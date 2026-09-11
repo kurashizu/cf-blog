@@ -38,6 +38,7 @@
 		waves,
 		inlet,
 		claimed,
+		wired,
 		onParam,
 		onWave,
 		onDrawWave
@@ -57,6 +58,9 @@
 		   decide alone -- and a control showing a number it is not using is worse
 		   than no control. */
 		claimed?: (nodeId: string, key: string) => boolean;
+		/* Is a socket patched? A probe draws against a different scale depending
+		   on which of its inlets has the cable, and only the graph knows. */
+		wired?: (nodeId: string, port: string) => boolean;
 		onParam: (key: string, value: number) => void;
 		onWave?: (key: string, value: SynthWaveform) => void;
 		onDrawWave?: (key: string, editing?: CustomWave) => void;
@@ -95,6 +99,11 @@
 	let fields = $derived(
 		spec.params
 			.filter((p) => !p.choices && !p.wave && p.field)
+			/* A probe's bounds only mean something to a control trace. Audio is
+			   fixed at -1..1 -- that is what full scale is -- so on an audio probe
+			   these two would be fields that visibly do nothing, which is the same
+			   mistake as a knob a cable has already claimed. */
+			.filter((p) => (p.key === 'cvLo' || p.key === 'cvHi' ? probeIsCv : true))
 			.map((p) => {
 				/* CONST's value takes the range of the kind it was set to: a
 				   velocity stops at 1 and a pitch runs to the top of hearing.
@@ -107,6 +116,17 @@
 			})
 	);
 	let drawingCurve = $state(false);
+
+	/* A probe reading a control value rather than a waveform.
+	
+	   Decided by which socket has a cable on it, not by the numbers arriving: a
+	   CV that happens to sit inside -1..1 looks exactly like audio. With both
+	   patched, audio wins -- it is the one with a fixed meaning, so the trace
+	   stays readable and the CV is drawn against the same full scale rather
+	   than silently rescaling the sound. */
+	let probeIsCv = $derived(
+		!!wired?.(nodeId, 'cv') && !wired?.(nodeId, 'in')
+	);
 
 	let knobs = $derived(spec.params.filter((p) => !p.choices && !p.field && !p.wave));
 
@@ -283,6 +303,7 @@
 			kind={spec.viz}
 			{nodeId}
 			color={spec.color}
+			cv={probeIsCv}
 			params={Object.fromEntries(spec.params.map((q) => [q.key, val(q.key, q.def)]))}
 		/>
 	{:else if spec.viz === 'adsr'}

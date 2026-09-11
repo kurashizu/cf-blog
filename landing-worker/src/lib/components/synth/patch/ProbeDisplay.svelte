@@ -18,6 +18,12 @@
 		kind,
 		nodeId,
 		color,
+		/* Which family is actually patched in. The card knows, because it knows
+		   which socket has a cable on it, and the scale depends entirely on the
+		   answer: audio is read against a fixed full scale, a value against its
+		   own declared bounds. Guessing from the samples cannot work -- a CV
+		   that happens to sit inside -1..1 is indistinguishable from audio. */
+		cv = false,
 		/* The module's own knobs. A meter you cannot adjust shows one view of the
 		   signal and hides every other: a scope at a fixed span cannot resolve a
 		   kick and a hi-hat both, and a spectrum at a fixed floor either buries
@@ -27,17 +33,78 @@
 		kind: 'scope' | 'fft' | 'meter';
 		nodeId: string;
 		color: string;
+		cv?: boolean;
 		params?: Record<string, number>;
 	} = $props();
 
 	const p = (key: string, def: number) => params[key] ?? def;
+
+	/* The axis, low and high.
+	
+	   Sorted rather than trusted in order, so a range typed backwards draws
+	   upside down instead of drawing nothing: an axis of zero height is a blank
+	   card, which looks like a broken probe rather than like a typo. */
+	const bounds = $derived.by(() => {
+		const a = p('cvLo', -1);
+		const b = p('cvHi', 1);
+		const lo = Math.min(a, b);
+		const hi = Math.max(a, b);
+		return hi - lo < 1e-9 ? { lo, hi: lo + 1 } : { lo, hi };
+	});
+
+	/** A number short enough to sit in a 4-pixel gutter and still be read. */
+	function tickLabel(v: number): string {
+		const a = Math.abs(v);
+		if (a === 0) return '0';
+		if (a >= 1e4 || (a < 0.01 && a > 0)) return v.toExponential(0).replace('e+', 'e');
+		if (a >= 100) return v.toFixed(0);
+		if (a >= 10) return v.toFixed(1).replace(/\.0$/, '');
+		return v.toFixed(2).replace(/0$/, '').replace(/\.$/, '');
+	}
 
 	let canvas = $state<HTMLCanvasElement | null>(null);
 
 	onMount(() => {
 		let raf = 0;
 		const time = new Uint8Array(8192);
+		/* Control values are read as floats, because the byte view cannot carry
+		   them: getByteTimeDomainData maps 0..255 onto -1..1 and *saturates*, so
+		   a CV of 3 and a CV of 10 both read back as 0.992 and every range above
+		   unity would draw as a flat line pinned to the ceiling. Measured, not
+		   assumed. Audio keeps the byte path, where it is exact and cheaper. */
+		const timeF = new Float32Array(8192);
 		const freq = new Uint8Array(1024);
+
+		/* Horizontal rules with their values written on them.
+		
+		   A trace without numbers says a shape changed and not what it changed
+		   to, which is the difference between a picture and a measurement -- and
+		   a probe exists to be read off. */
+		function drawScale(
+			ctx: CanvasRenderingContext2D,
+			w: number,
+			h: number,
+			lo: number,
+			hi: number
+		) {
+			const ticks = [hi, (hi + lo) / 2, lo];
+			ctx.save();
+			ctx.font = '9px ui-monospace, monospace';
+			ctx.textBaseline = 'middle';
+			for (const t of ticks) {
+				const y = h - ((t - lo) / (hi - lo)) * h;
+				// Clear of the very edge, so the top and bottom labels are not clipped.
+				const ly = Math.max(6, Math.min(h - 6, y));
+				ctx.globalAlpha = 0.22;
+				ctx.beginPath();
+				ctx.moveTo(0, y);
+				ctx.lineTo(w, y);
+				ctx.stroke();
+				ctx.globalAlpha = 0.65;
+				ctx.fillText(tickLabel(t), 3, ly);
+			}
+			ctx.restore();
+		}
 
 		function frame() {
 			raf = requestAnimationFrame(frame);
@@ -56,31 +123,36 @@
 			ctx.lineWidth = 1;
 
 			if (kind === 'scope') {
-				an.getByteTimeDomainData(time);
 				/* SPAN is a window in milliseconds, so a 20 ms setting shows about
 				   one cycle of a bass note and forty of a cymbal -- which is what
 				   makes a scope readable at both ends rather than at neither. */
 				const rate = an.context.sampleRate;
 				const want = Math.round((p('scopeSpan', 20) / 1000) * rate);
 				const n = Math.max(8, Math.min(Math.min(an.fftSize, time.length), want));
+				/* The two families are drawn against different axes, and that is
+				   the whole point of knowing which one arrived: audio has a defined
+				   full scale, so -1..1 is not a setting but what the numbers mean.
+				   A control value has no ceiling at all, so its axis is whatever
+				   was typed. */
+				const lo = cv ? bounds.lo : -1;
+				const hi = cv ? bounds.hi : 1;
+				if (cv) an.getFloatTimeDomainData(timeF);
+				else an.getByteTimeDomainData(time);
 				const gain = Math.pow(10, p('scopeGain', 0) / 20);
+				drawScale(ctx, w, h, lo, hi);
+				ctx.strokeStyle = color;
 				ctx.beginPath();
 				for (let i = 0; i < n; i++) {
 					const x = (i / (n - 1)) * w;
-					const v = Math.max(-1, Math.min(1, ((time[i] - 128) / 128) * gain));
-					const y = h / 2 - v * (h / 2);
+					const raw = cv ? timeF[i] : ((time[i] - 128) / 128) * gain;
+					// Clamped to the axis rather than to -1..1, so a trace that runs
+					// off the top is drawn at the top instead of wrapping.
+					const v = Math.max(lo, Math.min(hi, raw));
+					const y = h - ((v - lo) / (hi - lo)) * h;
 					if (i === 0) ctx.moveTo(x, y);
 					else ctx.lineTo(x, y);
 				}
 				ctx.stroke();
-				// Centre line, so a trace at rest reads as silence and not as an
-				// absent signal.
-				ctx.globalAlpha = 0.25;
-				ctx.beginPath();
-				ctx.moveTo(0, h / 2);
-				ctx.lineTo(w, h / 2);
-				ctx.stroke();
-				ctx.globalAlpha = 1;
 			} else if (kind === 'fft') {
 				const n = Math.min(an.frequencyBinCount, freq.length);
 				an.getByteFrequencyData(freq);
@@ -102,6 +174,41 @@
 					const bh = Math.max(0, Math.min(1, (db - floorDb) / span)) * h;
 					ctx.fillRect((b / bars) * w, h - bh, w / bars - 1, bh);
 				}
+			} else if (cv) {
+				/* A value, shown on its own axis and written out.
+				
+				   Not dB: decibels are a ratio against full scale, and a control
+				   value has no full scale to be a ratio against -- a cutoff of 5000
+				   is not "+74 dB of anything". The number is the reading, so the
+				   bar says where it sits between the bounds and the text says what
+				   it is. Averaged rather than peak-held, matching the audio side. */
+				const n = Math.min(an.fftSize, timeF.length);
+				an.getFloatTimeDomainData(timeF);
+				let sum = 0;
+				for (let i = 0; i < n; i++) sum += timeF[i];
+				const mean = sum / n;
+				const { lo, hi } = bounds;
+				const frac = Math.max(0, Math.min(1, (mean - lo) / (hi - lo)));
+				/* Grown from where zero sits, when zero is on the axis. A bar that
+				   always grows from the left says nothing about sign, and sign is
+				   most of what anyone is looking for in a bipolar CV. */
+				const zero = lo <= 0 && hi >= 0 ? (0 - lo) / (hi - lo) : 0;
+				const x0 = Math.min(frac, zero) * w;
+				const x1 = Math.max(frac, zero) * w;
+				ctx.fillRect(x0, 2, Math.max(1, x1 - x0), h - 4);
+				ctx.save();
+				ctx.font = '10px ui-monospace, monospace';
+				ctx.textBaseline = 'middle';
+				ctx.globalAlpha = 0.35;
+				ctx.fillText(tickLabel(lo), 3, h / 2);
+				const hiText = tickLabel(hi);
+				ctx.fillText(hiText, w - ctx.measureText(hiText).width - 3, h / 2);
+				// The reading itself, centred and brightest: it is the thing.
+				ctx.globalAlpha = 1;
+				ctx.fillStyle = '#fff';
+				const t = tickLabel(mean);
+				ctx.fillText(t, (w - ctx.measureText(t).width) / 2, h / 2);
+				ctx.restore();
 			} else {
 				an.smoothingTimeConstant = Math.max(0, Math.min(0.95, p('loudSmooth', 60) / 100));
 				const n = Math.min(an.fftSize, time.length);

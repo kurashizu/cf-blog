@@ -256,3 +256,169 @@ describe('PHASE CANCEL: two 500 Hz sines summed', () => {
 		expect(peak).toBeLessThan(0.58);
 	}, 30000);
 });
+
+
+describe('METER probes: reading a control value', () => {
+	/* A probe that takes a CV as well as audio, which is the one place crossing
+	   the family line costs nothing: a probe reads and hands back nothing, so
+	   there is no signal to convert and no patch to change.
+
+	   Driven through the live engine rather than an offline render, because
+	   what is being checked is the analyser the card draws from -- the same
+	   object, read the same way. */
+	const scopePatch = (value: number, wireCv = true) => ({
+		advanced: true,
+		rackGraph: {
+			nodes: [
+				{ id: 'entry', type: 'in' },
+				{ id: 'c', type: 'const' },
+				{ id: 'sc', type: 'scope' },
+				{ id: 'o', type: 'osc' },
+				{ id: 'output', type: 'out' }
+			],
+			cables: [
+				{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+				...(wireCv ? [{ from: 'c', fromPort: 'out', to: 'sc', toPort: 'cv' }] : []),
+				{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+			]
+		},
+		// kind 6 is F32, the plain real number.
+		graphParams: { 'c.kind': 6, 'c.value': value }
+	});
+
+	/** What the probe's analyser is carrying, read the way the card reads it. */
+	async function probeReads(value: number, wireCv = true): Promise<number | null> {
+		/* Through the page rather than importing the engine here: a dynamic
+		   import inside page.evaluate is rewritten by Vitest's transform and
+		   arrives in the browser as an undefined helper. The page holds the
+		   engine already. */
+		return page.evaluate(
+			async (a) =>
+				await (
+					window as never as {
+						__audit: { probeValue(p: unknown, n: string): Promise<number | null> };
+					}
+				).__audit.probeValue(a.t, 'sc'),
+			{ t: scopePatch(value, wireCv) }
+		);
+	}
+
+	it('reads a value the byte view could not carry', async () => {
+		/* The reason the control path reads floats. getByteTimeDomainData maps
+		   0..255 onto -1..1 and saturates, so 3 and 5000 both come back as 0.992
+		   and every range above unity would draw as a flat line on the ceiling.
+		   Measured, not assumed. */
+		expect(await probeReads(3)).toBeCloseTo(3, 3);
+		expect(await probeReads(5000)).toBeCloseTo(5000, 0);
+		expect(await probeReads(-2)).toBeCloseTo(-2, 3);
+	}, 45000);
+
+	it('reads a value at all, which it did not before', async () => {
+		/* The bug this inlet shipped with, and the third of its kind: a pure node
+		   builds nothing, so a cable from CONST lands on nobody and the mod loop
+		   has no source to connect. Every other module is fine with that -- a
+		   number in a param is what they wanted -- but a probe has no param, it
+		   *is* the reading, so it drew a flat zero with the cable sitting there
+		   looking connected. CONST 0.5, 3 and 5000 all read back 0. */
+		expect(await probeReads(0.5)).toBeCloseTo(0.5, 3);
+	}, 30000);
+
+	it('tells an unpatched socket from one carrying zero', async () => {
+		/* Both read zero, and they must: a CV of 0 is a reading and has to draw
+		   as one, while a probe nothing is patched to must not invent a trace.
+		   The engine separates them with a NaN fallback, which is the one value
+		   a real cable cannot hand back -- so this asserts the wired zero is a
+		   real reading rather than the default leaking through. */
+		expect(await probeReads(0)).toBe(0);
+		expect(await probeReads(9, false)).toBe(0);
+	}, 30000);
+});
+
+describe('a value arrives once, whichever way it is sent', () => {
+	/* ENTRY's VEL into GAIN's LVL, the velocity typed into the knob, and the
+	   same velocity from a CONST. Three routes to one number, and they have to
+	   be the same sound.
+
+	   They were not. GAIN's LVL is a declared inlet *and* a param of the same
+	   name, so the resolver read the velocity as a value and set it on the
+	   gain, and the mod loop -- which skipped only cables onto a port with no
+	   inlet -- then connected ENTRY's source to that same param on top. The
+	   velocity applied twice: 0.5798 RMS against 0.4163 for the other two, a
+	   1.39x error on the first patch anyone builds.
+
+	   CONST never showed it. A pure node builds nothing, so its cable was
+	   already being dropped for want of a source; only ENTRY, which does build,
+	   could reach the double. That is why this is asserted as a three-way match
+	   rather than against a constant -- the two correct routes are each other's
+	   control, and neither alone would have caught it. */
+	const N = [
+		{ id: 'entry', type: 'in' },
+		{ id: 'o', type: 'osc' },
+		{ id: 'g', type: 'gain' },
+		{ id: 'c', type: 'const' },
+		{ id: 'ts', type: 'tosig' },
+		{ id: 'output', type: 'out' }
+	];
+	const EXEC = { from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' };
+	const AUDIO = [
+		{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+		{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' }
+	];
+	const mk = (cables: unknown[], graphParams: Record<string, number>) => ({
+		advanced: true,
+		rackGraph: { nodes: N, cables },
+		graphParams
+	});
+	/* The velocity the bench plays: 110 of 127. */
+	const VEL = 110 / 127;
+
+	it('reads the same whether the velocity is patched or turned', async () => {
+		const patched = await render(
+			mk([EXEC, ...AUDIO, { from: 'entry', fromPort: 'vel', to: 'g', toPort: 'level' }], {
+				'g.level': 1
+			}),
+			6,
+			1
+		);
+		const turned = await render(mk([EXEC, ...AUDIO], { 'g.level': VEL }), 6, 1);
+		const fromConst = await render(
+			mk([EXEC, ...AUDIO, { from: 'c', fromPort: 'out', to: 'g', toPort: 'level' }], {
+				'g.level': 1,
+				'c.kind': 6,
+				'c.value': VEL
+			}),
+			6,
+			1
+		);
+		// The knob and the CONST were already right; ENTRY is the one that moved.
+		expect(turned.peak).toBeCloseTo(fromConst.peak, 4);
+		expect(patched.peak, `patched ${patched.peak} vs turned ${turned.peak}`).toBeCloseTo(
+			turned.peak,
+			3
+		);
+		expect(patched.envelope[3]).toBeCloseTo(turned.envelope[3], 3);
+	}, 45000);
+
+	it('still lets a signal through the same inlet', async () => {
+		/* The other half, and the reason the fix is a condition rather than a
+		   deletion: TO-SIG exists to turn a value into something that sums, and
+		   it must still reach LVL. A fix that skipped every cable onto a knob
+		   would silence this. */
+		const viaSignal = await render(
+			mk(
+				[
+					EXEC,
+					...AUDIO,
+					{ from: 'c', fromPort: 'out', to: 'ts', toPort: 'level' },
+					{ from: 'ts', fromPort: 'out', to: 'g', toPort: 'level' }
+				],
+				{ 'g.level': 1, 'c.kind': 6, 'c.value': 0.5 }
+			),
+			6,
+			1
+		);
+		const turned = await render(mk([EXEC, ...AUDIO], { 'g.level': 0.5 }), 6, 1);
+		expect(viaSignal.peak).toBeGreaterThan(0.1);
+		expect(viaSignal.peak).toBeCloseTo(turned.peak, 3);
+	}, 45000);
+});

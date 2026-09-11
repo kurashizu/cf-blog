@@ -292,6 +292,34 @@ export function noteNumber(name: string): number | null {
 
 const AUDIO_IN: PortSpec = { id: 'in', label: 'IN', kind: 'audio' };
 
+/* A probe's control inlet.
+ *
+ * Separate from IN rather than one inlet accepting either, because the family
+ * is what sets the scale and the cable is the only reliable way to know it. A
+ * control value sitting inside -1..1 looks exactly like audio in the samples;
+ * asking which socket it arrived at is exact.
+ *
+ * Typed `cv` -- the untyped real number -- so every control role reaches it.
+ * A meter that refused a frequency or a duration would be a meter you had to
+ * convert for, and there is nothing to convert: the bounds below say what to
+ * draw, whatever the number means. */
+const METER_CV_IN: PortSpec = { id: 'cv', label: 'CV', kind: 'mod', role: 'cv' };
+
+/* The bounds a control trace is drawn against.
+ *
+ * Fields rather than knobs: they are a range, read off whatever is being
+ * probed, and the knob rule reserves dials for special ranges and non-linear
+ * response. Neither applies to "what are the ends of my axis".
+ *
+ * Only consulted for the CV inlet. Audio is fixed at -1..1 because that is
+ * what full scale *is* -- a waveform has a defined ceiling and a control value
+ * does not, which is the whole reason one of these needs bounds and the other
+ * cannot use them. */
+const METER_RANGE_PARAMS = [
+	{ key: 'cvLo', label: 'LO', min: -1e6, max: 1e6, step: 0.001, def: -1, field: true, fixed: true },
+	{ key: 'cvHi', label: 'HI', min: -1e6, max: 1e6, step: 0.001, def: 1, field: true, fixed: true }
+];
+
 /* Blueprint's white execution pins.
  *
  * A module with an EXEC_IN is *impure* in Blueprint's sense: running it does
@@ -914,10 +942,23 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'METER',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.scope',
-		inputs: [AUDIO_IN],
+		/* Both families, because both are worth looking at and a probe is the one
+		   module where crossing the line costs nothing: it reads and hands back
+		   nothing, so there is no signal to convert and no patch to change.
+		   Everywhere else the two are kept apart because a value and a waveform
+		   mean different things to whatever receives them -- here nothing
+		   receives them.
+
+		   Two inlets rather than one that takes either. Which family a trace
+		   came from decides how it is scaled, and asking the cable is exact
+		   where guessing from the samples is not: a control value that happens
+		   to sit inside -1..1 is indistinguishable from audio by its numbers
+		   alone. */
+		inputs: [AUDIO_IN, METER_CV_IN],
 		outputs: [],
 		params: [
-			{ key: 'scopeSpan', label: 'SPAN', min: 1, max: 200, step: 1, def: 20, unit: 'ms', field: true, fixed: true }
+			{ key: 'scopeSpan', label: 'SPAN', min: 1, max: 200, step: 1, def: 20, unit: 'ms', field: true, fixed: true },
+			...METER_RANGE_PARAMS
 		],
 		viz: 'scope'
 	},
@@ -933,6 +974,13 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'METER',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.fft',
+		/* Audio only, and the one probe that stays that way.
+		
+		   A spectrum of a control value is a spectrum of something sampled at a
+		   rate nothing here defines: an envelope is a shape in seconds, not a
+		   sum of partials, and an FFT of one says more about the block size than
+		   about the patch. SCOPE and LOUD answer the question anyone would be
+		   asking of a CV -- what shape is it, how big is it -- and both take one. */
 		inputs: [AUDIO_IN],
 		outputs: [],
 		params: [],
@@ -948,9 +996,14 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'METER',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.loud',
-		inputs: [AUDIO_IN],
+		/* Takes a value as well, for the reason SCOPE does: the question "how
+		   big is this" is the same question on either side of the line, and a
+		   probe changes nothing by asking it. What differs is the scale -- a
+		   waveform is read in dB against full scale, a value against the bounds
+		   below -- which is why the family has to be known and not guessed. */
+		inputs: [AUDIO_IN, METER_CV_IN],
 		outputs: [],
-		params: [],
+		params: [...METER_RANGE_PARAMS],
 		viz: 'meter'
 	},
 	{

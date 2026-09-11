@@ -829,19 +829,33 @@ class ModularSynth {
          0.5, and CONST 100 gave 2.0. ENTRY resolves the same way, by pin name,
          so its VEL into a knob doubled in exactly the same manner.
       
-         Only cables onto a *knob* are skipped. A declared mod inlet -- a VCA's
-         CV, a PULSE's PWM -- has no value path at all, so ENTRY's VEL reaching
-         one of those is a signal and must still be connected.
+         Cables onto a *knob* are skipped. A declared mod inlet with no knob
+         behind it -- a PULSE's PWM -- has no value path at all, so ENTRY's VEL
+         reaching one of those is a signal and must still be connected.
+      
+         And a port can be both. GAIN's LVL and TO-SIG's LVL are each a declared
+         inlet *and* a param of the same name, so the resolver reads them as a
+         value and the inlet test alone said "signal, connect it". ENTRY's VEL
+         into GAIN's LVL was therefore applied twice -- measured at 0.58 RMS
+         where the same velocity typed into the knob, and the same velocity from
+         a CONST, both read 0.4163. A 1.39x error on the first patch anyone
+         builds.
+      
+         CONST never showed it: a pure node builds nothing, so `src` is
+         undefined and the cable was already being dropped a line below. Only
+         ENTRY, which does build, could reach the double.
       
          The two mechanisms are one decision seen from either side -- a value
          replaces the knob, a signal adds to it (docs/node-graph.md, "A value
          replaces a knob; a signal adds to it") -- so exactly one of them may
-         act on any given cable. */
+         act on any given cable. Whether a value path exists is the question,
+         and a param of the same name is what makes one. */
 			const fromType = typeById.get(c.from) ?? '';
-			const ontoKnob = !specById
-				.get(typeOfNode.get(c.to) ?? '')
-				?.inputs.some((q) => q.id === c.toPort);
-			if (ontoKnob && (isPureNode(fromType) || fromType === 'in')) continue;
+			const toSpec = specById.get(typeOfNode.get(c.to) ?? '');
+			const hasValuePath =
+				!toSpec?.inputs.some((q) => q.id === c.toPort) ||
+				!!toSpec?.params.some((q) => q.key === c.toPort);
+			if (hasValuePath && (isPureNode(fromType) || fromType === 'in')) continue;
 			const from = outletOf(src, c.fromPort);
 			/* An AudioParam and an AudioNode are both legitimate destinations, and
 			   TypeScript needs telling which overload applies. A param destination
@@ -1916,6 +1930,51 @@ class ModularSynth {
 				an.fftSize = type === 'fft' ? 2048 : 8192;
 				an.smoothingTimeConstant = type === 'loud' ? 0.6 : 0.2;
 				g.connect(an);
+				/* The control inlet, registered so the mod loop can find it.
+        
+           This is the lesson MAP taught, applied before it could be repeated:
+           a `mod` inlet that is not in this map is silently dropped -- the
+           cable draws, the socket lights, and nothing arrives. MAP declared
+           one, registered nothing, and spent its life shaping a constant while
+           every one of its own settings still visibly worked.
+        
+           The same analyser, deliberately. A probe with two inlets is still one
+           instrument looking at one thing; wiring both is a patch saying
+           "compare these", and summing is what the canvas already does
+           everywhere else a second cable lands. */
+				if (type !== 'fft') {
+					mod.set('cv', g);
+					/* A pure value made into something an analyser can look at.
+          
+             A CONST, an ADD, a CMP -- anything pure -- builds no node at all:
+             the resolver pulls it as a number and the module sets it as a
+             param's `.value`, so there is nothing for the mod loop to connect
+             and a cable from one lands on nobody. Every other module is fine
+             with that, because a number in a param is exactly what they
+             wanted. A probe is the exception: it has no param, it *is* the
+             reading, so a value that never becomes a signal is a probe
+             showing zero while the cable sits there looking connected.
+          
+             Measured before this existed: CONST 0.5, 3 and 5000 into SCOPE's
+             CV all read back 0.
+          
+             The fallback is NaN rather than 0, which is what tells an unwired
+             socket from one carrying a genuine zero. A CV of 0 is a reading and
+             has to draw as one; defaulting to a visible zero instead would
+             invent a trace on a probe nothing is patched to. NaN is the only
+             value `cvIn` cannot be handed back from a real cable.
+          
+             A signal-carrying cable needs none of this -- it is already an
+             audio node and the mod loop connects it -- and cannot reach here,
+             because the resolver returns the fallback for those. */
+					const probe = cvIn(probeKey, 'cv', NaN);
+					if (Number.isFinite(probe)) {
+						const dc = ctx.createConstantSource();
+						dc.offset.value = probe;
+						dc.connect(g);
+						sources.push(dc);
+					}
+				}
 				/* Offline renders have no frames to draw on, and the map is read by the
            canvas while a live voice is sounding. Keyed by node so several
            probes in one patch stay apart. */

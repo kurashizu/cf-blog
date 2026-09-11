@@ -654,15 +654,31 @@ describe('regressions the string tests could not see', () => {
 				const offsets = ctx.nodes
 					.filter((n) => n.kind === 'const')
 					.map((n) => (n as unknown as { offset: FakeParam }).offset.value);
-				return { driven, offsets };
+				/* What the gain ended up at, which is the thing the patch is about.
+				   Asked of the built node rather than of the cable, because LVL is
+				   a knob *and* an inlet and the velocity arrives as a value: the
+				   number is on the node, not on a connection. */
+				const gains = ctx.nodes
+					.filter((n) => n.kind === 'gain')
+					.map((n) => (n as unknown as { gain: FakeParam }).gain.value);
+				return { driven, offsets, gains };
 			} finally {
 				Object.assign(track, saved);
 				S.renderCtx = null;
 			}
 		};
-		// The VEL cable lands on a param as a signal, not as nothing.
-		expect(cvSources(100).driven.length).toBeGreaterThan(0);
-		// And a hard hit carries a different number than a soft one.
+		/* The VEL cable reaches the level, and a hard hit is not a soft one.
+		
+		   Asserted on the resulting gains rather than on the connection. GAIN's
+		   LVL is a declared inlet *and* a param of the same name, so ENTRY's VEL
+		   resolves as a value and replaces the knob -- it is not connected as a
+		   signal, because connecting it as well applied it twice and made this
+		   patch 1.39x too loud. The claim worth pinning is that the velocity
+		   arrives and that it varies, not which of the two mechanisms carries
+		   it. */
+		expect(cvSources(100).gains.some((g) => g > 0)).toBe(true);
+		expect(cvSources(10).gains.join(',')).not.toBe(cvSources(127).gains.join(','));
+		// ENTRY still publishes its pins as sources, whoever reads them.
 		expect(cvSources(10).offsets.join(',')).not.toBe(cvSources(127).offsets.join(','));
 	});
 

@@ -165,6 +165,37 @@
 					level: (t?.graphParams as Record<string, number>)?.['gain-mtwflybt-1.level']
 				};
 			},
+			/* What a probe's analyser is carrying, live.
+			
+			   Here rather than in the test, because a dynamic import inside
+			   page.evaluate is rewritten by Vitest's own transform and does not
+			   survive the trip into the browser. The page already holds the
+			   engine, so it does the reading and hands back a number.
+			
+			   Read as a float: the byte view saturates at +/-1, so a control value
+			   of 3 and one of 5000 are the same byte and the reading would be a
+			   lie for every range above unity. */
+			probeValue: async (patch: Record<string, unknown>, nodeId: string, holdMs = 200) => {
+				const S = modularSynth as unknown as {
+					updateTrack(i: number, t: unknown): void;
+					triggerTrackVoice(...a: unknown[]): unknown;
+					releaseTrackVoice?(k: unknown): void;
+					graphProbes: Map<string, AnalyserNode>;
+				};
+				S.updateTrack(0, { ...patch, muted: false });
+				const key = S.triggerTrackVoice(0, 48, 0);
+				await new Promise((r) => setTimeout(r, holdMs));
+				const an = S.graphProbes.get(nodeId);
+				let out: number | null = null;
+				if (an) {
+					const f = new Float32Array(an.fftSize);
+					an.getFloatTimeDomainData(f);
+					out = f[f.length - 1];
+				}
+				if (key) S.releaseTrackVoice?.(key);
+				await new Promise((r) => setTimeout(r, 60));
+				return out;
+			},
 			run: async (seconds = 2, noteIndex = 40, slices = 8) => {
 				result = await renderNote(seconds, noteIndex, slices);
 				return result;

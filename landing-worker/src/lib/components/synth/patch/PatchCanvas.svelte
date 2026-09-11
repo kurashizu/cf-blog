@@ -114,6 +114,20 @@
 		}
 	};
 
+	/* Is anything plugged into this socket?
+	
+	   A probe needs to know which of its two inlets has a cable on it, because
+	   that is what decides the scale it draws against -- and the cable is the
+	   only reliable answer: a control value sitting inside -1..1 is
+	   indistinguishable from audio by its samples alone. */
+	const wiredOf = (nodeId: string, port: string) => {
+		try {
+			return resolver.isWired(nodeId, port);
+		} catch {
+			return false;
+		}
+	};
+
 	/* The wave editor, opened from a card's picker. Keyed by node and param
 	   rather than by oscillator number, since a patch may hold any number of
 	   oscillators -- and the saved table is written back to the node that
@@ -1251,6 +1265,7 @@
 									waves={graphWaves}
 									inlet={inletOf}
 									claimed={claimedOf}
+									wired={wiredOf}
 									onParam={(key, value) => setGraphParam(graphParams, n.id, key, value)}
 									onWave={(key, value) => setGraphWave(graphWaves, n.id, key, value)}
 									onDrawWave={(key, editing) => openWaveDraw(n.id, key, editing)}

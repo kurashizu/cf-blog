@@ -566,6 +566,15 @@ describe('every parameter the engine reads is declared', () => {
 			   the trace to show is a property of the picture rather than of the
 			   sound, and a probe deliberately changes nothing about the patch. */
 			'scope.scopeSpan',
+			/* The bounds a control trace is drawn against, read by ProbeDisplay
+			   for the same reason: an axis is a property of the picture. They do
+			   not exist on the audio side at all -- a waveform's full scale is
+			   what -1..1 *means*, not a setting -- so there is nothing for the
+			   engine to read even in principle. */
+			'scope.cvLo',
+			'scope.cvHi',
+			'loud.cvLo',
+			'loud.cvHi',
 			/* The execution chain, read where execution is resolved rather than
 			   where audio is built -- none of the three makes a sound, so none of
 			   them passes through the module builder and its `p()` at all.
