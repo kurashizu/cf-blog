@@ -53,6 +53,7 @@ export {
 	roleOf,
 	rolesCompatible
 } from './graph-model';
+import { roleOf, type PortRole as Role } from './graph-model';
 export type { RackGraph, GraphCable, GraphNode, PortKind, PortRole, PortSpec } from './graph-model';
 
 /**
@@ -222,6 +223,67 @@ function isDeclaredInlet(graph: RackGraph, cable: GraphCable): boolean {
 	return !!spec?.inputs.some((q) => q.id === cable.toPort);
 }
 
+/**
+ * The range a role's values actually occupy.
+ *
+ * MAP's X bounds say what the incoming signal swings between, and getting them
+ * wrong is silent: a -1..1 waveform read against the default 0..1 has its whole
+ * negative half clamped to the low end, so half the cycle does nothing and the
+ * card still looks right. Nobody types those numbers before hearing the
+ * problem.
+ *
+ * The cable's role is what knows. A `cv` is bipolar, a `unit` is a proportion,
+ * a `pitch` is semitones about the reference -- so the bounds can be filled in
+ * when the cable is drawn, which is the moment the answer becomes knowable.
+ *
+ * Only a first guess. Both fields stay typed, and a patch that wants a window
+ * onto part of the range says so by typing it.
+ */
+const ROLE_RANGE: Partial<Record<Role, [number, number]>> = {
+	cv: [-1, 1],
+	unit: [0, 1],
+	bool: [0, 1],
+	hz: [20, 20000],
+	pitch: [-48, 48],
+	time: [0, 4],
+	index: [0, 127]
+};
+
+/**
+ * Fill in MAP's input range from whatever was just plugged into it.
+ *
+ * Deliberately narrow: it fires on MAP's `a` inlet and nowhere else, and only
+ * while both bounds are still untouched. A range the player has typed is an
+ * answer, and an answer is not something to overwrite because a cable moved.
+ */
+function inferMapRange(graph: RackGraph, cable: GraphCable): void {
+	const to = graph.nodes.find((n) => n.id === cable.to);
+	if (to?.type !== 'map' || cable.toPort !== 'a') return;
+	const params = get(activeTrackId) !== undefined ? currentGraphParams() : undefined;
+	if (!params) return;
+	// Untouched means absent: a knob that has never been set is not in the patch.
+	if (params[`${to.id}.inLo`] !== undefined || params[`${to.id}.inHi`] !== undefined) return;
+	const from = graph.nodes.find((n) => n.id === cable.from);
+	const spec = MODULE_SPECS.find((m) => m.id === from?.type);
+	const port = spec?.outputs.find((q) => q.id === cable.fromPort);
+	const range = port && ROLE_RANGE[roleOf(port)];
+	if (!range) return;
+	/* Both bounds in one write. `setGraphParam` spreads from the map it is
+	   handed, so calling it twice with the same stale object would have the
+	   second write drop the first -- and the range would come out half set,
+	   which is worse than not set. */
+	setGraphParams(params, {
+		[`${to.id}.inLo`]: range[0],
+		[`${to.id}.inHi`]: range[1]
+	});
+}
+
+/** The live track's graph params, or undefined when there is no track. */
+function currentGraphParams(): Record<string, number> | undefined {
+	const id = get(activeTrackId);
+	return modularSynth.getTrack(id)?.graphParams as Record<string, number> | undefined;
+}
+
 export function addCable(
 	graph: RackGraph,
 	cable: GraphCable,
@@ -252,6 +314,10 @@ export function addCable(
 		? graph.cables.filter((c) => !(c.to === cable.to && c.toPort === cable.toPort))
 		: graph.cables;
 	commit({ ...graph, cables: [...cables, cable] });
+	/* After the commit, so the param write lands on the graph that has the
+	   cable -- and so an undo of the cable and an undo of the range are two
+	   steps, which is what they are. */
+	inferMapRange(graph, cable);
 	return 'ok';
 }
 
@@ -291,6 +357,31 @@ export function setGraphParam(
 	lastParamAt = now;
 	const next = { ...(params ?? {}), [`${nodeId}.${param}`]: value };
 	modularSynth.updateTrack(get(activeTrackId), { graphParams: next } as Partial<TrackData>);
+	refreshTracks();
+	flushHistoryBump();
+}
+
+/**
+ * Write several knobs at once.
+ *
+ * One undo step and one track update for a change that is one decision --
+ * MAP's two input bounds arrive together or the range is half set. Calling
+ * `setGraphParam` twice cannot do it: each spreads from the map it was handed,
+ * so the second call, holding the object as it was before the first, drops it.
+ */
+export function setGraphParams(
+	params: Record<string, number> | undefined,
+	values: Record<string, number>
+): void {
+	const clean = Object.fromEntries(Object.entries(values).filter(([, v]) => Number.isFinite(v)));
+	if (!Object.keys(clean).length) return;
+	pushUndo(get(activeTrackId));
+	// Force the next single-knob write to open its own window: this was not a
+	// hand resting on a knob, so nothing should coalesce with it.
+	lastParamKey = '';
+	modularSynth.updateTrack(get(activeTrackId), {
+		graphParams: { ...(params ?? {}), ...clean }
+	} as Partial<TrackData>);
 	refreshTracks();
 	flushHistoryBump();
 }
