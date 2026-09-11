@@ -514,6 +514,24 @@ describe('every parameter the engine reads is declared', () => {
 		'kind'
 	]);
 
+	it('gives SCOPE and LOUD a control inlet, and FFT none', () => {
+		/* A probe is the one place crossing the audio/control line costs nothing
+		   -- it reads and hands back nothing -- so SCOPE and LOUD take either.
+		
+		   FFT deliberately does not: a spectrum of a control value is a spectrum
+		   of something sampled at a rate nothing here defines, and says more
+		   about the block size than about the patch. The engine's own guard is
+		   `type !== 'fft'`, so adding the inlet to the catalogue to "fix the
+		   inconsistency" would leave it unregistered -- a declared mod inlet
+		   reaching nobody, which is the bug shape this instrument has had four
+		   times. This is the assertion that makes that a deliberate change. */
+		const cvInlet = (id: string) =>
+			MODULE_SPECS.find((m) => m.id === id)?.inputs.some((q) => q.id === 'cv') ?? false;
+		expect(cvInlet('scope')).toBe(true);
+		expect(cvInlet('loud')).toBe(true);
+		expect(cvInlet('fft')).toBe(false);
+	});
+
 	it('offers the knobs the engine reads for RING and SPACE', () => {
 		/* Two knobs that existed in the sound and nowhere on the card.
 		
