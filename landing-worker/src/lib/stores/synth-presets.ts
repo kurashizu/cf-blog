@@ -3,6 +3,36 @@ import { browser } from '$app/environment';
 import { playSound } from '../sound';
 import { tr } from '../i18n';
 import { KEY_TIMBRE_KEYS, BLANK_TRACK_TIMBRE, type TrackData } from '../track-data';
+import { MODULE_SPECS } from './synth-modules';
+
+/* Every type the catalogue can build, asked rather than restated: a second copy
+   of the roster is the thing that goes stale. */
+const MODULE_IDS = new Set(MODULE_SPECS.map((m) => m.id));
+
+/* Types these patches were written against, and what absorbed each.
+ *
+ * The catalogue was emptied and rebuilt from primitives, so a preset written
+ * before that names modules which no longer exist. Where the replacement is
+ * exact, the rename belongs here rather than in thirteen preset literals: one
+ * table is one place to be wrong, and it keeps each preset readable as the
+ * instrument it describes.
+ *
+ * Only exact absorptions. VCA is GAIN -- an amplifier whose level may go
+ * negative is a VCA and an inverter at once, which is why GAIN took it. MIX is
+ * SUM, since every audio inlet already sums and MIX's two level knobs are two
+ * GAINs the patch can see. Anything needing more than a rename (BODY, BOW,
+ * REED, COMB, DRIVE, EQ, LFO) is deliberately absent: those want a patch, and a
+ * table that silently substituted an approximation would be worse than a
+ * preset that says it is waiting. */
+const MIGRATED: Record<string, string> = { vca: 'gain', mix: 'sum' };
+
+/* And the params that moved with them, with the conversion each needs.
+ *
+ * VCA's GAIN was a percentage and GAIN's LVL is a multiplier. A rename alone
+ * would be a hundredfold error that type-checks perfectly. */
+const MIGRATED_PARAMS: Record<string, [string, (v: number) => number]> = {
+	'vca.gain': ['level', (v) => v / 100]
+};
 import { SMB1_NOISE_KEYS } from '../songs/mario1';
 import {
 	activeKey,
@@ -220,13 +250,24 @@ function patch(
 	}
 	const graphNodes: GraphNode[] = [
 		{ id: ENTRY_ID, type: 'in', x: 48, y: 168 },
-		...nodes.map(([id, type]) => ({ id, type, ...posOf(id) })),
-		{ id: TRIM_ID, type: 'vca', x: 48 + (lastCol + 1) * COL, y: 168 },
+		...nodes.map(([id, type]) => ({ id, type: MIGRATED[type] ?? type, ...posOf(id) })),
+		{ id: TRIM_ID, type: 'gain', x: 48 + (lastCol + 1) * COL, y: 168 },
 		{ id: OUTPUT_ID, type: 'out', x: 48 + (lastCol + 2) * COL, y: 168 }
 	];
-	const graphParams: Record<string, number> = { [`${TRIM_ID}.gain`]: outLevel };
-	for (const [id, , params] of nodes) {
-		for (const [k, v] of Object.entries(params ?? {})) graphParams[`${id}.${k}`] = v;
+	/* The trim, in GAIN's units.
+	
+	   `outLevel` is a percentage because the old VCA's was, and GAIN's LVL is a
+	   plain multiplier -- so the number carries across divided rather than
+	   renamed. Copying it straight over would have made every one of these
+	   patches a hundred times too loud, which is the kind of migration that
+	   passes a type check and fails an ear. */
+	const graphParams: Record<string, number> = { [`${TRIM_ID}.level`]: outLevel / 100 };
+	for (const [id, type, params] of nodes) {
+		for (const [k, v] of Object.entries(params ?? {})) {
+			const moved = MIGRATED_PARAMS[`${type}.${k}`];
+			if (moved) graphParams[`${id}.${moved[0]}`] = moved[1](v);
+			else graphParams[`${id}.${k}`] = v;
+		}
 	}
 	/* 'a>b' is the common case: the OUT socket into the IN socket. A source
 	   port is named after a dot ('sp.r>x') for the modules with two outlets --
@@ -245,23 +286,66 @@ function patch(
 	graphCables.push({ from: TRIM_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' });
 	// OUT runs when the note does; without this the patch builds and stays mute.
 	graphCables.push({ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' });
-	/* Held back while the catalogue is rebuilt from primitives.
+	/* Emitted only if every type in it exists.
 
-	   Every one of these patches is wired out of modules that no longer exist --
-	   a bowed string, a modal bank, a mid/side pair -- and the engine skips a
-	   node whose type the catalogue does not carry. Emitting the graph anyway
-	   would ship thirteen presets that load, draw nothing, and play silence,
-	   which is worse than not offering them: the patch would look intact.
+	   These patches predate the rebuild, and each is wired out of some modules
+	   the catalogue no longer carries. A node whose type is unknown builds
+	   nothing, and a cable through it is a broken chain rather than a missing
+	   trim -- measured, an OSC through an unknown node renders exact silence
+	   where the same chain through GAIN reads 0.1203. So emitting a graph with
+	   one in it ships a preset that loads, draws, and plays nothing, which is
+	   worse than not offering it: the patch looks intact.
 
-	   The node and cable lists above are left standing rather than deleted,
-	   because they are the description of each instrument and are what these
-	   presets get rebuilt from once the primitives they need are back. The
-	   racks-1-7 half of every preset is unaffected and still plays. */
-	void graphNodes;
-	void graphCables;
-	void graphParams;
-	return {};
+	   This used to be an unconditional `return {}` with the reason in a comment.
+	   That was right about the risk and wrong about the mechanism: it held back
+	   the ones that were already fine along with the ones that were not, and
+	   nothing anywhere said when it could come off. A migration would have had
+	   to be finished by someone remembering this comment existed.
+
+	   Asking the catalogue instead means each preset is emitted the moment its
+	   last missing primitive lands, one at a time and without anyone editing
+	   this function. `missingTypes` is what the build test reports, so a module
+	   deleted tomorrow names the presets it breaks rather than silently
+	   emptying them. */
+	const missing = missingTypes(graphNodes);
+	if (missing.length) {
+		/* Keyed by the patch's own nodes rather than by a name, because `patch`
+		   is called from inside a preset literal and does not know which one it
+		   is building. The signal path is what identifies it anyway. */
+		HELD_BACK.set(
+			graphNodes
+				.map((n) => n.type)
+				.filter((t) => t !== 'in' && t !== 'out')
+				.join('>'),
+			missing
+		);
+		return {};
+	}
+	return { rackGraph: { nodes: graphNodes, cables: graphCables }, graphParams };
 }
+
+/**
+ * The types a graph names that the catalogue does not carry.
+ *
+ * ENTRY and OUT are excluded because they are the graph's two ends rather than
+ * modules -- `isFixedNode` refuses to delete either and they are in no palette,
+ * so they will never be in `MODULE_SPECS`.
+ */
+function missingTypes(nodes: { type: string }[]): string[] {
+	return [...new Set(nodes.map((n) => n.type))]
+		.filter((t) => t !== 'in' && t !== 'out' && !MODULE_IDS.has(t))
+		.sort();
+}
+
+/**
+ * Which presets are still waiting on a primitive, and on which.
+ *
+ * Filled as the presets are built, and read by the test that asserts a held-back
+ * preset is held back *for a reason that is still true*. Without it the holding
+ * is invisible: a preset that silently emits nothing looks exactly like one that
+ * has no graph to emit.
+ */
+export const HELD_BACK = new Map<string, string[]>();
 
 export const SOUND_PRESETS: SoundPreset[] = [
 	/* BASS */
@@ -675,9 +759,20 @@ export const SOUND_PRESETS: SoundPreset[] = [
 				   now -- more modules, and each one says what it does. */
 				[
 					['pf', 'tofreq'],
-					['x2', 'mul', { mulB: 2 }],
-					['x3', 'mul', { mulB: 3 }],
-					['x4', 'mul', { mulB: 4 }],
+					/* The drawbar ratios, as CONSTs into MUL's B.
+					
+					   These were written as `mul: { mulB: 2 }` -- a param MUL has
+					   never had. MUL is two inlets and no knobs, so the ratio was
+					   read as nothing and every drawbar ran at the fundamental: an
+					   organ with four copies of one pitch. A number a module does
+					   not declare is silently absent, which is why the preset test
+					   asks the catalogue rather than trusting the literal. */
+					['r2', 'const', { kind: 6, value: 2 }],
+					['r3', 'const', { kind: 6, value: 3 }],
+					['r4', 'const', { kind: 6, value: 4 }],
+					['x2', 'mul'],
+					['x3', 'mul'],
+					['x4', 'mul'],
 					['d16', 'osc', { wave: 0 }],
 					['d8', 'osc', { wave: 0 }],
 					['d5', 'osc', { wave: 0 }],
@@ -698,6 +793,9 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'pf>x2:a',
 					'pf>x3:a',
 					'pf>x4:a',
+					'r2>x2:b',
+					'r3>x3:b',
+					'r4>x4:b',
 					'x2>d8:pitch',
 					'x3>d5:pitch',
 					'x4>d4:pitch',
@@ -706,11 +804,11 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'd5>g5',
 					'd4>g4',
 					'g16>lo',
-					'g8>lo:b',
+					'g8>lo',
 					'g5>hi',
-					'g4>hi:b',
+					'g4>hi',
 					'lo>all',
-					'hi>all:b',
+					'hi>all',
 					'all>lvl',
 					'lvl>cab',
 					'cab>output'
@@ -785,12 +883,22 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampRelease: 0.18,
 			...patch(
 				[
-					['air', 'noise', { colour: 0 }],
+					/* NOISE is white and has no knobs now -- COL was a slope the old
+					   composite carried, and a coloured noise is NOISE into FILTER
+					   where the slope is a cable you can see. */
+					['air', 'noise'],
 					['ex', 'vca', { gain: 200 }],
-					['edge', 'filter', { type: 1, cutoff: 2200, q: 1.1, depth: 550 }],
+					/* DEPTH was the old composite's welded envelope amount. A filter
+					   that opens with the note is ENV into CUTOFF, which is a patch
+					   rather than a knob. */
+					['edge', 'filter', { type: 1, cutoff: 2200, q: 1.1 }],
 					['pipe', 'tube', { tubeDecay: 0.7, tubeDamp: 34, tubeOdd: 1 }],
 					['sp', 'split', {}],
-					['wid', 'delay', { dlTime: 7, dlFeedback: 0, dlTone: 9000, dlMix: 60 }],
+					/* A bare delay line: TIME in seconds, and nothing else in the
+					   box. FEEDBACK was the loop the graph refuses, TONE was a
+					   FILTER after it, and MIX was the dry path the patch already
+					   draws -- `air` reaches the output through `edge` as well. */
+					['wid', 'delay', { delayTime: 0.007 }],
 					['mg', 'merge', {}],
 					['rm', 'space', { spaceSize: 44, spaceDecay: 50, spaceMix: 24 }]
 				],
