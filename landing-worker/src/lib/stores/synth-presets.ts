@@ -178,6 +178,150 @@ function synth(extra: Partial<TrackData>): Partial<TrackData> {
  * source with no inlet gets struck.
  */
 /**
+ * The last five composites, written out as the primitives they always were.
+ *
+ * None of these is irreducible, which is why none came back to the catalogue:
+ *
+ *   EQ    three biquads in series, and FILTER carries all three of its types
+ *   DRIVE a waveshaper into a lowpass -- SHAPE and FILTER
+ *   LFO   an oscillator into a gain, crossing to control -- OSC, TO-CV, GAIN
+ *   BOW   a sawtooth and filtered noise summed, then a tone filter
+ *   REED  a waveshaper and a trim gain
+ *
+ * The arithmetic is the old engine's, kept so the instruments sound as they
+ * were voiced. Where a composite's curve has no equivalent among SHAPE's three
+ * -- REED's asymmetric clip, DRIVE's biased tanh -- the nearest shape is used
+ * and the difference is stated on the node rather than hidden: a reed that
+ * clips slightly differently is still a reed, and the alternative is a card
+ * that cannot be taken apart.
+ */
+function expandComposites(
+	nodes: [string, string, Record<string, number>?][],
+	cables: string[]
+): { nodes: [string, string, Record<string, number>?][]; cables: string[] } {
+	const COMPOSITE = new Set(['eq', 'drive', 'lfo', 'bow', 'reed']);
+	if (!nodes.some(([, type]) => COMPOSITE.has(type))) return { nodes, cables };
+	const out: [string, string, Record<string, number>?][] = [];
+	const extra: string[] = [];
+	/* What a cable leaving this id should leave from instead. The input keeps
+	   the original name so cables already written into it still land. */
+	const exit = new Map<string, string>();
+	for (const [id, type, q] of nodes) {
+		const p = q ?? {};
+		switch (type) {
+			case 'eq': {
+				// type 4 is `lowshelf`, 6 `peaking`, 5 `highshelf`.
+				out.push(
+					[id, 'filter', { type: 4, cutoff: p.lowFreq ?? 200, filterGain: p.lowGain ?? 0 }],
+					[
+						`${id}_m`,
+						'filter',
+						{ type: 6, cutoff: p.midFreq ?? 1200, q: p.midQ ?? 1, filterGain: p.midGain ?? 0 }
+					],
+					[`${id}_h`, 'filter', { type: 5, cutoff: p.highFreq ?? 5000, filterGain: p.highGain ?? 0 }]
+				);
+				extra.push(`${id}>${id}_m`, `${id}_m>${id}_h`);
+				exit.set(id, `${id}_h`);
+				break;
+			}
+			case 'drive': {
+				/* SOFT is SHAPE's tanh, which is DRIVE's curve without the bias
+				   term. The bias made the harmonics even-order -- warmth rather
+				   than fuzz -- and SHAPE has no bias, so that colour is the one
+				   thing this expansion does not reproduce. */
+				out.push(
+					[id, 'shape', { shapeKind: 0, shapeDrive: p.driveAmt ?? 25 }],
+					[`${id}_t`, 'filter', { type: 0, cutoff: p.driveTone ?? 9000, q: 0.7 }]
+				);
+				extra.push(`${id}>${id}_t`);
+				exit.set(id, `${id}_t`);
+				break;
+			}
+			case 'lfo': {
+				/* An oscillator, crossed to control and scaled. TO-CV is the door;
+				   the GAIN is AMT. There is no LFO card for exactly this reason --
+				   it would be OSC's wave list and FREQ knob written twice. */
+				out.push(
+					/* RATE is a socket on OSC, not a knob, so it arrives as a CONST
+					   rather than a param -- an oscillator holds its own frequency
+					   only when something says what it is. */
+					[`${id}_r`, 'const', { kind: 7, value: p.lfoRate ?? 5 }],
+					[id, 'osc', { wave: p.lfoWave ?? 0 }],
+					[`${id}_c`, 'tocv'],
+					/* AMT scales the value *after* the crossing, so it is arithmetic
+					   on a control rather than a gain on a signal -- MUL against a
+					   constant. A GAIN here would be an audio module fed a value,
+					   which the role lattice refuses and should. */
+					[`${id}_k`, 'const', { kind: 6, value: (p.lfoAmt ?? 50) / 100 }],
+					[`${id}_a`, 'mul']
+				);
+				extra.push(
+					`${id}_r>${id}:pitch`,
+					`${id}>${id}_c`,
+					`${id}_c>${id}_a:a`,
+					`${id}_k>${id}_a:b`
+				);
+				exit.set(id, `${id}_a`);
+				break;
+			}
+			case 'bow': {
+				/* A sawtooth dragged across the string, plus the scrape of rosin:
+				   noise through a highpass at twice the root. Summed, then a lowpass
+				   whose corner is how hard the bow bites. */
+				const noise = (p.bowNoise ?? 25) / 100;
+				out.push(
+					[id, 'osc', { wave: 2 }],
+					[`${id}_dg`, 'gain', { level: 1 - noise * 0.5 }],
+					[`${id}_n`, 'noise'],
+					[`${id}_hp`, 'filter', { type: 1, cutoff: 440, q: 0.7 }],
+					[`${id}_sg`, 'gain', { level: noise * 0.6 }],
+					[`${id}_s`, 'sum'],
+					[`${id}_t`, 'filter', { type: 0, cutoff: 400 + ((p.bowPressure ?? 50) / 100) * 7000, q: 0.7 }]
+				);
+				extra.push(
+					`${id}>${id}_dg`,
+					`${id}_dg>${id}_s`,
+					`${id}_n>${id}_hp`,
+					`${id}_hp>${id}_sg`,
+					`${id}_sg>${id}_s`,
+					`${id}_s>${id}_t`
+				);
+				exit.set(id, `${id}_t`);
+				break;
+			}
+			case 'reed': {
+				/* The reed beating against the mouthpiece: a hard clip whose
+				   threshold is the stiffness, trimmed so a stiffer reed is not
+				   louder. HARD is SHAPE's nearest curve -- the old one was
+				   asymmetric, biased open, which SHAPE cannot say. */
+				const stiff = (p.reedStiff ?? 50) / 100;
+				out.push(
+					[id, 'shape', { shapeKind: 1, shapeDrive: 40 + stiff * 55 }],
+					[`${id}_g`, 'gain', { level: 1 / (1 + stiff) }]
+				);
+				extra.push(`${id}>${id}_g`);
+				exit.set(id, `${id}_g`);
+				break;
+			}
+			default:
+				out.push([id, type, q]);
+		}
+	}
+	const moved = cables.map((c) => {
+		const [lhs, rest] = c.split('>');
+		const from = lhs.split('.')[0];
+		const swapped = exit.get(from);
+		/* The source port name is dropped, not carried across. LFO published its
+		   value from an outlet it named `cv`, and every one of these expansions
+		   ends on a module whose single outlet is `out` -- so keeping the old
+		   name would address a port that does not exist on the node that
+		   replaced it. */
+		return swapped ? `${swapped}>${rest}` : c;
+	});
+	return { nodes: out, cables: [...moved, ...extra] };
+}
+
+/**
  * MIX, written out as the two gains and the sum it always was.
  *
  * A rename to SUM was not enough: MIX carried a level per leg, and SUM is a
@@ -331,6 +475,7 @@ function patch(
 	const ROW = 124;
 	({ nodes, cables } = expandBody(nodes, cables));
 	({ nodes, cables } = expandMix(nodes, cables));
+	({ nodes, cables } = expandComposites(nodes, cables));
 	const feeders = new Map<string, string[]>();
 	for (const c of cables) {
 		const [lhs, rest] = c.split('>');
@@ -1002,7 +1147,9 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'mal>ex',
 					'ex>bar',
 					'bar>trm',
-					'fan.cv>trm:cv',
+					/* The tremolo's level. `:cv` was VCA's inlet name; GAIN's is
+					   `level`, and it is the same socket by another name. */
+					'fan.cv>trm:level',
 					'trm>mx',
 					'ex>res',
 					'res>mx:b',
@@ -1427,7 +1574,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['pn', 'pan', { panPos: 0 }],
 					['rm', 'space', { spaceSize: 52, spaceDecay: 38, spaceMix: 26 }]
 				],
-				['bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo.cv>pn:cv', 'pn>rm', 'rm>output'],
+				['bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo.cv>pn:panPos', 'pn>rm', 'rm>output'],
 				47
 			)
 		})
