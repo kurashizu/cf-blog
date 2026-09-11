@@ -1937,7 +1937,14 @@ describe('MAP: nine shapes, nine different numbers', () => {
 		expect(ease).toBeCloseTo(0.4061, 3);
 		expect(st4).toBeCloseTo(0.4813, 3);
 		expect(st8).toBeCloseTo(0.4125, 3);
-		expect(inv).toBeCloseTo(0.5632, 3);
+		/* 1 - 0.75 = 0.25, and 0.25 x the bare oscillator is 0.1203.
+		
+		   This read 0.5632 when it was first measured, which is above the bare
+		   oscillator and so above what an inversion into 0..1 can possibly
+		   produce -- the number was the MAP double-application, not the curve.
+		   INV is the shape that exposed it, because it is the one with a
+		   non-zero output at the bottom of its input range. */
+		expect(inv).toBeCloseTo(0.1203, 3);
 		/* The relations that survive a change of input, stated separately so a
 		   failure says which property broke rather than only which number moved:
 		   the exponentials bend down, the logarithms bend up, and the two
@@ -3460,7 +3467,11 @@ describe('MAP: the signal path and the value path are two different readings', (
 
 		   Through a 1 Hz LFO with GATE, the envelope swings the full 0.4813 and
 		   reaches exact zero twice in two seconds -- a gate is a gate. Through a
-		   CONST of 0.5, it is flat at 0.5736: one number, held.
+		   CONST of 0.5, it is flat at 0.4813: one number, held.
+		
+		   That constant read 0.5736 when first measured, which was the MAP
+		   double-application -- GATE of 0.5 is 1, so the level is the bare
+		   oscillator and cannot be above it.
 
 		   The flatness is the load-bearing half. A MAP that dropped its signal
 		   input reads *flat* on both rows, which is the documented failure, and
@@ -3471,7 +3482,7 @@ describe('MAP: the signal path and the value path are two different readings', (
 		expect(signal.spread, `signal: ${JSON.stringify(signal.envelope)}`).toBeGreaterThan(0.4);
 		expect(Math.min(...signal.envelope), 'a gated signal reaches zero').toBe(0);
 		expect(value.spread, `value: ${JSON.stringify(value.envelope)}`).toBeLessThan(0.15);
-		expect(value.envelope[8]).toBeCloseTo(0.5736, 2);
+		expect(value.envelope[8]).toBeCloseTo(0.4813, 2);
 	}, 60000);
 
 	it('runs the same curve per sample as it does per note', async () => {
@@ -3485,13 +3496,17 @@ describe('MAP: the signal path and the value path are two different readings', (
 		   so the two paths cannot disagree unless someone writes the shapes out a
 		   second time, which is the duplication this file records drifting on
 		   before. Measured: the signal path swings 0.4452 and the value path sits
-		   at 0.361, which is INV of 0.5 and therefore 0.5 -- the one input where
-		   the two paths must meet. */
+		   at 0.1203, which is INV of 0.5 *through the -1..1 input range*: 0.5 sits
+		   three quarters of the way up that range, so the curve is fed 0.75 and
+		   inverts it to 0.25, and a quarter of the bare oscillator is 0.1203.
+		
+		   The range is the step this comment originally skipped, and it read
+		   0.361 on the arithmetic that ignored it -- a number that only matched
+		   while MAP was applying its value twice. */
 		const signal = await mapThrough(8, true);
 		const value = await mapThrough(8, false);
 		expect(signal.spread).toBeGreaterThan(0.35);
-		// INV at 0.5 is 0.5, and the bare rig at half level reads 0.2406 x ... measured 0.361.
-		expect(value.envelope[8]).toBeCloseTo(0.361, 2);
+		expect(value.envelope[8]).toBeCloseTo(0.1203, 2);
 		expect(value.spread, 'a value is still one number').toBeLessThan(0.15);
 	}, 60000);
 });

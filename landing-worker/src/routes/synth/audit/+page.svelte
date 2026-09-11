@@ -178,7 +178,28 @@
 				   otherwise sound underneath it and swamp a quiet patch. */
 				const all = modularSynth.getTracks();
 				for (let i = 1; i < all.length; i++) modularSynth.updateTrack(i, { muted: true } as never);
-				modularSynth.updateTrack(0, { ...patch, muted: false } as never);
+				/* Clear every field a patch might carry before writing the new one.
+				
+				   `updateTrack` merges -- `{...existing, ...partial}` -- so a field
+				   the incoming patch omits keeps whatever the *last* patch set.
+				   `graphWaves` is the one that bit: a test setting a square wave
+				   left it behind, and the next test's bare oscillator rendered at
+				   0.5758 instead of 0.4813 while its own patch said nothing about
+				   waveforms.
+				
+				   That made the suite fail about one run in three, on a different
+				   cluster of tests each time, depending on the order renders
+				   happened to run in. Worse than flaky: a leaked field is a render
+				   measuring something other than the patch under test, which is
+				   exactly what this bench exists to rule out. */
+				modularSynth.updateTrack(0, {
+					graphWaves: {},
+					graphParams: {},
+					rackChain: [],
+					rackParams: {},
+					...patch,
+					muted: false
+				} as never);
 				/* Read it straight back, so a caller can tell whether the write
 				   landed rather than assuming. A graph the engine did not take is
 				   the difference between measuring a patch and measuring the last

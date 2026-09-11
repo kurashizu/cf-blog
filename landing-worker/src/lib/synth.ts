@@ -12,6 +12,7 @@ import {
 	execDelays,
 	runs,
 	isPureNode,
+	isValueNode,
 	PURE_NODES,
 	type NoteEvent
 } from './stores/node-graph';
@@ -870,6 +871,20 @@ class ModularSynth {
 			const hasValuePath =
 				!toSpec?.inputs.some((q) => q.id === c.toPort) ||
 				!!toSpec?.params.some((q) => q.key === c.toPort);
+			/* MAP is the one node that is pullable *and* buildable, and the two
+			   classifications disagree about it: `isValueNode('map')` is true, so
+			   the resolver returns its number, while `isPureNode('map')` is false,
+			   so the engine builds a WaveShaper. Asking `isPureNode` here therefore
+			   failed to skip a MAP that was carrying a value -- the value was read
+			   onto the param by `cvIn` and the WaveShaper's resting DC was
+			   connected on top of it. Measured: an INV over 0..1 into GAIN's LVL
+			   read exactly 1.0 too high at every input, which is `map(midpoint)`
+			   arriving a second time.
+			
+			   `isValueNode` is the question that was meant: can this be pulled as a
+			   number. A MAP that is itself carrying a signal still has to connect,
+			   which is what `carriesSignal` preserves -- so a waveform through MAP
+			   is shaped per sample, and a value through MAP is read once. */
 			if (hasValuePath && (isPureNode(fromType) || fromType === 'in')) continue;
 			const from = outletOf(src, c.fromPort);
 			/* An AudioParam and an AudioNode are both legitimate destinations, and
