@@ -226,7 +226,15 @@ export const PURE_NODES: Record<string, PureFn> = {
 		const x = span === 0 ? 0 : Math.max(0, Math.min(1, raw));
 		const outLo = p('outLo', 0);
 		const outHi = p('outHi', 1);
-		const out = (y: number) => outLo + Math.max(0, Math.min(1, y)) * (outHi - outLo);
+		/* No clamp on the way out.
+
+		   Every shape below already returns 0..1, so this clamp could only ever
+		   fire on a shape that deliberately leaves the unit interval -- and then
+		   it truncated the result instead of carrying it. That is the one thing a
+		   MAP must not do: the shape is a function, and where its output lands is
+		   the Y range's business alone. A shape reaching 1.2 with Y set to 0..100
+		   means 120, not 100. */
+		const out = (y: number) => outLo + y * (outHi - outLo);
 		/* Indexed by position in MAP_SHAPES, which is the list the card selects
 		   from. Kept in the same order for the same reason the waveforms are: two
 		   hand-written copies of one order disagree, and the one nobody corrects

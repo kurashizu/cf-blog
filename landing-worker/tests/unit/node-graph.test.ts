@@ -1300,3 +1300,40 @@ describe('MAP: the shape is a function, the ranges decide what it means', () => 
 		expect(at(9, pm)).toBe(1);
 	});
 });
+
+/* The Y range is the only thing that decides where a shape's output lands.
+
+   `out()` used to clamp its argument to 0..1 before scaling. Every built-in
+   shape already returns 0..1, so the clamp never fired for them -- it was dead
+   weight that would silently truncate the first shape to leave the unit
+   interval, which is precisely the presetting a MAP is supposed to not do. */
+describe('MAP: the Y range is not second-guessed', () => {
+	const GATE = MAP_SHAPES.findIndex((m) => m.id === 'gate');
+	const at = (a: number, params: Record<string, number>) =>
+		PURE_NODES.map(
+			{ get: (k: string, d: number) => (k === 'a' ? a : d) } as never,
+			(k: string, d: number) => params[k] ?? d,
+			{ velocity: 0.8, noteIndex: 48, tuning: 440 } as NoteEvent
+		);
+
+	it('carries a shape to the exact ends of Y, at any scale', () => {
+		for (const [lo, hi] of [
+			[-1, 1],
+			[200, 8000],
+			[0, 127],
+			[-50, -10]
+		]) {
+			const pm = { shape: GATE, inLo: -1, inHi: 1, outLo: lo, outHi: hi };
+			expect(at(-1, pm)).toBe(lo);
+			expect(at(1, pm)).toBe(hi);
+		}
+	});
+
+	it('handles an inverted Y range without reordering it', () => {
+		/* Y.LO above Y.HI is a legitimate way to say "backwards", and the result
+		   is simply the interpolation run the other way. */
+		const pm = { shape: GATE, inLo: -1, inHi: 1, outLo: 1, outHi: -1 };
+		expect(at(-1, pm)).toBe(1);
+		expect(at(1, pm)).toBe(-1);
+	});
+});
