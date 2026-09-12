@@ -693,11 +693,18 @@ export function resizeGroupTo(
  * for the common case where the estimate was right.
  */
 export function refitGroupTo(
-	graph: RackGraph,
+	_graph: RackGraph,
 	groupId: string,
 	ids: Set<string>,
 	size: NodeSize
 ): void {
+	/* Read fresh rather than using the caller's handle. This runs from a
+	   requestAnimationFrame set up before the drop was committed, so the graph
+	   captured in that closure is the one from *before* the prefab landed -- it
+	   has no such group in it, `find` returns undefined, and the refit silently
+	   did nothing. That is why the LFO box still cut MAP off after the fix that
+	   was supposed to stop it. */
+	const graph = graphOf(modularSynth.getTrack(get(activeTrackId)));
 	const next = refitGroup(graph, groupId, ids, size);
 	if (next === graph) return;
 	modularSynth.updateTrack(get(activeTrackId), { rackGraph: next } as Partial<TrackData>);

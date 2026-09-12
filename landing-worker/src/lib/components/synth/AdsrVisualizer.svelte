@@ -8,7 +8,17 @@
 		/* The numbers under the curve repeat whatever knobs sit beside it. On a
 		   patch-bay card the knobs are directly below, so the curve alone is the
 		   useful half. */
-		compact = false
+		compact = false,
+		/* Whether the numbers are shown. The letters under the curve are what say
+		   which segment is which -- they are the graph's axis, not a readout --
+		   so they stay even where the values are a duplicate of the faders
+		   alongside. `compact` still drops the whole strip, for the patch-bay
+		   card where the curve alone is wanted. */
+		values = true,
+		/* The pitch envelope has no release stage -- its third fader is an AMT in
+		   semitones rather than a sustain level, and there is no fourth. Labelling
+		   its curve A/D/S/R said it had four segments when it has three. */
+		stages = ['A', 'D', 'S', 'R']
 	}: {
 		attack?: number;
 		decay?: number;
@@ -16,6 +26,8 @@
 		release?: number;
 		color?: string;
 		compact?: boolean;
+		values?: boolean;
+		stages?: string[];
 	} = $props();
 
 	const width = 160;
@@ -48,8 +60,20 @@
 	let fillD = $derived(`${pathD} L ${x4},${y0} L ${x0},${y0} Z`);
 </script>
 
-<div class="w-full bg-black/70 border border-white/15 rounded-xs p-1 flex flex-col items-center">
-	<svg viewBox="0 0 {width} {height}" class="w-full h-12 overflow-visible select-none">
+<!-- `h-full` and a stretching curve, not a fixed 48px box.
+
+     The graph sat at its own `h-12` inside a `flex-1` parent, so the panel gave
+     it the whole column and it used a sliver of it -- the dead space above and
+     below the envelope was the rest. `min-h-0` lets the SVG shrink when the rack
+     is short; `preserveAspectRatio="none"` lets the curve stretch to whatever
+     height it is given, which is right for a shape whose axes are time and
+     level rather than a picture that must not distort. -->
+<div class="w-full h-full min-h-0 bg-black/70 border border-white/15 rounded-xs p-1 flex flex-col">
+	<svg
+		viewBox="0 0 {width} {height}"
+		preserveAspectRatio="none"
+		class="w-full flex-1 min-h-0 overflow-visible select-none"
+	>
 		<defs>
 			<linearGradient id="adsrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
 				<stop offset="0%" stop-color={color} stop-opacity="0.4" />
@@ -96,18 +120,27 @@
 		<div
 			class="w-full flex flex-col gap-0.5 border-t border-white/10 pt-0.5 font-mono leading-none"
 		>
-			<div class="grid grid-cols-4 text-center text-xs font-black text-white/60">
-				<span>A</span>
-				<span>D</span>
-				<span>S</span>
-				<span>R</span>
+			<div
+				class="grid text-center text-xs font-black text-white/60"
+				style="grid-template-columns: repeat({stages.length}, minmax(0, 1fr))"
+			>
+				{#each stages as st (st)}
+					<span>{st}</span>
+				{/each}
 			</div>
-			<div class="grid grid-cols-4 text-center text-[10px] font-black tracking-tight">
-				<span class="truncate" style="color: {color}">{Math.round(attack * 1000)}ms</span>
-				<span class="truncate text-white/90">{Math.round(decay * 1000)}ms</span>
-				<span class="truncate text-white/90">{Math.round(sustain * 100)}%</span>
-				<span class="truncate" style="color: {color}">{Math.round(release * 1000)}ms</span>
-			</div>
+			{#if values}
+				<div
+					class="grid text-center text-[10px] font-black tracking-tight"
+					style="grid-template-columns: repeat({stages.length}, minmax(0, 1fr))"
+				>
+					<span class="truncate" style="color: {color}">{Math.round(attack * 1000)}ms</span>
+					<span class="truncate text-white/90">{Math.round(decay * 1000)}ms</span>
+					<span class="truncate text-white/90">{Math.round(sustain * 100)}%</span>
+					{#if stages.length > 3}
+						<span class="truncate" style="color: {color}">{Math.round(release * 1000)}ms</span>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>

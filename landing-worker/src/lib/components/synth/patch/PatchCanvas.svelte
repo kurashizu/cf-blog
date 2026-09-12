@@ -1286,7 +1286,14 @@
 					   with no box there is nothing to refit. */
 					if (dropped?.groupId) {
 						const { ids, groupId } = dropped;
-						requestAnimationFrame(() => refitGroupTo(graph, groupId, ids, sizeOf));
+						/* Two frames, not one. `measured` is written by a ResizeObserver,
+						   which does not report until after the frame that laid the cards
+						   out -- so a single rAF still reads the spec estimates and the
+						   refit is a no-op. Waiting for the observer is what makes this
+						   fire against real heights. */
+						requestAnimationFrame(() =>
+							requestAnimationFrame(() => refitGroupTo(graph, groupId, ids, sizeOf))
+						);
 					}
 					dragType = null;
 					playSound('click');
@@ -1615,8 +1622,15 @@
 									style="color: {spec.color}; width: {NOTE_MAX_W}px"
 								></textarea>
 							{:else}
+								<!-- `whitespace-pre`, not `pre-wrap`. The box around this has a
+								     max-width but the text itself has no width of its own, so it
+								     shrink-wraps to its narrowest possible layout -- and with
+								     wrapping on, that is one word per line. "LFO OUT" came out
+								     as two lines, which reads as though the space had been typed
+								     as a newline. Explicit newlines still break, because `pre`
+								     honours them; what it will not do is invent one. -->
 								<div
-									class="px-1 py-0.5 font-mono text-[11px] leading-snug whitespace-pre-wrap break-words min-w-[40px]"
+									class="px-1 py-0.5 font-mono text-[11px] leading-snug whitespace-pre min-w-[40px]"
 									style="color: {spec.color}{labelOf(n.id) ? '' : '60'}"
 								>
 									{labelOf(n.id) || $t('synthPatch.notePlaceholder')}

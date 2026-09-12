@@ -102,8 +102,18 @@
 				data-tour="synth-rack"
 				class="shrink-0 xl:max-h-[260px] h-fit overflow-auto custom-scrollbar no-gutter"
 			>
+				<!-- A real minimum width, so a narrow window scrolls this row rather
+				     than crushing it.
+
+				     `minmax(0, 1fr)` lets a column shrink to nothing, and at the old
+				     1000px floor rack 4's six columns came to 250px -- not enough for
+				     an envelope graph and four faders side by side, so the faders were
+				     squeezed until the last one sat outside the panel. Racks 1-3 never
+				     had this because they are in a column that scrolls vertically.
+				     Below this floor the parent's `overflow-auto` gives a horizontal
+				     scrollbar, which is the honest answer to "too narrow". -->
 				<div
-					class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[repeat(24,minmax(0,1fr))] xl:min-w-[1000px] gap-1.5 text-xs"
+					class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[repeat(24,minmax(0,1fr))] xl:min-w-[1400px] gap-1.5 text-xs"
 				>
 					<Module4Envelopes />
 					<Module5Lfo />

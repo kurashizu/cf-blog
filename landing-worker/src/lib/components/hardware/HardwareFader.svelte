@@ -15,6 +15,18 @@
 		height = 44,
 		description,
 		reset,
+		/* Whether the fader prints its own value underneath.
+		
+		   Off where something beside it already shows the same number -- rack 4's
+		   envelope graph has an A/D/S/R axis and is the natural place to read
+		   these, so four more copies below the faders were both redundant and
+		   what pushed the column past the panel edge. */
+		showValue = true,
+		/* Let the track take whatever height the column gives it, instead of the
+		   fixed `height`. A row of 46px stubs in a tall panel leaves most of the
+		   space empty and makes the faders look like an afterthought beside a
+		   graph that does fill its box. */
+		fill = false,
 		onChange
 	}: {
 		label: string;
@@ -26,6 +38,8 @@
 		color?: string;
 		height?: number;
 		description?: string;
+		showValue?: boolean;
+		fill?: boolean;
 		/** Neutral value the control snaps back to on right-click; omit to disable. */
 		reset?: number;
 		onChange: (val: number) => void;
@@ -97,7 +111,9 @@
 <div
 	onwheel={handleWheel}
 	oncontextmenu={handleContextMenu}
-	class="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0 min-w-0 leading-none h-full justify-between py-0.5"
+	class="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0 min-w-0 leading-none h-full py-0.5 {showValue
+		? 'justify-between'
+		: 'justify-start gap-1'}"
 	title={tooltipText}
 >
 	<span
@@ -120,8 +136,10 @@
 			},
 			onDragEnd: () => (isDragging = false)
 		}}
-		style="height: {height}px"
-		class="w-4 bg-black/80 border rounded-xs relative cursor-ns-resize flex items-center justify-center p-0.5 transition-colors {isDragging
+		style={fill ? '' : `height: ${height}px`}
+		class="w-4 bg-black/80 border rounded-xs relative cursor-ns-resize flex items-center justify-center p-0.5 transition-colors {fill
+			? 'flex-1 min-h-0'
+			: ''} {isDragging
 			? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]'
 			: 'border-white/30 hover:border-white/70'}"
 	>
@@ -142,8 +160,10 @@
 		</div>
 	</div>
 
-	<span
-		class="text-[10px] sm:text-xs font-black text-center truncate max-w-[42px] leading-none"
-		style="color: {color}">{formatDisplay(value)}</span
-	>
+	{#if showValue}
+		<span
+			class="text-[10px] sm:text-xs font-black text-center truncate max-w-[42px] leading-none"
+			style="color: {color}">{formatDisplay(value)}</span
+		>
+	{/if}
 </div>

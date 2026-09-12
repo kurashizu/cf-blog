@@ -132,7 +132,7 @@ export const BUILTIN_PREFABS: Prefab[] = [
 				{ id: 'cv', type: 'tocv', x: 448, y: 58 },
 				{ id: 'map', type: 'map', x: 672, y: 0 },
 				{ id: 'outT', type: 'nodecv', x: 896, y: 89 },
-				{ id: 'nOut', type: 'note', x: 892, y: 63 }
+				{ id: 'nOut', type: 'note', x: 892, y: 55 }
 			],
 			cables: [
 				{ from: 'rate', fromPort: 'out', to: 'osc', toPort: 'pitch' },
@@ -188,8 +188,8 @@ export const BUILTIN_PREFABS: Prefab[] = [
 				{ id: 'outT', type: 'nodept', x: 720, y: 22 },
 				{ id: 'rtn', type: 'fbrtn', x: 72, y: 160 },
 				{ id: 'fb', type: 'gain', x: 296, y: 152 },
-				{ id: 'nIn', type: 'note', x: -4, y: 5 },
-				{ id: 'nOut', type: 'note', x: 716, y: -4 }
+				{ id: 'nIn', type: 'note', x: -4, y: -3 },
+				{ id: 'nOut', type: 'note', x: 716, y: -12 }
 			],
 			cables: [
 				{ from: 'inT', fromPort: 'out', to: 'sum', toPort: 'in' },
@@ -250,8 +250,8 @@ export const BUILTIN_PREFABS: Prefab[] = [
 				{ id: 'fenv', type: 'env', x: 96, y: 186 },
 				{ id: 'fmap', type: 'map', x: 320, y: 198 },
 				{ id: 'aenv', type: 'env', x: 544, y: 186 },
-				{ id: 'nIn', type: 'note', x: -4, y: 37 },
-				{ id: 'nOut', type: 'note', x: 964, y: 48 }
+				{ id: 'nIn', type: 'note', x: -4, y: 29 },
+				{ id: 'nOut', type: 'note', x: 964, y: 40 }
 			],
 			cables: [
 				{ from: 'inT', fromPort: 'out', to: 'tofreq', toPort: 'a' },
@@ -320,8 +320,8 @@ export const BUILTIN_PREFABS: Prefab[] = [
 				{ id: 'delay', type: 'delay', x: 296, y: 108 },
 				{ id: 'merge', type: 'merge', x: 520, y: 43 },
 				{ id: 'outT', type: 'nodept', x: 744, y: 75 },
-				{ id: 'nIn', type: 'note', x: -4, y: 5 },
-				{ id: 'nOut', type: 'note', x: 740, y: 49 }
+				{ id: 'nIn', type: 'note', x: -4, y: -3 },
+				{ id: 'nOut', type: 'note', x: 740, y: 41 }
 			],
 			cables: [
 				{ from: 'inT', fromPort: 'out', to: 'mono', toPort: 'in' },
@@ -369,7 +369,7 @@ export const BUILTIN_PREFABS: Prefab[] = [
 				{ id: 'lfo', type: 'osc', x: 224, y: 0 },
 				{ id: 'depth', type: 'gain', x: 448, y: 29 },
 				{ id: 'outT', type: 'nodept', x: 672, y: 61 },
-				{ id: 'nOut', type: 'note', x: 668, y: 35 }
+				{ id: 'nOut', type: 'note', x: 668, y: 27 }
 			],
 			cables: [
 				{ from: 'rate', fromPort: 'out', to: 'lfo', toPort: 'pitch' },
@@ -410,9 +410,9 @@ export const BUILTIN_PREFABS: Prefab[] = [
 				{ id: 'inT', type: 'nodept', x: 0, y: 233 },
 				{ id: 'duck', type: 'gain', x: 520, y: 222 },
 				{ id: 'outT', type: 'nodept', x: 744, y: 244 },
-				{ id: 'nKey', type: 'note', x: -4, y: 63 },
-				{ id: 'nIn', type: 'note', x: -4, y: 207 },
-				{ id: 'nOut', type: 'note', x: 740, y: 218 }
+				{ id: 'nKey', type: 'note', x: -4, y: 55 },
+				{ id: 'nIn', type: 'note', x: -4, y: 199 },
+				{ id: 'nOut', type: 'note', x: 740, y: 210 }
 			],
 			cables: [
 				{ from: 'keyT', fromPort: 'out', to: 'follow', toPort: 'in' },
@@ -480,8 +480,8 @@ export const BUILTIN_PREFABS: Prefab[] = [
 				{ id: 'fbR', type: 'gain', x: 496, y: 388 },
 				{ id: 'merge', type: 'merge', x: 944, y: 154 },
 				{ id: 'outT', type: 'nodept', x: 1168, y: 186 },
-				{ id: 'nIn', type: 'note', x: -4, y: 149 },
-				{ id: 'nOut', type: 'note', x: 1164, y: 160 }
+				{ id: 'nIn', type: 'note', x: -4, y: 141 },
+				{ id: 'nOut', type: 'note', x: 1164, y: 152 }
 			],
 			cables: [
 				{ from: 'inT', fromPort: 'out', to: 'split', toPort: 'in' },

@@ -152,20 +152,40 @@
 
 	<div class="flex gap-1.5 items-center flex-1 min-h-0 my-auto">
 		<div class="flex-1 min-w-0 flex flex-col justify-between h-full py-0.5">
-			<div class="flex-1 flex items-center justify-center">
+			<!-- `min-w-0` here as well as on the parent. A flex item will not
+			     shrink below its content's intrinsic width without it, and this one
+			     holds an SVG -- so the graph kept its full size, the row overflowed,
+			     and the A/D/S/R column was pushed off the panel with R hanging
+			     outside the border. The outer div already had it; this inner one is
+			     the flex item that actually contains the picture. -->
+			<div class="flex-1 min-w-0 flex items-center justify-center">
+				<!-- The numbers live here, under the curve, rather than under the
+				     faders.
+
+				     They were in both places, which is one too many, and the copy
+				     below the faders was what pushed the R fader past the panel edge.
+				     The graph is the better home: it already carries the A/D/S/R axis
+				     those numbers label, so each value sits under the segment of the
+				     envelope it describes. -->
 				<AdsrVisualizer
 					attack={attackVal}
 					decay={decayVal}
 					sustain={visSustain}
 					release={releaseVal}
 					color={envColor}
+					stages={activeEnvTab === 'pit' ? ['A', 'D', 'AMT'] : ['A', 'D', 'S', 'R']}
 				/>
 			</div>
 		</div>
 
-		<!-- Fixed width so the four faders never get crushed when the rack is at its narrowest -->
+		<!-- Fixed width so the four faders never get crushed when the rack is at
+		     its narrowest.
+
+		     `items-center`, not `items-stretch`: stretching let each fader size
+		     itself independently, so R floated up out of the row and broke the
+		     baseline the four labels share. -->
 		<div
-			class="w-32 shrink-0 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1 h-full py-0.5"
+			class="w-40 shrink-0 flex items-center justify-around gap-1 border-l border-white/10 pl-1.5 pr-0.5 h-full py-0.5 overflow-hidden"
 		>
 			<!-- A, D and R are times in seconds, so they say so.
 
@@ -189,7 +209,9 @@
 				unit="ms"
 				color={envColor}
 				height={46}
+				fill
 				description={attackDesc}
+				showValue={false}
 				reset={0}
 				onChange={onAttackChange}
 			/>
@@ -202,7 +224,9 @@
 				unit="ms"
 				color={envColor}
 				height={46}
+				fill
 				description={decayDesc}
+				showValue={false}
 				reset={0.01}
 				onChange={onDecayChange}
 			/>
@@ -214,7 +238,9 @@
 				step={activeEnvTab === 'pit' ? 0.1 : 0.02}
 				color={envColor}
 				height={46}
+				fill
 				description={thirdDesc}
+				showValue={false}
 				reset={activeEnvTab === 'amp' ? 1 : 0}
 				onChange={onThirdChange}
 			/>
@@ -230,7 +256,9 @@
 					unit="ms"
 					color={envColor}
 					height={46}
+				fill
 					description={releaseDesc}
+					showValue={false}
 					reset={activeEnvTab === 'amp' ? 0.02 : 0}
 					onChange={onFourthChange}
 				/>
