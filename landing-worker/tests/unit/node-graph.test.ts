@@ -1238,3 +1238,65 @@ describe('the logic chain', () => {
 		expect(Math.max(...delayed)).toBeGreaterThan(Math.max(...onBeat));
 	});
 });
+
+/*
+ * A MAP's shape and its ranges are independent, which is the whole design.
+ *
+ * The shape is a pure function on 0..1: X normalises whatever arrives into that
+ * domain, the shape bends it, and Y puts the result wherever the destination
+ * wants it. So "what does GATE output" has no answer on its own -- it outputs
+ * the ends of the Y range, whatever those happen to be.
+ *
+ * Worth pinning because the two halves are easy to conflate when reading a
+ * card: the preview draws the shape on its own axes, and the numbers beside it
+ * are the range, and neither picture shows the other's contribution.
+ */
+describe('MAP: the shape is a function, the ranges decide what it means', () => {
+	const at = (a: number, params: Record<string, number>) =>
+		PURE_NODES.map(
+			{ get: (_k: string, d: number) => (_k === 'a' ? a : d) } as never,
+			(k: string, d: number) => params[k] ?? d,
+			{ velocity: 0.8, noteIndex: 48, tuning: 440 } as NoteEvent
+		);
+
+	const GATE = MAP_SHAPES.findIndex((m) => m.id === 'gate');
+
+	it('GATE lands on the ends of whatever Y range it is given', () => {
+		/* Symmetric range: the two values are -1 and 1. */
+		const pm = { shape: GATE, inLo: -1, inHi: 1, outLo: -1, outHi: 1 };
+		expect(at(-1, pm)).toBe(-1);
+		expect(at(1, pm)).toBe(1);
+
+		/* The same shape, a hertz range: now it is 200 and 800. Nothing about
+		   GATE changed -- only where its two outputs are put. */
+		const hz = { shape: GATE, inLo: -1, inHi: 1, outLo: 200, outHi: 800 };
+		expect(at(-1, hz)).toBe(200);
+		expect(at(1, hz)).toBe(800);
+	});
+
+	it('GATE is two-valued: the midpoint is where it steps', () => {
+		/* It is a threshold rather than a line, so the endpoints agreeing with
+		   an identity map is a coincidence of the range, not the shape. */
+		const pm = { shape: GATE, inLo: -1, inHi: 1, outLo: -1, outHi: 1 };
+		expect(at(-0.3, pm)).toBe(-1);
+		expect(at(0.3, pm)).toBe(1);
+		// Exactly at the middle it has already stepped: `x < 0.5` is false at 0.5.
+		expect(at(0, pm)).toBe(1);
+	});
+
+	it('X maps the input domain, independently of the shape', () => {
+		/* The same GATE, fed a 0..127 controller instead of a bipolar LFO. The
+		   step is still at the middle of the *declared* range. */
+		const cc = { shape: GATE, inLo: 0, inHi: 127, outLo: 0, outHi: 1 };
+		expect(at(0, cc)).toBe(0);
+		expect(at(63, cc)).toBe(0);
+		expect(at(64, cc)).toBe(1);
+		expect(at(127, cc)).toBe(1);
+	});
+
+	it('input outside the X range clamps, for every shape but WRAP', () => {
+		const pm = { shape: GATE, inLo: -1, inHi: 1, outLo: -1, outHi: 1 };
+		expect(at(-9, pm)).toBe(-1);
+		expect(at(9, pm)).toBe(1);
+	});
+});
