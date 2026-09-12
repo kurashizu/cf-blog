@@ -1421,10 +1421,21 @@ class ModularSynth {
            one has to be passed per sample or a moving envelope would be read
            once and held. Both halves, decided per cable, exactly as MAP does. */
 				const g = ctx.createGain();
-				/* The signal arrives at the node's input, not at its gain. Registering
-           `a` as the AudioParam would have made the cable *scale* the terminal
-           rather than pass through it -- a signal into a unity gain's gain is a
-           multiply, and a terminal that multiplies is not a terminal. */
+				/* `a` registered as the node's *input*, which is what MAP does too.
+
+           The mod map is not only for AudioParams. `isMod` classifies a cable
+           by the kind of the port it lands on, and `a` is a mod inlet -- so a
+           signal into this terminal is a mod cable, and mod cables are
+           connected by looking the destination up in this map. Leaving it out
+           meant the lookup found nothing and the cable was silently dropped:
+           a CONST through a terminal still worked, because that resolves as a
+           value, while anything *moving* vanished.
+
+           An earlier comment here argued that registering `a` would make the
+           cable scale the terminal rather than pass through it. That is true
+           of a GainNode's `gain` param and false of its input, which is what
+           is stored here -- the same distinction MAP relies on. */
+				mod.set('a', g);
 				return { in: g, out: g, mod };
 			}
 

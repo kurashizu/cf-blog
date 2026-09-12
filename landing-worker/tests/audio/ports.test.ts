@@ -3500,3 +3500,149 @@ describe('prefabs: the LFO still modulates', () => {
 		);
 	}, 60000);
 });
+
+/*
+ * The two reroute terminals, on both of their paths.
+ *
+ * These shipped with unit tests that checked them as *data* -- that every
+ * terminal in a prefab had a cable, that every one had a note beside it -- and
+ * with one audio test that pushed a CONST through and heard it. That was the
+ * wrong half. A terminal is a no-op, so the only way it can fail is by not
+ * being one, and a constant is exactly the case that survives being read once
+ * and held. The case that does not is a *moving* signal.
+ *
+ * It failed, and a user found it before these tests did: the LFO prefab's
+ * NODE.CV silenced everything downstream of it. `isMod` classifies a cable by
+ * the kind of the port it lands on, `a` is a mod inlet, and mod cables are
+ * connected by looking their destination up in the node's mod map -- which
+ * NODE.CV never populated, so the lookup found nothing and the cable was
+ * dropped without a word.
+ *
+ * So every one of these renders the same patch twice: once with the terminal
+ * spliced in and once without. A terminal that changes the sound at all has
+ * failed, and the comparison is what says so.
+ */
+describe('NODE and NODE.CV pass what they are given', () => {
+	/* A 5 Hz LFO, which is the shape the bug was found in: OSC -> TO-CV -> MAP
+	   is a control signal that *moves*, and moving is the whole point. */
+	const lfoNodes: Node[] = [
+		{ id: 'c', type: 'const' },
+		{ id: 'o', type: 'osc' },
+		{ id: 'cv', type: 'tocv' },
+		{ id: 'm', type: 'map' }
+	];
+	const lfoCables: Cable[] = [
+		{ from: 'c', fromPort: 'out', to: 'o', toPort: 'pitch' },
+		{ from: 'o', fromPort: 'out', to: 'cv', toPort: 'in' },
+		{ from: 'cv', fromPort: 'out', to: 'm', toPort: 'a' }
+	];
+	const lfoParams = {
+		...constAt('c', 7, 5),
+		'm.inLo': -1,
+		'm.inHi': 1,
+		'm.outLo': 0,
+		'm.outHi': 1
+	};
+
+	it('NODE.CV carries a moving control signal, not just a constant', async () => {
+		const direct = await render(
+			patch(
+				[...lfoNodes, { id: 'ts', type: 'tosig' }],
+				[
+					...lfoCables,
+					{ from: 'm', fromPort: 'out', to: 'ts', toPort: 'level' },
+					{ from: 'ts', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				lfoParams
+			),
+			8
+		);
+		const viaTerm = await render(
+			patch(
+				[...lfoNodes, { id: 'nc', type: 'nodecv' }, { id: 'ts', type: 'tosig' }],
+				[
+					...lfoCables,
+					{ from: 'm', fromPort: 'out', to: 'nc', toPort: 'a' },
+					{ from: 'nc', fromPort: 'out', to: 'ts', toPort: 'level' },
+					{ from: 'ts', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				lfoParams
+			),
+			8
+		);
+		// The direct patch has to be audible, or the comparison proves nothing.
+		expect(direct.peak).toBeGreaterThan(0.1);
+		// And the terminal must not have changed it.
+		expect(viaTerm.peak).toBeGreaterThan(0.1);
+		expect(viaTerm.peak).toBeCloseTo(direct.peak, 1);
+	});
+
+	it('NODE.CV still carries a plain value', async () => {
+		/* The case that already worked. Kept because it is the other half of
+		   "dual", and a fix to the signal path must not cost the value path. */
+		const out = await render(
+			patch(
+				[{ id: 'c', type: 'const' }, { id: 'nc', type: 'nodecv' }, { id: 'ts', type: 'tosig' }],
+				[
+					{ from: 'c', fromPort: 'out', to: 'nc', toPort: 'a' },
+					{ from: 'nc', fromPort: 'out', to: 'ts', toPort: 'level' },
+					{ from: 'ts', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				constAt('c', 4, 0.5)
+			),
+			8
+		);
+		expect(out.peak).toBeGreaterThan(0.1);
+	});
+
+	it('NODE passes audio through unchanged', async () => {
+		const direct = await render(
+			patch(
+				[{ id: 'o', type: 'osc' }],
+				[{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }]
+			),
+			8
+		);
+		const viaTerm = await render(
+			patch(
+				[{ id: 'o', type: 'osc' }, { id: 'n', type: 'nodept' }],
+				[
+					{ from: 'o', fromPort: 'out', to: 'n', toPort: 'in' },
+					{ from: 'n', fromPort: 'out', to: 'output', toPort: 'in' }
+				]
+			),
+			8
+		);
+		expect(direct.peak).toBeGreaterThan(0.1);
+		expect(viaTerm.peak).toBeCloseTo(direct.peak, 1);
+	});
+
+	it('two terminals in a row are still a no-op', async () => {
+		/* A reroute is for getting a cable around a card, and going round two
+		   corners is the ordinary case. Chaining is where a per-node error
+		   compounds into an audible one. */
+		const direct = await render(
+			patch(
+				[{ id: 'o', type: 'osc' }],
+				[{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }]
+			),
+			8
+		);
+		const chained = await render(
+			patch(
+				[
+					{ id: 'o', type: 'osc' },
+					{ id: 'n1', type: 'nodept' },
+					{ id: 'n2', type: 'nodept' }
+				],
+				[
+					{ from: 'o', fromPort: 'out', to: 'n1', toPort: 'in' },
+					{ from: 'n1', fromPort: 'out', to: 'n2', toPort: 'in' },
+					{ from: 'n2', fromPort: 'out', to: 'output', toPort: 'in' }
+				]
+			),
+			8
+		);
+		expect(chained.peak).toBeCloseTo(direct.peak, 1);
+	});
+});
