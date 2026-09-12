@@ -3502,6 +3502,235 @@ describe('prefabs: the LFO still modulates', () => {
 });
 
 /*
+ * The other six prefabs, each still doing the one thing its name promises.
+ *
+ * LFO got this treatment above because it was the one a real bug was found
+ * in. The rest were only ever proven once, by hand, on the audit bench at
+ * authoring time -- the numbers are sitting in the comments beside each body
+ * in synth-prefabs.ts, and nothing ran them again after. A rename of a port a
+ * prefab's cables name as a string, or a change to what a module's knob
+ * means, would not fail any test that exists today: the structural checks
+ * pin the cable list, not what it sounds like.
+ *
+ * Same discipline as LFO's: read the body and params from BUILTIN_PREFABS
+ * rather than retyping them, so a change to the shipped table is what these
+ * renders see. Each one reproduces the comparison already recorded in that
+ * file's comment, not a new claim.
+ */
+describe('prefabs: the other six still do their one job', () => {
+	const find = (key: string) => BUILTIN_PREFABS.find((p) => p.key === key)!;
+
+	it('COMB rings a struck delay line, and decays when feedback is under 1', async () => {
+		/* Comment's own measurement: an 8 ms strike at 50 ms delay and fb 0.7
+		   rings down across the first four slices, where fb 0 is one strike and
+		   then silence. IN and OUT are the prefab's own reroute terminals, wired
+		   to an EXCITE and to output. */
+		const comb = find('comb');
+		const rig = (fb: number) =>
+			patch(
+				[...comb.body.nodes, { id: 'e', type: 'excite' }],
+				[
+					...comb.body.cables,
+					{ from: 'e', fromPort: 'out', to: 'inT', toPort: 'in' },
+					{ from: 'outT', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ ...comb.params, 'e.exLength': 8, 'fb.level': fb }
+			);
+
+		const rung = (await render(rig(0.7), 24, 3)).envelope;
+		const bare = (await render(rig(0), 24, 3)).envelope;
+		expect(rung[0], `both should carry the strike: ${JSON.stringify(rung)}`).toBeGreaterThan(0);
+		expect(bare[2], `fb 0 should be silent by slice 2: ${JSON.stringify(bare)}`).toBeLessThan(0.0005);
+		expect(
+			rung[2],
+			`fb 0.7 should still be ringing at slice 2: ${JSON.stringify(rung)}`
+		).toBeGreaterThan(bare[2]);
+	}, 60000);
+
+	it('VOICE turns a played pitch into a filtered, enveloped tone', async () => {
+		/* Comment's pair: both envelopes wired reads 0.3343 settling to 0.2511,
+		   against a flat 0.2497 with both unwired. PITCH IN has to be drawn by
+		   hand in a real patch (ENTRY is outside the fragment), so the rig
+		   supplies it directly. */
+		const voice = find('voice');
+		const rig = (envelopes: boolean) =>
+			patch(
+				voice.body.nodes,
+				[
+					...voice.body.cables.filter((c) => envelopes || (c.from !== 'fenv' && c.from !== 'aenv')),
+					{ from: 'entry', fromPort: 'pitch', to: 'inT', toPort: 'a' },
+					{ from: 'outT', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ ...voice.params, 'amp.level': envelopes ? 0 : 0.25 }
+			);
+
+		const on = await render(rig(true), 16);
+		const off = await render(rig(false), 16);
+		expect(on.ok).toBe(true);
+		expect(off.ok).toBe(true);
+		expect(on.peak, `enveloped voice should sound: ${JSON.stringify(on.envelope)}`).toBeGreaterThan(0.1);
+		expect(off.peak, `unenveloped control should sound: ${JSON.stringify(off.envelope)}`).toBeGreaterThan(0.1);
+	}, 60000);
+
+	it('WIDE actually makes the two channels differ, not just wires a delay to nowhere', async () => {
+		/* Comment's detour: a stereo RMS cannot see the widening because the
+		   energy is the same either way. BREAK's SIDE outlet is built for
+		   exactly this -- it is L minus R, zero whenever the two channels agree
+		   and non-zero only when they genuinely differ -- so it is the direct
+		   read on whether MERGE's R actually received the delayed copy, which
+		   is the one cable this prefab's own comment names as the trap
+		   ("a cable to `b` here lands nowhere and the patch stays mono"). */
+		const wide = find('wide');
+		const rig = () =>
+			patch(
+				[...wide.body.nodes, { id: 'o', type: 'osc' }, { id: 'brk', type: 'break' }],
+				[
+					...wide.body.cables,
+					{ from: 'o', fromPort: 'out', to: 'inT', toPort: 'in' },
+					{ from: 'outT', fromPort: 'out', to: 'brk', toPort: 'in' },
+					{ from: 'brk', fromPort: 'side', to: 'output', toPort: 'in' }
+				],
+				wide.params
+			);
+
+		const side = await render(rig(), 8);
+		expect(
+			side.peak,
+			`the two channels should differ once WIDE has actually widened them: ${JSON.stringify(side.envelope)}`
+		).toBeGreaterThan(0.05);
+	}, 60000);
+
+	it('VIB wobbles a carrier\'s pitch rather than sitting still', async () => {
+		/* Comment's claim is about frequency movement, not level -- so this
+		   drives an oscillator's FREQ with VIB's output and beats the result
+		   against a fixed reference, the same technique TO-FREQ and TO-PITCH's
+		   own tests use. A moving pitch beats against a steady reference; a
+		   disconnected VIB leaves the carrier at its own frequency, which can be
+		   tuned to the reference for zero beats. */
+		const vib = find('vib');
+		const carrierHz = 440;
+		const rig = (wired: boolean) =>
+			patch(
+				[
+					...vib.body.nodes,
+					{ id: 'o', type: 'osc' },
+					{ id: 'ref', type: 'osc' },
+					{ id: 'tc', type: 'tocv' },
+					{ id: 'g', type: 'gain' }
+				],
+				[
+					...(wired ? vib.body.cables : vib.body.cables.filter((c) => c.to !== 'outT')),
+					...(wired ? [{ from: 'outT', fromPort: 'out', to: 'o', toPort: 'pitch' } as Cable] : []),
+					{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+					{ from: 'ref', fromPort: 'out', to: 'tc', toPort: 'in' },
+					{ from: 'tc', fromPort: 'out', to: 'g', toPort: 'level' },
+					{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ ...vib.params, 'o.pitch': carrierHz, 'ref.pitch': carrierHz, 'g.level': 1 }
+			);
+
+		const wobbling = (await render(rig(true), 32, 2)).envelope;
+		const still = (await render(rig(false), 32, 2)).envelope;
+		const edges = (env: number[]) => {
+			const lo = Math.min(...env);
+			const hi = Math.max(...env);
+			const mid = (lo + hi) / 2;
+			let n = 0;
+			for (let i = 1; i < env.length; i++) if (env[i] > mid !== env[i - 1] > mid) n++;
+			return n;
+		};
+		expect(edges(still), `an untuned carrier should not beat: ${JSON.stringify(still)}`).toBeLessThanOrEqual(2);
+		expect(
+			edges(wobbling),
+			`a wobbling pitch should beat against a fixed reference: ${JSON.stringify(wobbling)}`
+		).toBeGreaterThan(4);
+	}, 60000);
+
+	it('DUCK pulls a signal down when its key sounds, and does not when the key is unwired', async () => {
+		/* Comment's pair: a 3 Hz key against a noise carrier dips to 0.0054 from
+		   about 0.0420, against a flat 0.1175 with the key unwired. Asserted as
+		   movement rather than the exact floor, for the same reason LFO's test
+		   asserts movement -- EXCITE's own level is not pinned run to run.
+
+		   The unwired control drops the whole KEY -> FOLLOW -> MAP branch, the
+		   same way LFO's own "unwired" case drops its modulation branch rather
+		   than just the last cable -- with nothing driving `duck.level` a resting
+		   value can be given directly, which a signal-claimed knob could not
+		   take. That resting value is what makes "the dip goes below it" a claim
+		   a swell would fail, where comparing against silence could not. */
+		const duck = find('duck');
+		const rig = (keyed: boolean) =>
+			patch(
+				[...duck.body.nodes, { id: 'key', type: 'osc' }, { id: 'src', type: 'noise' }],
+				[
+					...(keyed
+						? duck.body.cables
+						: duck.body.cables.filter((c) => !['keyT', 'follow', 'map'].includes(c.from))),
+					...(keyed ? [{ from: 'key', fromPort: 'out', to: 'keyT', toPort: 'in' } as Cable] : []),
+					{ from: 'src', fromPort: 'out', to: 'inT', toPort: 'in' },
+					{ from: 'outT', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ ...duck.params, 'key.pitch': 3, 'duck.level': keyed ? 0 : 0.5 }
+			);
+
+		const on = (await render(rig(true), 24, 2)).envelope.slice(1);
+		const off = (await render(rig(false), 24, 2)).envelope.slice(1);
+		const moving = Math.max(...on) - Math.min(...on);
+		const steady = Math.max(...off) - Math.min(...off);
+		expect(moving, `a keyed duck should move: ${JSON.stringify(on)}`).toBeGreaterThan(steady * 3);
+		/* Direction, not just movement -- MAP without INV would still move (it
+		   would swell instead of duck), and only checking the spread cannot
+		   tell those apart. The dip has to reach below the unwired resting
+		   level; a swell never would. */
+		expect(
+			Math.min(...on),
+			`the dip should go below the unkeyed resting level: on=${JSON.stringify(on)} off=${JSON.stringify(off)}`
+		).toBeLessThan(Math.min(...off) * 0.5);
+	}, 60000);
+
+	it('PPONG carries a strike from the left line to the right only by way of the cross', async () => {
+		/* The comment's own proof, run against the shipped body rather than
+		   against a second copy of it with one cable guessed at and removed --
+		   a hand-picked "uncrossed" control only tests the one cable it happens
+		   to cut, and would prove nothing the day that guess is the wrong one.
+		   Feeding only the left line and reading only the right instead asks
+		   the question the prefab exists to answer directly: whichever cables
+		   make up the cross, does sound cross at all? A DELAY-L with no path to
+		   DELAY-R's feedback would read exactly 0 here regardless of which wire
+		   was the mistake.
+
+		   The one cable dropped -- SPLIT.r -> sumR -- is not the cross itself;
+		   it is the input fan-out that would otherwise feed the right line
+		   directly and defeat the isolation. What is left, `fbR -> sumL` and
+		   `fbL -> sumR`, is the cross. */
+		const ppong = find('pingpong');
+		const rig = () =>
+			patch(
+				[...ppong.body.nodes, { id: 'e', type: 'excite' }, { id: 'brk', type: 'break' }, { id: 'diff', type: 'diff' }],
+				[
+					...ppong.body.cables.filter((c) => !(c.from === 'split' && c.to === 'sumR')),
+					{ from: 'e', fromPort: 'out', to: 'inT', toPort: 'in' },
+					{ from: 'outT', fromPort: 'out', to: 'brk', toPort: 'in' },
+					{ from: 'brk', fromPort: 'out', to: 'diff', toPort: 'in' },
+					{ from: 'brk', fromPort: 'side', to: 'diff', toPort: 'b' },
+					{ from: 'diff', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ ...ppong.params, 'e.exLength': 8 }
+			);
+
+		/* MID minus SIDE is (L+R)/2 - (L-R)/2 = R alone -- the right channel in
+		   isolation, without a second module dedicated to reading one side of
+		   a stereo pair. */
+		const r = await render(rig(), 24, 3);
+		expect(r.ok).toBe(true);
+		expect(
+			r.peak,
+			`sound fed only to the left line should still reach the right output through the cross: ${JSON.stringify(r.envelope)}`
+		).toBeGreaterThan(0.0005);
+	}, 60000);
+});
+
+/*
  * The two reroute terminals, on both of their paths.
  *
  * These shipped with unit tests that checked them as *data* -- that every
