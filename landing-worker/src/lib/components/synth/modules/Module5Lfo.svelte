@@ -23,7 +23,7 @@
 </script>
 
 <div
-	class="xl:col-span-5 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0"
+	class="xl:col-span-5 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] xl:min-h-[128px] shrink-0"
 >
 	<div
 		class="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0"

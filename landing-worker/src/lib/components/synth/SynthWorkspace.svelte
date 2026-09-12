@@ -100,7 +100,7 @@
 		{#if !$panelIsExclusive}
 			<div
 				data-tour="synth-rack"
-				class="shrink-0 xl:max-h-[260px] h-fit overflow-auto custom-scrollbar no-gutter"
+				class="shrink-0 xl:max-h-[210px] h-fit overflow-auto custom-scrollbar no-gutter"
 			>
 				<!-- A real minimum width, so a narrow window scrolls this row rather
 				     than crushing it.
