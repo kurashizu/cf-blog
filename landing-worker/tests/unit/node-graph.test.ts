@@ -1337,3 +1337,108 @@ describe('MAP: the Y range is not second-guessed', () => {
 		expect(at(1, pm)).toBe(-1);
 	});
 });
+
+/*
+ * The contract a MAP owes its ranges, stated once and checked for every shape.
+ *
+ *   - Input is clamped to X.LO..X.HI. Anything below reads as X.LO, anything
+ *     above as X.HI.
+ *   - The normalisation across that interval is linear.
+ *   - X.LO arrives at Y.LO and X.HI arrives at Y.HI.
+ *
+ * The shape decides the path between the ends and nothing else. Two shapes are
+ * deliberate exceptions and are named here rather than quietly skipped: INV
+ * exists to swap the ends, and WRAP is the one shape defined by what happens
+ * outside the range, so it is the one that must not clamp.
+ */
+describe('MAP: what every shape owes its X and Y ranges', () => {
+	const at = (a: number, P: Record<string, number>) =>
+		PURE_NODES.map(
+			{ get: (k: string, d: number) => (k === 'a' ? a : d) } as never,
+			(k: string, d: number) => (k in P ? P[k] : d),
+			{ velocity: 0.8, noteIndex: 48, tuning: 440 } as NoteEvent
+		);
+
+	/* Deliberately not 0..1 on either axis: a contract that only holds for the
+	   defaults is not a contract. */
+	const RANGE = { inLo: 2, inHi: 6, outLo: 10, outHi: 20 };
+
+	/* INV swaps the ends by definition -- that is the whole shape, and inverting
+	   by swapping Y.LO and Y.HI is the alternative a patch already has. WRAP is
+	   defined by leaving the range, so clamping it would erase it. */
+	const SWAPS_ENDS = new Set(['inv']);
+	const DOES_NOT_CLAMP = new Set(['wrap']);
+
+	for (const [i, shape] of MAP_SHAPES.entries()) {
+		const P = { shape: i, ...RANGE };
+
+		it(`${shape.label}: X.LO -> Y.LO and X.HI -> Y.HI`, () => {
+			const [wantLo, wantHi] = SWAPS_ENDS.has(shape.id) ? [20, 10] : [10, 20];
+			expect(at(2, P)).toBe(wantLo);
+			// WRAP's top end belongs to the next cycle rather than to this one.
+			if (!DOES_NOT_CLAMP.has(shape.id)) expect(at(6, P)).toBe(wantHi);
+		});
+
+		it(`${shape.label}: input outside X is clamped to its ends`, () => {
+			if (DOES_NOT_CLAMP.has(shape.id)) return;
+			const [wantLo, wantHi] = SWAPS_ENDS.has(shape.id) ? [20, 10] : [10, 20];
+			expect(at(-5, P)).toBe(wantLo);
+			expect(at(99, P)).toBe(wantHi);
+		});
+	}
+
+	it('the normalisation across X is linear', () => {
+		/* DRAW undrawn is the identity shape, so it is the one that shows the
+		   normalisation on its own with no curve on top of it. */
+		const P = { shape: MAP_SHAPES.findIndex((m) => m.id === 'draw'), ...RANGE };
+		expect([2, 3, 4, 5, 6].map((v) => at(v, P))).toEqual([10, 12.5, 15, 17.5, 20]);
+	});
+});
+
+/* GATE's threshold is the middle of the X range, not a number in the function.
+
+   It was `x < 0.5` against the normalised value. That is arithmetically the
+   same thing -- normalising is what makes it the same -- but a literal in the
+   shape reads as a preset the function is holding, and the whole point of X.LO
+   and X.HI is that the range is the patch's to decide. Derived, it visibly
+   moves when the card's fields move. */
+describe('MAP: GATE steps at the middle of whatever X says', () => {
+	const GATE = MAP_SHAPES.findIndex((m) => m.id === 'gate');
+	const at = (a: number, P: Record<string, number>) =>
+		PURE_NODES.map(
+			{ get: (k: string, d: number) => (k === 'a' ? a : d) } as never,
+			(k: string, d: number) => (k in P ? P[k] : d),
+			{ velocity: 0.8, noteIndex: 48, tuning: 440 } as NoteEvent
+		);
+
+	it('puts the step at (X.LO + X.HI) / 2 for any range', () => {
+		for (const [lo, hi] of [
+			[0, 10],
+			[200, 8000],
+			[-1, 1],
+			[0, 100],
+			/* Asymmetric, so a midpoint and a "half the span" answer differ. */
+			[10, 11]
+		]) {
+			const P = { shape: GATE, inLo: lo, inHi: hi, outLo: 0, outHi: 1 };
+			const mid = (lo + hi) / 2;
+			const eps = (hi - lo) / 1000;
+			expect(at(mid - eps, P), `${lo}..${hi} just below`).toBe(0);
+			expect(at(mid, P), `${lo}..${hi} at`).toBe(1);
+			expect(at(mid + eps, P), `${lo}..${hi} just above`).toBe(1);
+		}
+	});
+
+	it('moves the step when X moves, with Y untouched', () => {
+		const Y = { outLo: 0, outHi: 1 };
+		// 5 is above the middle of 0..8 and below the middle of 0..20.
+		expect(at(5, { shape: GATE, inLo: 0, inHi: 8, ...Y })).toBe(1);
+		expect(at(5, { shape: GATE, inLo: 0, inHi: 20, ...Y })).toBe(0);
+	});
+
+	it('a zero-width X range still reads as the low end', () => {
+		/* No midpoint to be either side of, and the rest of the node treats an
+		   unset range this way. */
+		expect(at(5, { shape: GATE, inLo: 1, inHi: 1, outLo: 10, outHi: 90 })).toBe(10);
+	});
+});

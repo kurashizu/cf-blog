@@ -288,11 +288,24 @@ export const PURE_NODES: Record<string, PureFn> = {
 				return out(((raw % 1) + 1) % 1);
 			}
 			default:
-				/* GATE: one step at the halfway point. It sits where a straight line
-				   used to, which with both ranges set was the same as no shape at
-				   all -- and unlike every curve below it, a threshold cannot be
-				   reached by bending one. */
-				return out(x < 0.5 ? 0 : 1);
+				/* GATE: one step, at the middle of the X range.
+				
+				   Written against the incoming value and `(lo + hi) / 2` rather than
+				   against the normalised `x` and a literal 0.5. The two agree
+				   arithmetically -- normalising is what makes them agree -- but only
+				   one of them says where the threshold comes from. A constant in the
+				   function reads as a preset the shape is holding; derived from the
+				   range, it is visibly the same X.LO and X.HI the card shows, and
+				   moving either moves the step.
+				
+				   The comparison happens before the clamp for the same reason: an
+				   input below X.LO is below the midpoint and an input above X.HI is
+				   above it, which is what clamping would have said anyway. */
+				/* A zero-width range has no midpoint to be on either side of, and
+				   the rest of this node reads that case as "always the low end" --
+				   so this does too, rather than stepping high on every input
+				   because `a >= lo` is trivially true when lo and hi are equal. */
+				return out(span === 0 || i.get('a', 0) < (lo + hi) / 2 ? 0 : 1);
 		}
 	}
 };
