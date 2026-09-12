@@ -814,7 +814,8 @@ class ModularSynth {
 				fbBuses,
 				new Set(
 					graph.cables.filter((c) => c.to === node.id).map((c) => c.toPort)
-				)
+				),
+				(port) => resolver.isDrivenBySignal(node.id, port)
 			);
 			if (!made) continue;
 			// Whatever this node just created starts when this node runs.
@@ -1027,7 +1028,14 @@ class ModularSynth {
        signal source, so a port fed by an oscillator looks unwired to it. OSC's
        PHS needs the difference -- it builds a delay line only when something is
        patched, and a signal is exactly the case that wants one. */
-		wiredPorts?: ReadonlySet<string>
+		wiredPorts?: ReadonlySet<string>,
+		/* Is this port fed by something that *moves*, as opposed to a number?
+    
+       `cvIn` cannot answer it: the dual nodes -- MAP, NODE.CV -- resolve to a
+       finite value even while carrying a waveform, which is exactly what makes
+       them dual. The caller holds the resolver that can walk back up the cable
+       and say which it is. */
+		drivenBySignal: (port: string) => boolean = () => false
 	): {
 		in: AudioNode | null;
 		/** A second audio inlet, for the modules that take two signals. */
@@ -2184,7 +2192,21 @@ class ModularSynth {
              A signal-carrying cable needs none of this -- it is already an
              audio node and the mod loop connects it -- and cannot reach here,
              because the resolver returns the fallback for those. */
-					const probe = cvIn(probeKey, 'cv', NaN);
+					/* Only when nothing is *moving* into the socket.
+
+					   The comment below says a signal-carrying cable cannot reach
+					   here because the resolver hands back the fallback for those.
+					   That is true of a plain audio node and false of the dual kind:
+					   `read` walks a MAP or a NODE.CV and returns the number it would
+					   resolve to, so a live signal through one arrived as a finite
+					   value *as well as* being connected by the mod loop -- and this
+					   added a DC offset of that number on top of the wave.
+
+					   Measured: a GATE mapping -1..1 onto -1..1, which is a square
+					   between the rails, reached a SCOPE oscillating between 0 and 2.
+					   The trace was the right shape and sat an entire unit too high,
+					   which reads as a signal that never goes negative. */
+					const probe = drivenBySignal('cv') ? NaN : cvIn(probeKey, 'cv', NaN);
 					if (Number.isFinite(probe)) {
 						const dc = ctx.createConstantSource();
 						dc.offset.value = probe;

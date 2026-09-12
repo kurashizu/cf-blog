@@ -3646,3 +3646,69 @@ describe('NODE and NODE.CV pass what they are given', () => {
 		expect(chained.peak).toBeCloseTo(direct.peak, 1);
 	});
 });
+
+/*
+ * A probe must not add its own DC to a signal it is watching.
+ *
+ * The probe resolved its CV inlet twice: the mod loop connected the cable as a
+ * signal, and `cvIn` *also* pulled the same cable as a number and added a
+ * ConstantSource of that value on top. For an ordinary audio node the second
+ * step is harmless -- the resolver hands back the fallback and nothing is
+ * added. For the dual kind it is not: MAP and NODE.CV resolve to a finite
+ * number even while carrying a waveform, which is exactly what makes them dual,
+ * so the value was real and the offset was applied.
+ *
+ * Measured: a GATE mapping -1..1 onto -1..1 is a square between the rails, and
+ * it reached a SCOPE oscillating between 0 and 2. The shape was right and sat
+ * one whole unit too high, which reads as a signal that never goes negative --
+ * and reads as a MAP bug, which is where several rounds of looking went.
+ *
+ * The rule this pins: placing a probe cannot change what it is measuring.
+ */
+describe('a probe observes without offsetting', () => {
+	const lfoThrough = (shape: number, outLo: number, outHi: number) =>
+		patch(
+			[
+				{ id: 'c', type: 'const' },
+				{ id: 'o', type: 'osc' },
+				{ id: 'cv', type: 'tocv' },
+				{ id: 'm', type: 'map' },
+				{ id: 'ts', type: 'tosig' }
+			],
+			[
+				{ from: 'c', fromPort: 'out', to: 'o', toPort: 'pitch' },
+				{ from: 'o', fromPort: 'out', to: 'cv', toPort: 'in' },
+				{ from: 'cv', fromPort: 'out', to: 'm', toPort: 'a' },
+				{ from: 'm', fromPort: 'out', to: 'ts', toPort: 'level' },
+				{ from: 'ts', fromPort: 'out', to: 'output', toPort: 'in' }
+			],
+			{
+				...constAt('c', 7, 5),
+				'm.shape': shape,
+				'm.inLo': -1,
+				'm.inHi': 1,
+				'm.outLo': outLo,
+				'm.outHi': outHi
+			}
+		);
+
+	it('renders the same with a scope attached as without', async () => {
+		/* The whole claim, stated as a comparison rather than as a number: a
+		   meter is not a stage in making a sound, so adding one must be
+		   inaudible. */
+		const bare = lfoThrough(0, -1, 1);
+		const withScope = lfoThrough(0, -1, 1);
+		withScope.rackGraph.nodes.push({ id: 'sc', type: 'scope' });
+		withScope.rackGraph.cables.push({
+			from: 'm',
+			fromPort: 'out',
+			to: 'sc',
+			toPort: 'cv'
+		} as Cable);
+
+		const a = await render(bare, 8);
+		const b = await render(withScope, 8);
+		expect(a.peak).toBeGreaterThan(0.1);
+		expect(b.peak).toBeCloseTo(a.peak, 2);
+	});
+});

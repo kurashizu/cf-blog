@@ -1442,3 +1442,40 @@ describe('MAP: GATE steps at the middle of whatever X says', () => {
 		expect(at(5, { shape: GATE, inLo: 1, inHi: 1, outLo: 10, outHi: 90 })).toBe(10);
 	});
 });
+
+/*
+ * X and Y are linear rescalings, and nothing else.
+ *
+ * X.LO..X.HI spreads linearly across the shape's own x axis; the shape's output
+ * spreads linearly across Y.LO..Y.HI. So changing either range can only move
+ * and stretch the picture -- it can never bend it. That is the property the
+ * ranges exist to have, and it is stronger than checking the endpoints: two
+ * endpoints agree for plenty of wrong curves.
+ *
+ * Checked as affine invariance. Run a shape over a reference pair of ranges,
+ * run it again over a shifted and scaled pair, and the second must be exactly
+ * the linear image of the first at every point. Any nonlinearity introduced by
+ * the range handling shows up here as a nonzero residual.
+ */
+describe('MAP: the ranges are affine, for every shape', () => {
+	const at = (a: number, P: Record<string, number>) =>
+		PURE_NODES.map(
+			{ get: (k: string, d: number) => (k === 'a' ? a : d) } as never,
+			(k: string, d: number) => (k in P ? P[k] : d),
+			{ velocity: 0.8, noteIndex: 48, tuning: 440 } as NoteEvent
+		);
+
+	for (const [i, shape] of MAP_SHAPES.entries()) {
+		it(`${shape.label}: a shifted, scaled range is the linear image of the plain one`, () => {
+			const A = { shape: i, inLo: 0, inHi: 1, outLo: 0, outHi: 1 };
+			/* Deliberately not a multiple of the reference on either axis, and Y
+			   straddles zero, so a sign or offset error cannot cancel out. */
+			const B = { shape: i, inLo: 10, inHi: 30, outLo: -5, outHi: 15 };
+			for (let k = 0; k <= 20; k++) {
+				const t = k / 20;
+				const ref = at(t, A);
+				expect(at(10 + t * 20, B), `${shape.label} at t=${t}`).toBeCloseTo(-5 + ref * 20, 10);
+			}
+		});
+	}
+});
