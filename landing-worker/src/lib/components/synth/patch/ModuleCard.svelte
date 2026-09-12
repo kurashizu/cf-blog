@@ -139,6 +139,11 @@
 	/* The LFO's shape, drawn over one cycle. A picture of the wave says which
 	   one is selected faster than the word does. */
 	/** The shape MAP is set to, sampled across its own range. */
+	/* The curve preview's own geometry, shared by the path and the viewBox it is
+	   drawn into so the two cannot drift apart. */
+	const VIZ_H = 28;
+	const STROKE = 1.5;
+
 	function curvePath(shape: number): string {
 		/* Swept across the range the card is set to, not across 0..1.
 
@@ -169,7 +174,21 @@
 			   Y.HI) draws upside down, which is what it does. */
 			const span = outHi - outLo;
 			const norm = span === 0 ? 0 : (y - outLo) / span;
-			pts.push(`${(t * 100).toFixed(1)},${(25 - Math.max(0, Math.min(1, norm)) * 22).toFixed(1)}`);
+			/* The full height of the box, less half a stroke at each end so the
+			   line is not clipped by its own width.
+
+			   It used to run 25 down to 3 inside a 28-tall viewBox, which left
+			   Y.LO floating three pixels off the floor and Y.HI the same distance
+			   below the ceiling. On a curve that sweeps you cannot see it; on GATE
+			   -- two values, both of them an end of the range -- the step sat in
+			   the upper half of an empty box and read as though the low half of Y
+			   were never reached. The bend was right the whole time and only the
+			   drawing of it was inset. */
+			const pad = STROKE / 2;
+			const y0 = VIZ_H - pad;
+			pts.push(
+				`${(t * 100).toFixed(1)},${(y0 - Math.max(0, Math.min(1, norm)) * (VIZ_H - STROKE)).toFixed(1)}`
+			);
 		}
 		return `M ${pts.join(' L ')}`;
 	}
@@ -267,7 +286,7 @@
 						d={previewPath(previewSamples(waveOf(p.key), 96))}
 						fill="none"
 						stroke={spec.color}
-						stroke-width="1.5"
+						stroke-width={STROKE}
 						vector-effect="non-scaling-stroke"
 					/>
 				</svg>
@@ -354,7 +373,7 @@
 		     by describing it: the card and the sound read the same function, so a
 		     curve that looks wrong is wrong. -->
 		<div class="bg-black/70 border border-white/15 rounded-xs">
-			<svg viewBox="0 0 100 28" class="w-full h-[24px]" preserveAspectRatio="none">
+			<svg viewBox="0 0 100 {VIZ_H}" class="w-full h-[24px]" preserveAspectRatio="none">
 				<path
 					d={curvePath(Math.round(val('shape', 0)))}
 					fill="none"
