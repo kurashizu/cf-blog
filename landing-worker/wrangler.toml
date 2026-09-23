@@ -7,6 +7,9 @@ main = ".svelte-kit/cloudflare/_worker.js"
 [assets]
 binding = "ASSETS"
 directory = ".svelte-kit/cloudflare"
+# Makes the adapter emit 404.html (the SPA shell, per `fallback: 'spa'` in
+# svelte.config.js); src/hooks.server.ts serves it for unmatched paths.
+not_found_handling = "404-page"
 
 # Custom domains (apex + www.apex, e.g. `krsz.in` + `www.krsz.in`) are
 # configured in the Cloudflare Dashboard — not declared here on purpose.
