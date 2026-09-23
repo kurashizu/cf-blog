@@ -421,8 +421,11 @@ const posTime = (m, idx) => {
  * standings panel already reports rank as a list, so the spiral's "further
  * round the curve" reading would just fight the panel that already says the
  * same thing in text. */
+/** Half-width of RACE's date axis: a replay reads left to right, so it is
+ *  given more width than height rather than the space box's square. */
+const RX = S * 1.5;
 const posRace = (m, idx) => new THREE.Vector3(
-  (norm(dNum(m), dLo, dHi) - 0.5) * 2 * S,
+  (norm(dNum(m), dLo, dHi) - 0.5) * 2 * RX,
   (norm(m.i, iLo, iHi) - 0.5) * 2 * S,
   (laneOf.get(m.c) / Math.max(CREATORS.length - 1, 1) - 0.5) * 2 * S
 );
@@ -2751,6 +2754,7 @@ function buildParetoViz() {
     // Without this the line reached toward release dates with no body drawn
     // for them yet, which is what read as stuck on an old shape after
     // scrubbing or switching into RACE.
+    if (raceOn) return;   // RACE draws its own record line, every frame, on its rolling axis
     const T = vis()
       .filter(([, i]) => !raceOn || raceScale[i] >= 0.999)
       .sort((a, b) => dNum(a[0]) - dNum(b[0]));
@@ -3070,6 +3074,178 @@ scene.add(streamPts);
 const raceLaneZ = (i) => (laneOf.get(MODELS[i].c) / Math.max(CREATORS.length - 1, 1) - 0.5) * 2 * S;
 const raceStart = (i) => norm(dNum(MODELS[i]), dLo, dHi);   // 0..1 across the window
 
+/* RACE draws on a chart of its own. It used to borrow the space box, whose
+ * edges carried price ticks that mean nothing on a date axis, and with the
+ * spiral's labels hidden the replay had no scale at all. Release date runs
+ * along the bottom with a gridline at each new year, intelligence up the side
+ * at the same levels the spine uses, and both are titled. Rebuilt on every
+ * start so the labels follow the current locale. */
+const RACE_Z = S + 2;   // chart plane, just in front of the nearest lane
+const raceChart = new THREE.Group();
+raceChart.visible = false;
+scene.add(raceChart);
+function buildRaceChart() {
+  raceChart.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); });
+  raceChart.clear();
+  const P = (x, y) => new THREE.Vector3(x, y, RACE_Z);
+  raceChart.add(lineSet([P(-RX, -S), P(RX, -S), P(-RX, -S), P(-RX, S)], '#ffffff', 0.4));
+  raceChart.add(lineSet([P(RX, -S), P(RX, S), P(-RX, S), P(RX, S)], '#ffffff', 0.1));
+  raceChart.add(tag(tr('lmspace.axis.releasedLabel'), P(RX + 16, -S), AX.x, 'tag tmonth raceax'));
+  raceChart.add(tag(tr('lmspace.axis.intelligence') + ' ↑', P(-RX + 22, S - 6), AX.y, 'tag tmonth raceax'));
+  // Pools the per-frame axis reuses: tick labels, gridlines, the record line.
+  raceTicksX = Array.from({ length: 16 }, () => { const t = tag('', P(0, -S - 8), AX.x, 'tag spinenum raceax'); raceChart.add(t); return t; });
+  raceTicksY = Array.from({ length: 10 }, () => { const t = tag('', P(-RX - 9, 0), AX.y, 'tag spinenum raceax'); raceChart.add(t); return t; });
+  raceGrid = new THREE.LineSegments(new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.07 }));
+  raceGrid.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(26 * 2 * 3), 3));
+  raceGrid.frustumCulled = false;
+  raceChart.add(raceGrid);
+  // Three passes of the same staircase, the outer two faint and nudged up and
+  // down, because LineBasicMaterial draws one pixel wide on most GPUs.
+  raceRecord = [0, 0.7, -0.7].map((dy, k) => {
+    const l = new THREE.Line(new THREE.BufferGeometry(),
+      new THREE.LineBasicMaterial({ color: 0x98c379, transparent: true, opacity: k ? 0.35 : 0.95 }));
+    l.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 2 * 3 + 6), 3));
+    l.position.y = dy; l.frustumCulled = false; l.renderOrder = 2;
+    raceChart.add(l);
+    return l;
+  });
+  raceRecTag = tag(tr('lmspace.race.newRecord'), P(0, 0), '#98c379', 'tag tmonth raceax');
+  raceRecTag.element.style.opacity = '0';
+  raceChart.add(raceRecTag);
+  raceRecHolder = -1; raceRecAge = 9;
+}
+
+/* ---------- the rolling time axis ---------------------------------------- *
+ * The right edge is always the date being replayed, and time before it is
+ * log-compressed: the last few weeks get as much room as the year before
+ * them, so each arrival lands in open space and the history it joins slides
+ * left and squeezes up behind it. A fixed date axis spent most of the replay
+ * on an empty chart filling in from the left. Intelligence rescales too,
+ * easing its top up as records are set rather than reserving room for scores
+ * nobody has reached yet.
+ */
+const DAY = 864e5;
+const RACE_TAU = 45 * DAY;           // the compression knee
+let raceTop = iHi;
+let raceTicksX = [], raceTicksY = [], raceGrid = null, raceRecord = [], raceRecTag = null;
+let raceRecHolder = -1, raceRecAge = 9;
+const raceOrder = MODELS.map((m, i) => i)
+  .filter((i) => Number.isFinite(dNum(MODELS[i])))
+  .sort((a, b) => dNum(MODELS[a]) - dNum(MODELS[b]));
+const raceNow = () => dLo + (dHi - dLo) * raceT;
+function raceX(t, now) {
+  const span = Math.max(now - dLo, 90 * DAY);
+  const k = Math.log1p(Math.max(now - t, 0) / RACE_TAU) / Math.log1p(span / RACE_TAU);
+  return RX - 2 * RX * Math.min(k, 1);
+}
+const raceY = (v) => (THREE.MathUtils.clamp((v - iLo) / Math.max(raceTop - iLo, 1e-6), 0, 1.04) - 0.5) * 2 * S;
+function niceStep(raw) {
+  const p = 10 ** Math.floor(Math.log10(raw)), f = raw / p;
+  return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+}
+function updateRaceAxes(now, dt) {
+  const P = (x, y) => new THREE.Vector3(x, y, RACE_Z);
+  const grid = raceGrid.geometry.attributes.position;
+  let g = 0;
+  const line = (x0, y0, x1, y1) => {
+    if (g < grid.count - 1) { grid.setXYZ(g++, x0, y0, RACE_Z); grid.setXYZ(g++, x1, y1, RACE_Z); }
+  };
+  // Month starts, newest first; January (the year) takes precedence, then any
+  // month that still has room -- the log compression decides which survive.
+  const cands = [];
+  const c = new Date(now); c.setUTCDate(1); c.setUTCHours(0, 0, 0, 0);
+  for (let n = 0; n < 60 && c.getTime() >= dLo - 31 * DAY; n++) {
+    const t = c.getTime(), x = raceX(t, now);
+    if (x > -RX && x < RX - 4) cands.push({ t, x, jan: c.getUTCMonth() === 0 });
+    c.setUTCMonth(c.getUTCMonth() - 1);
+  }
+  const placed = [];
+  const GAP = 24;
+  for (const pass of [true, false]) {
+    for (const cd of cands) {
+      if (cd.jan !== pass || placed.length >= raceTicksX.length) continue;
+      if (placed.some((p) => Math.abs(p.x - cd.x) < GAP)) continue;
+      placed.push(cd);
+    }
+  }
+  raceTicksX.forEach((tg, k) => {
+    const cd = placed[k];
+    tg.visible = !!cd;
+    if (!cd) return;
+    const d = new Date(cd.t);
+    tg.element.textContent = cd.jan ? String(d.getUTCFullYear())
+      : d.toLocaleDateString(get(locale), { month: 'short', timeZone: 'UTC' });
+    tg.position.copy(P(cd.x, -S - 8));
+    line(cd.x, -S, cd.x, S);
+  });
+  // Intelligence levels at a round step for the range currently shown.
+  const step = niceStep((raceTop - iLo) / 3);
+  let k = 0;
+  for (let v = Math.ceil(iLo / step) * step; v <= raceTop && k < raceTicksY.length; v += step, k++) {
+    const y = raceY(v);
+    raceTicksY[k].visible = true;
+    raceTicksY[k].element.textContent = String(+v.toFixed(6));
+    raceTicksY[k].position.copy(P(-RX - 9, y));
+    line(-RX, y, RX, y);
+  }
+  for (; k < raceTicksY.length; k++) raceTicksY[k].visible = false;
+  grid.needsUpdate = true;
+  raceGrid.geometry.setDrawRange(0, g);
+
+  // The record line: the Pareto frontier of release date against intelligence
+  // -- every model on it was smarter than anything released before it. Drawn
+  // as a staircase so it holds each record until the next one breaks it.
+  let best = -Infinity, holder = -1;
+  const pts = [];
+  for (const i of raceOrder) {
+    if (isOff(MODELS[i]) || raceStart(i) > raceT || MODELS[i].i == null) continue;
+    if (MODELS[i].i > best) {
+      best = MODELS[i].i;
+      const x = to[i].x, y = to[i].y;
+      if (pts.length) pts.push([x, pts[pts.length - 1][1]]);
+      pts.push([x, y]);
+      holder = i;
+    }
+  }
+  if (pts.length) pts.push([RX, pts[pts.length - 1][1]]);
+  for (const l of raceRecord) {
+    const a = l.geometry.attributes.position;
+    pts.forEach(([x, y], n) => a.setXYZ(n, x, y, RACE_Z));
+    a.needsUpdate = true;
+    l.geometry.setDrawRange(0, pts.length);
+  }
+  // A new record is called out on the body that set it, briefly.
+  if (holder !== raceRecHolder) { if (raceRecHolder !== -1) raceRecAge = 0; raceRecHolder = holder; }
+  raceRecAge += dt;
+  if (holder !== -1) {
+    // Records land on the right edge, often at the top: keep the callout inside the chart.
+    raceRecTag.position.set(Math.min(to[holder].x, RX - 18), Math.min(to[holder].y + 12, S - 4), RACE_Z);
+    const o = raceRecAge < 0.2 ? raceRecAge / 0.2 : raceRecAge < 1.6 ? 1 : Math.max(0, 1 - (raceRecAge - 1.6) / 0.4);
+    raceRecTag.element.style.opacity = String(o);
+  }
+}
+
+/** Frame the chart in whatever part of the stage the standings panel leaves
+ *  free: wide enough for the date axis beside the panel, tall enough for the
+ *  year labels under it. Re-run on resize, since the panel is a fixed pixel
+ *  width and the stage is not. */
+function frameRace() {
+  const a = stageW / stageH;
+  const panel = raceEl.offsetWidth ? (raceEl.offsetLeft + raceEl.offsetWidth + 10) / stageW : 0;
+  // hi stops short of the right edge: the top-right HUD controls and the
+  // leaders' name labels both need that strip, and the leaders sit top-right.
+  const lo = Math.min(panel + 0.03, 0.4), hi = 0.84;
+  const left = RX + 16, right = RX + 36;   // world units taken by the axis labels on either side
+  const W = Math.max((left + right) / (hi - lo), S * 2.5 * a);
+  orthoZoom = W / a;
+  sizeOrtho();
+  // x such that the chart's left labels land at `lo` across the stage
+  const cx = -left - (lo - 0.5) * W;
+  camera.position.set(cx, S * 0.06, 300);
+  yawPitch.yaw = 0; yawPitch.pitch = 0; vel.set(0, 0, 0);
+}
+
 function startRace() {
   if (missionOn) stopMission();
   // The race runs along the release-date axis, so it needs a timeline layout
@@ -3077,8 +3253,11 @@ function startRace() {
   // scrubbable replay needs a straight track to read progress along, and
   // setView('time') would leave the spiral's spine up and the box down.
   setView('time');
-  frame.visible = true;
+  frame.visible = false;
   timeSpineGroup.visible = false;
+  buildRaceChart();
+  raceChart.visible = true;
+  raceTop = iLo + 10;
   morph = 1;
   for (let i = 0; i < N; i++) { to[i].copy(posRace(MODELS[i], i)); from[i].copy(to[i]); }
   raceOn = true; raceT = 0; raceDone = false; racePick = -1; racePaused = false;
@@ -3093,14 +3272,12 @@ function startRace() {
   // perfectly vertical with no perspective to bend either. Free look and
   // WASD are also switched off for as long as raceOn holds, above.
   setProjection('ortho');
-  orthoZoom = S * 2.3;
-  sizeOrtho();
-  camera.position.set(0, 0, 300);
-  yawPitch.yaw = 0; yawPitch.pitch = 0; vel.set(0, 0, 0);
   renderRacePanel();
+  frameRace();
 }
 function stopRace() {
   raceOn = false;
+  raceChart.visible = false;
   streamPts.visible = false;
   raceBob.fill(0);
   raceScale.fill(1);
@@ -3206,11 +3383,19 @@ function updateRace(dt) {
     if (raceT >= 1) { raceT = 1; raceDone = true; }
   }
   const now = performance.now() / 1000;
+  const date = raceNow();
+  // Ease the top of the intelligence axis toward the best score shipped so far.
+  let liveMax = iLo + 10;
+  for (let i = 0; i < N; i++) if (raceStart(i) <= raceT && !isOff(MODELS[i]) && MODELS[i].i > liveMax) liveMax = MODELS[i].i;
+  raceTop += (liveMax * 1.06 - raceTop) * (1 - Math.exp(-dt * 2.5));
   let s = 0;
   for (let i = 0; i < N; i++) {
     const m = MODELS[i];
     const born = raceStart(i);
     const live = born <= raceT && !isOff(m);
+    const t = dNum(m);
+    to[i].set(Number.isFinite(t) ? raceX(t, date) : RX, raceY(m.i ?? iLo), raceLaneZ(i));
+    from[i].copy(to[i]);
 
     // An unreleased model is scaled away rather than parked under the floor:
     // sinking it merely moved the orb somewhere the camera can still fly to,
@@ -3230,9 +3415,9 @@ function updateRace(dt) {
     // time axis, spaced by its measured throughput. A fast model lays down a
     // dense, quick trail and a slow one a sparse, crawling one, so the speed
     // figure is legible as motion rather than decoration.
-    const y = (norm(m.i, iLo, iHi) - 0.5) * 2 * S + raceBob[i];
+    const y = to[i].y + raceBob[i];
     const z = raceLaneZ(i);
-    const x0 = (born - 0.5) * 2 * S;
+    const x0 = to[i].x;
     const rate = 0.10 + (Math.min(m.sp, 1200) / 1200) * 0.85;   // trail speed
     const reach = 10 + (Math.min(m.sp, 1200) / 1200) * 30;      // trail length
     for (let k = 0; k < STREAM_PER; k++, s++) {
@@ -3251,6 +3436,7 @@ function updateRace(dt) {
   streamGeo.attributes.position.needsUpdate = true;
   streamGeo.attributes.color.needsUpdate = true;
   streamGeo.attributes.aAlpha.needsUpdate = true;
+  updateRaceAxes(date, dt);
   if (Math.floor(now * 4) !== lastPanel) { lastPanel = Math.floor(now * 4); renderRacePanel(); paintRaceCtl(); }
 }
 let lastPanel = -1;
@@ -3972,6 +4158,7 @@ function applySize() {
   skyCam.aspect = stageW / stageH;
   skyCam.updateProjectionMatrix();
   sizeOrtho();
+  if (raceOn) frameRace();
   renderer.setSize(stageW, stageH);
   labelRenderer.setSize(stageW, stageH);
   // Drives the shader's pixel-size LOD, so it has to track the stage too.

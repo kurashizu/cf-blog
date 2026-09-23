@@ -478,10 +478,12 @@
 :global(.lmspace #race) { position:absolute; top:98px; left:12px; z-index:30; display:none;
     width:200px; max-height:calc(100% - 122px); overflow-y:auto; background:rgba(9,10,12,.92); border:1px solid var(--purple);
     border-radius:2px; padding:7px 8px; backdrop-filter:blur(8px); }
-:global(.lmspace #race .rhd) { display:flex; justify-content:space-between; align-items:baseline;
-    gap:6px; padding-bottom:5px; margin-bottom:4px; border-bottom:1px solid rgba(255,255,255,.12); }
-:global(.lmspace #race .q) { font-size:1rem; font-weight:900; color:var(--purple); letter-spacing:.04em; }
-:global(.lmspace #race .m) { font-size:1rem; color:rgba(255,255,255,.4); }
+:global(.lmspace #race .rhd) { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline;
+    column-gap:6px; padding-bottom:5px; margin-bottom:4px; border-bottom:1px solid rgba(255,255,255,.12); }
+/* Each half of the header stays whole: a CJK date and count broke mid-word
+   ("2026年9 / 月") in a 200px panel. Whole, the count wraps under the date. */
+:global(.lmspace #race .q) { font-size:1rem; font-weight:900; color:var(--purple); letter-spacing:.04em; white-space:nowrap; }
+:global(.lmspace #race .m) { font-size:1rem; color:rgba(255,255,255,.4); white-space:nowrap; }
 :global(.lmspace .rrow) { display:flex; align-items:center; gap:6px; font-size:0.9167rem; padding:1.5px 0;
     color:rgba(255,255,255,.62); }
 :global(.lmspace .rrow.me) { background:rgba(198,120,221,.16); outline:1px solid rgba(198,120,221,.4);
