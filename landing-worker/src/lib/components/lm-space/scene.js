@@ -2664,33 +2664,39 @@ function buildParetoViz() {
   if (view === 'space') {
     // Quadrant A: three real axes, so the frontier is a surface. The convex
     // hull of the frontier points is closed on every side, though, and a
-    // Pareto front only has one meaningful face -- the one looking toward the
-    // dominated region. Keeping every face of the hull drew the far side too
-    // and the whole thing read as a solid wedge rather than a sheet, so only
-    // triangles whose normal points away from the "better" corner (cheaper,
-    // smarter, faster) survive: those are the ones actually bounding the
-    // frontier, and dropping the rest leaves an open shell instead of a solid.
+    // Pareto front only has one meaningful side -- the one looking toward the
+    // "better" corner (cheaper, smarter, faster). Keeping every face of the
+    // hull drew the sides and the back too and the whole thing read as a solid
+    // wedge rather than a sheet, so only triangles whose normal points toward
+    // that corner survive: those are the ones actually bounding the frontier,
+    // and dropping the rest leaves an open shell instead of a solid.
     const A = vis();
     const frontA = paretoFront(A, [['p', false], ['i', true], ['sp', true]]);
     if (frontA.length >= 4) {
       try {
         const geo = new ConvexGeometry(frontA.map(([, i]) => cur[i].clone()));
         const pos = geo.attributes.position;
-        const centroid = new THREE.Vector3();
-        for (let k = 0; k < pos.count; k++) centroid.add(new THREE.Vector3().fromBufferAttribute(pos, k));
-        centroid.divideScalar(pos.count);
-        const keep = [];
         const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
-        const ab = new THREE.Vector3(), ac = new THREE.Vector3(), normal = new THREE.Vector3(), toCenter = new THREE.Vector3();
+        const ab = new THREE.Vector3(), ac = new THREE.Vector3(), normal = new THREE.Vector3();
+        // Every face of a convex hull faces away from its own centroid, so that
+        // test kept all of them and drew the closed wedge. The frontier is the
+        // part of the hull that looks toward the better corner: a face belongs
+        // to it when its outward normal points no further toward pricier (+X),
+        // dumber (-Y) or slower (-Z) on any axis. The sides and the back, which
+        // face the dominated region, are dropped.
+        const EPS = 1e-6;
+        const orthant = [], halfSpace = [];
         for (let k = 0; k < pos.count; k += 3) {
           a.fromBufferAttribute(pos, k); b.fromBufferAttribute(pos, k + 1); c.fromBufferAttribute(pos, k + 2);
-          ab.subVectors(b, a); ac.subVectors(c, a); normal.crossVectors(ab, ac);
-          toCenter.subVectors(centroid, a);
-          // A face pointing toward the hull's own centroid is an inner/back
-          // face from the frontier's point of view; only the outward ones --
-          // facing away from the bulk of the data -- are the frontier itself.
-          if (normal.dot(toCenter) < 0) keep.push(a.clone(), b.clone(), c.clone());
+          ab.subVectors(b, a); ac.subVectors(c, a); normal.crossVectors(ab, ac).normalize();
+          const tri = [a.clone(), b.clone(), c.clone()];
+          if (normal.x <= EPS && normal.y >= -EPS && normal.z >= -EPS) orthant.push(...tri);
+          if (-normal.x + normal.y + normal.z > 0) halfSpace.push(...tri);
         }
+        // A frontier squashed flat along one axis can leave no face strictly
+        // inside the orthant; fall back to the faces that at least lean toward
+        // the better corner rather than drawing nothing.
+        const keep = orthant.length ? orthant : halfSpace;
         if (keep.length) {
           // Wireframe only, no fill: a translucent mesh still read as a solid
           // from some angles even with only the outward faces kept, and the
@@ -2751,10 +2757,16 @@ function buildParetoViz() {
 $('pareto-toggle').onclick = () => {
   paretoOn = !paretoOn;
   $('pareto-toggle').classList.toggle('on', paretoOn);
-  paretoGroup.visible = paretoOn;
-  paretoBGroup.visible = paretoOn;
-  buildParetoViz();
-  updateParetoTubes();
+  // Mid-morph the bodies are between two layouts, and a frontier built now
+  // would stay on that in-between shape. Leave it hidden; runFrame builds it
+  // once they settle.
+  const settled = morph >= 1;
+  paretoGroup.visible = paretoOn && settled;
+  paretoBGroup.visible = paretoOn && settled;
+  if (settled || !paretoOn) {
+    buildParetoViz();
+    updateParetoTubes();
+  }
 };
 
 /* ---------- views ---------- */
@@ -3491,6 +3503,11 @@ function stopGravity() {
   // Fall back to the axes layout.
   for (let i = 0; i < N; i++) { from[i].copy(cur[i]); to[i].copy(view === 'space' ? posSpace(MODELS[i], i) : posTime(MODELS[i], i)); }
   morph = 0;
+  // The frontier was last built around the clusters. Hidden through the morph
+  // like setView does, so runFrame rebuilds it once the bodies are back on
+  // their axes instead of leaving it standing where the clusters were.
+  paretoGroup.visible = false;
+  paretoBGroup.visible = false;
 }
 $('g-start').onclick = () => (gravityOn ? stopGravity() : startGravity());
 
