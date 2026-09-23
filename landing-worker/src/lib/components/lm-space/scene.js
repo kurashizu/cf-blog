@@ -117,6 +117,9 @@ function dispose() {
     else o.material?.dispose?.();
   });
   atlasTex.dispose();
+  // the backdrop lives in its own scene, outside the traverse above
+  sky.geometry.dispose();
+  skyMat.dispose();
   skyTex.dispose();
   tipEl.remove();
 }
@@ -426,7 +429,6 @@ const posRace = (m, idx) => new THREE.Vector3(
 
 /* ---------- scene ---------- */
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0b0d);
 // No exponential fog: it would grey out the sky sphere along with the data.
 
 
@@ -476,6 +478,8 @@ function setProjection(mode) {
 const HOME = new THREE.Vector3(-25, 48, 190);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+// Two passes per frame (backdrop, then data), so clearing is done by hand.
+renderer.autoClear = false;
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(stageW, stageH);
 $('app').appendChild(renderer.domElement);
@@ -511,8 +515,16 @@ const skyMat = new THREE.MeshBasicMaterial({
 });
 const sky = new THREE.Mesh(new THREE.SphereGeometry(1400, 48, 32), skyMat);
 sky.rotation.y = 0.6;
-sky.renderOrder = -1;
-scene.add(sky);
+/* The backdrop is drawn in a pass of its own, always through a perspective
+ * camera that looks the same way as the live one. Under the orthographic
+ * camera the sphere filled the frame with whatever small patch of it the
+ * frustum's width covered, so the panorama came out magnified and blurred --
+ * worst in RACE, which is orthographic throughout. A backdrop has no data
+ * position to preserve, so it keeps the perspective framing in every mode. */
+const skyScene = new THREE.Scene();
+skyScene.background = new THREE.Color(0x0a0b0d);
+skyScene.add(sky);
+const skyCam = new THREE.PerspectiveCamera(62, stageW / stageH, 1, 3000);
 
 
 
@@ -3957,6 +3969,8 @@ function applySize() {
   if (!measureStage()) return;
   persp.aspect = stageW / stageH;
   persp.updateProjectionMatrix();
+  skyCam.aspect = stageW / stageH;
+  skyCam.updateProjectionMatrix();
   sizeOrtho();
   renderer.setSize(stageW, stageH);
   labelRenderer.setSize(stageW, stageH);
@@ -4029,20 +4043,7 @@ function runFrame(dt) {
   // glow breathes on a slower cycle still, so the nebulae seem to be lit rather
   // than painted.
   updateDust(driftClock);
-  sky.position.copy(camera.position);
-  // Under orthographic projection there is no perspective divide, so scaling
-  // the sphere changes nothing on screen -- the frustum simply maps a narrower
-  // slice of the panorama across the viewport and the texture looks magnified.
-  // Repeating the map instead puts the same amount of sky back in frame.
-  const rep = projMode === 'ortho'
-    ? THREE.MathUtils.clamp(orthoZoom / 190, 1, 6)
-    : 1;
-  if (Math.abs(skyTex.repeat.x - rep) > 0.01) {
-    // Horizontally only: the vertical axis runs pole to pole, and repeating it
-    // would stack a second sky on top of the first.
-    skyTex.repeat.set(rep, 1);
-    skyTex.needsUpdate = true;
-  }
+  skyCam.quaternion.copy(camera.quaternion);
   sky.rotation.y += dt * 0.0132;
   sky.rotation.z = 0.16 + Math.sin(driftClock * 0.021) * 0.05;
   const breathe = 0.5 + 0.5 * Math.sin(driftClock * 0.15);
@@ -4104,6 +4105,9 @@ function runFrame(dt) {
   declutterLabels();
   if (card.style.display === 'block') placeCard();
 
+  renderer.clear();
+  renderer.render(skyScene, skyCam);
+  renderer.clearDepth();
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
 }
