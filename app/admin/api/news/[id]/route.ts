@@ -19,6 +19,7 @@ import {
     updateNewsSummary,
     type RequeueMode,
 } from "@/lib/news";
+import { bumpPageCacheVersion } from "@/lib/page-cache-version";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,7 @@ export async function PATCH(
 
         const item = await updateNewsSummary(id, body.summary);
         if (!item) return NextResponse.json(NOT_FOUND, { status: 404 });
+        await bumpPageCacheVersion();
         return NextResponse.json({ item });
     } catch (e) {
         console.error("Admin news PATCH error:", e);
@@ -132,6 +134,7 @@ export async function DELETE(
 
         const deleted = await deleteNewsItem(id);
         if (!deleted) return NextResponse.json(NOT_FOUND, { status: 404 });
+        await bumpPageCacheVersion();
         return NextResponse.json({ success: true, id });
     } catch (e) {
         console.error("Admin news DELETE error:", e);

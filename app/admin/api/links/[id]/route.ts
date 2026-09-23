@@ -5,6 +5,7 @@ import {
     parseAboutLinkInput,
     type AboutLinkInput,
 } from "@/lib/about-links";
+import { bumpPageCacheVersion } from "@/lib/page-cache-version";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,7 @@ export async function PUT(
                           { status: 404 },
                       );
             }
+            await bumpPageCacheVersion();
             const links = await repo.getAllForAdmin();
             return NextResponse.json({ links });
         }
@@ -88,6 +90,7 @@ export async function PUT(
                 { status: 404 },
             );
         }
+        await bumpPageCacheVersion();
 
         return NextResponse.json({ link });
     } catch (error) {
@@ -121,6 +124,7 @@ export async function DELETE(
                 { status: 404 },
             );
         }
+        await bumpPageCacheVersion();
 
         return NextResponse.json({ success: true });
     } catch (error) {
