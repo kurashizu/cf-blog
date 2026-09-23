@@ -177,6 +177,18 @@ const [sLo, sHi] = robustExtent((m) => (m.sp == null ? NaN : lg(m.sp)));
    its top 2% is the frontier -- clamped, the dozen best models all drew at the
    same height as the 98th-percentile one. */
 const [iLo, iHi] = ext((m) => (m.i == null ? NaN : m.i));
+/* The labelled levels on the intelligence rule: a round step sized to the
+   data's own span, about three per axis, so the scale follows the index as
+   scores rise instead of stopping at whatever ceiling was current. */
+const I_LEVELS = (() => {
+  const raw = (iHi - iLo) / 3;
+  const p = 10 ** Math.floor(Math.log10(raw));
+  const f = raw / p;
+  const step = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+  const out = [];
+  for (let v = Math.ceil(iLo / step) * step; v <= iHi; v += step) out.push(+v.toFixed(6));
+  return out;
+})();
 const dNum = (m) => (m.d ? Date.parse(m.d) : NaN);
 const [dLo, dHi] = robustExtent(dNum);
 
@@ -879,10 +891,8 @@ scene.add(spineGroup);
 
   // Level rings: a hoop at each labelled score, so a height can be read off
   // anywhere in the scene, including inside an annexe.
-  for (const v of [10, 20, 30, 40, 50, 60]) {
-    if (v < iLo || v > iHi) continue;
+  for (const v of I_LEVELS) {
     const y = (norm(v, iLo, iHi) - 0.5) * 2 * S;
-    const major = v % 20 === 0;
     // The rule stands at the origin, but its level marks have to reach every
     // quadrant, so they are drawn as a rectangle spanning the whole occupied
     // region rather than as a circle around the shaft.
@@ -899,15 +909,13 @@ scene.add(spineGroup);
     };
     dash(x0, z0, x1, z0); dash(x1, z0, x1, z1);
     dash(x1, z1, x0, z1); dash(x0, z1, x0, z0);
-    // Only the major levels get a ring, and faintly: a dashed rectangle at every
-    // step crossed through the clusters and read as noise.
-    if (!major) continue;
+    // Faint on purpose: a brighter or denser set of rectangles crossed through
+    // the clusters and read as noise.
     const hoop = lineSet(pts, AX.y, 0.10);
     spineGroup.add(hoop);
     // The spine now carries the only intelligence scale, so its numbers are
     // styled as a real rule rather than as faint annotations.
-    const t = tag(String(v), new THREE.Vector3(cx, y, cz),
-                  major ? 'rgba(86,182,194,1)' : 'rgba(86,182,194,.7)', 'tag spinenum');
+    const t = tag(String(v), new THREE.Vector3(cx, y, cz), 'rgba(86,182,194,1)', 'tag spinenum');
     spineGroup.add(t);
   }
 
@@ -990,10 +998,8 @@ scene.add(timeSpineGroup);
   // of the spiral, so a height can still be read off out where the latest
   // models sit and not only near the centre.
   const ringR = SPIRAL_R + 14;
-  for (const v of [10, 20, 30, 40, 50, 60]) {
-    if (v < iLo || v > iHi) continue;
+  for (const v of I_LEVELS) {
     const y = (norm(v, iLo, iHi) - 0.5) * 2 * S;
-    const major = v % 20 === 0;
     const pts = [];
     const SEGS = 96;
     for (let k = 0; k < SEGS; k += 2) {
@@ -1001,10 +1007,8 @@ scene.add(timeSpineGroup);
       pts.push(new THREE.Vector3(Math.cos(a0) * ringR, y, Math.sin(a0) * ringR));
       pts.push(new THREE.Vector3(Math.cos(a1) * ringR, y, Math.sin(a1) * ringR));
     }
-    if (!major) continue;
     timeSpineGroup.add(lineSet(pts, AX.y, 0.10));
-    timeSpineGroup.add(tag(String(v), new THREE.Vector3(cx, y, cz),
-                       major ? 'rgba(86,182,194,1)' : 'rgba(86,182,194,.7)', 'tag spinenum'));
+    timeSpineGroup.add(tag(String(v), new THREE.Vector3(cx, y, cz), 'rgba(86,182,194,1)', 'tag spinenum'));
   }
 
   timeSpineGroup.add(tag(tr('lmspace.axis.intelligence'), new THREE.Vector3(cx, S + 12, cz), 'rgba(86,182,194,.95)',
