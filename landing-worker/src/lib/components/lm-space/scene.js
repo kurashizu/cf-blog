@@ -3978,33 +3978,10 @@ let fpsFrames = 0, fpsAccum = 0;
 const clock = new THREE.Clock();
 let rafId = 0;
 let running = true;
-/* Recording rig, gated behind a URL flag so it never ships to a real visitor.
-   A real clock ties frame content to wall-clock render speed, which is
-   unusable for a scripted flythrough: a dropped frame under a screenshot
-   capture would skip motion rather than just take longer. Freezing the clock
-   and stepping it by a fixed amount per capture makes the output identical
-   however slow the machine taking the screenshot actually is.
-   frameLoop stays requestAnimationFrame's own callback, taking the rAF
-   timestamp it's always taken and ignoring it exactly as before; the forced
-   step is a second, separate entry point, never the same function called two
-   ways, so a real frame can never be mistaken for a scripted one. */
-let frozen = false;
-const director = /[?&]director=1\b/.test(location.search)
-  ? {
-      freeze() { frozen = true; },
-      step(dt) { runFrame(dt ?? 1 / 60); },
-      camera,
-      yawPitch,
-      vel,
-      setMode(id) { const el = $(id); if (el) el.click(); }
-    }
-  : null;
-if (director) window.__lmDirector = director;
-
 function frameLoop() {
   if (!running) return;
-  if (!frozen) rafId = requestAnimationFrame(frameLoop);
-  if (!frozen) runFrame(Math.min(clock.getDelta(), 0.05));
+  rafId = requestAnimationFrame(frameLoop);
+  runFrame(Math.min(clock.getDelta(), 0.05));
 }
 
 function runFrame(dt) {
