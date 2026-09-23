@@ -173,7 +173,10 @@ function robustExtent(fn, loQ = 0.02, hiQ = 0.98) {
 }
 const [pLo, pHi] = robustExtent((m) => (m.p == null ? NaN : lg(m.p)));
 const [sLo, sHi] = robustExtent((m) => (m.sp == null ? NaN : lg(m.sp)));
-const [iLo, iHi] = robustExtent((m) => (m.i == null ? NaN : m.i));
+/* Intelligence is exempt: it is a bounded linear score with no outliers, and
+   its top 2% is the frontier -- clamped, the dozen best models all drew at the
+   same height as the 98th-percentile one. */
+const [iLo, iHi] = ext((m) => (m.i == null ? NaN : m.i));
 const dNum = (m) => (m.d ? Date.parse(m.d) : NaN);
 const [dLo, dHi] = robustExtent(dNum);
 
