@@ -22,6 +22,8 @@ import {
 	STRINGS_PROCESSOR,
 	MODES_PARAMS,
 	MODES_PROCESSOR,
+	SPACE_PARAMS,
+	SPACE_PROCESSOR,
 	type MapOptions
 } from './live-dsp-params';
 
@@ -555,3 +557,146 @@ class ModesProcessor extends StoppableProcessor {
 }
 
 registerProcessor(MODES_PROCESSOR, ModesProcessor);
+
+/* ── SPACE ──────────────────────────────────────────────────────────────── */
+
+/** An allpass: smears a transient into a cluster without colouring it. */
+class Allpass {
+	private buf: Float32Array;
+	private pos = 0;
+	constructor(
+		samples: number,
+		private g: number
+	) {
+		this.buf = new Float32Array(Math.max(1, samples));
+	}
+	step(x: number): number {
+		const d = this.buf[this.pos];
+		const v = x + this.g * d;
+		this.buf[this.pos] = v;
+		this.pos = (this.pos + 1) % this.buf.length;
+		return d - this.g * v;
+	}
+}
+
+/* Delay-line lengths in seconds at SIZE's middle, mutually prime in samples
+   near enough that their echoes never line up into a pitch. */
+const FDN_BASE = [0.0297, 0.0371, 0.0411, 0.0437, 0.0533, 0.0599, 0.0677, 0.0793];
+const FDN_N = FDN_BASE.length;
+const FDN_MAX_SCALE = 2.5;
+/* Wet level, set against the convolver this replaced so SPACE at the same
+   settings is about as loud as it was. The convolver's energy grew with the
+   length of its room, so the network's output is scaled by sqrt(RT60) too:
+   measured against it at four settings, a constant gain put the shortest room
+   6 dB over and the longest 5 dB under. */
+const SPACE_GAIN = 0.09;
+
+/**
+ * A room as a feedback delay network: eight delay lines whose outputs are
+ * mixed by a Householder matrix and fed back, each through the gain that
+ * makes it fall 60 dB in the room's decay time.
+ *
+ * SPACE used to convolve with an impulse of noise generated when the note was
+ * built: SIZE was its length and DECAY the exponent of its envelope, so both
+ * were read once. Here SIZE scales the delay lines and sets the decay time,
+ * DECAY shapes it, and both are read every render block.
+ *
+ * The decay time is set so the tail stops being heard where the old one did.
+ * The old impulse's envelope was (1 - t/T)^k, with T = SIZE's seconds and k
+ * from DECAY: polynomial, so at a long DECAY it held its level almost to T and
+ * then fell away. A network decays exponentially, so no one decay time
+ * matches every point; this matches the point 40 dB down -- where a tail
+ * drops out of a mix, and where the audio tests read "silent" -- which the
+ * old envelope crossed at T * (1 - 0.01^(1/k)), and an exponential crosses at
+ * two thirds of its RT60. Matching -60 dB instead ended every long room
+ * seconds early, because the polynomial is still loud when the exponential
+ * is not.
+ *
+ * The line lengths glide toward their targets (read with interpolation), so
+ * turning SIZE bends the room instead of clicking.
+ */
+class SpaceProcessor extends StoppableProcessor {
+	static get parameterDescriptors() {
+		return SPACE_PARAMS;
+	}
+	private lines: Float32Array[];
+	private writePos = 0;
+	private delay = new Float64Array(FDN_N);
+	private target = new Float64Array(FDN_N);
+	private gain = new Float64Array(FDN_N);
+	private diffuse = [
+		new Allpass(Math.round(0.0047 * sampleRate), 0.6),
+		new Allpass(Math.round(0.0017 * sampleRate), 0.6)
+	];
+	private started = false;
+	private taps = new Float64Array(FDN_N);
+	private outGain = SPACE_GAIN;
+	constructor(options?: unknown) {
+		super(options);
+		const len = Math.ceil(Math.max(...FDN_BASE) * FDN_MAX_SCALE * sampleRate) + 4;
+		this.lines = FDN_BASE.map(() => new Float32Array(len));
+	}
+	private plan(size: number, decay: number): void {
+		const seconds = Math.min(4, Math.max(0.05, (size / 100) * 3));
+		const k = 2 * Math.max(0.1, (1 - decay / 100) * 3) + 1;
+		const rt60 = Math.max(0.05, 1.5 * seconds * (1 - Math.pow(0.01, 1 / k)));
+		const scale = Math.min(FDN_MAX_SCALE, Math.max(0.25, seconds / 1.2));
+		this.outGain = SPACE_GAIN * Math.sqrt(rt60 / 1.2);
+		for (let i = 0; i < FDN_N; i++) {
+			const d = FDN_BASE[i] * scale;
+			this.target[i] = d * sampleRate;
+			this.gain[i] = Math.pow(10, (-3 * d) / rt60);
+		}
+		if (!this.started) {
+			this.delay.set(this.target);
+			this.started = true;
+		}
+	}
+	private read(line: Float32Array, samples: number): number {
+		const len = line.length;
+		let r = this.writePos - samples;
+		while (r < 0) r += len;
+		const i0 = Math.floor(r);
+		const frac = r - i0;
+		const a = line[i0 % len];
+		const b = line[(i0 + 1) % len];
+		return a + (b - a) * frac;
+	}
+	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const outL = outputs[0]?.[0];
+		const outR = outputs[0]?.[1] ?? outL;
+		if (!outL || !outR) return !this.finished();
+		const inL = inputs[0]?.[0];
+		const inR = inputs[0]?.[1] ?? inL;
+		const dt = 1 / sampleRate;
+		this.plan(at(p.size, 0), at(p.decay, 0));
+		const y = this.taps;
+		const len = this.lines[0].length;
+		for (let i = 0; i < outL.length; i++) {
+			if (currentTime + i * dt >= this.stopAt) {
+				outL[i] = 0;
+				outR[i] = 0;
+				continue;
+			}
+			const x = inL ? 0.5 * (inL[i] + (inR ? inR[i] : inL[i])) : 0;
+			const fed = this.diffuse[1].step(this.diffuse[0].step(x));
+			let sum = 0;
+			for (let n = 0; n < FDN_N; n++) {
+				this.delay[n] += (this.target[n] - this.delay[n]) * 0.0005;
+				y[n] = this.read(this.lines[n], this.delay[n]);
+				sum += y[n];
+			}
+			const house = (2 / FDN_N) * sum;
+			for (let n = 0; n < FDN_N; n++) {
+				const sign = n & 1 ? -1 : 1;
+				this.lines[n][this.writePos] = sign * fed + this.gain[n] * (y[n] - house);
+			}
+			this.writePos = (this.writePos + 1) % len;
+			outL[i] = (y[0] - y[2] + y[4] - y[6]) * this.outGain;
+			outR[i] = (y[1] - y[3] + y[5] - y[7]) * this.outGain;
+		}
+		return !this.finished();
+	}
+}
+
+registerProcessor(SPACE_PROCESSOR, SpaceProcessor);

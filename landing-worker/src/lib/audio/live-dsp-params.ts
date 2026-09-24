@@ -111,7 +111,16 @@ export const MODES_PARAMS: LiveParamDescriptor[] = [
 	a('gate', 0)
 ];
 
+export const SPACE_PROCESSOR = 'krsz-space';
+
+/**
+ * SPACE: SIZE and DECAY as the card's 0..100. The processor puts out the wet
+ * signal only, in stereo; the dry/wet crossfade is native, in front of it.
+ */
+export const SPACE_PARAMS: LiveParamDescriptor[] = [a('size', 40), a('decay', 50)];
+
 export const LIVE_PARAMS: Record<string, LiveParamDescriptor[]> = {
+	[SPACE_PROCESSOR]: SPACE_PARAMS,
 	[ENV_PROCESSOR]: ENV_PARAMS,
 	[MAP_PROCESSOR]: MAP_PARAMS,
 	[SHAPE_PROCESSOR]: SHAPE_PARAMS,

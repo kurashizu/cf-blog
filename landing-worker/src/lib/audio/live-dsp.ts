@@ -53,10 +53,18 @@ export interface LiveDsp {
 
 let warned = false;
 
+/**
+ * `tailSeconds` is how long the processor may keep sounding after the voice
+ * says stop. A native effect -- a convolver, a delay line -- has no `stop`,
+ * so a room kept ringing after the note that fed it was reaped; a processor
+ * that obeyed `stop` literally would cut its own reverb off at the voice's
+ * end. Such a processor is stopped `tailSeconds` later instead.
+ */
 export function createLiveDsp(
 	ctx: BaseAudioContext,
 	name: string,
-	options: AudioWorkletNodeOptions = {}
+	options: AudioWorkletNodeOptions = {},
+	tailSeconds = 0
 ): LiveDsp | null {
 	const factory = ctx as unknown as Partial<WorkletFactory>;
 	let node: AudioWorkletNode;
@@ -83,7 +91,7 @@ export function createLiveDsp(
 	const source = {
 		start() {},
 		stop(when?: number) {
-			const at = when ?? ctx.currentTime;
+			const at = (when ?? ctx.currentTime) + tailSeconds;
 			if (at >= stopped) return;
 			stopped = at;
 			node.port.postMessage({ stop: at });

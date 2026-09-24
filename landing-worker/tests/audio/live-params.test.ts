@@ -295,3 +295,49 @@ describe("EXCITE's LEN takes a signal", () => {
 		expect(Math.abs(signal.envelope[0] - typed.envelope[0])).toBeLessThan(0.2 * typed.envelope[0]);
 	});
 });
+
+describe("SPACE's SIZE takes a signal", () => {
+	it('a signal of 100 rings as long as typing 100, not as a size-0 room', async () => {
+		/* SIZE was the length of an impulse generated at the note, so a moving
+		   source read as 0 and made the smallest room there is. It is a live
+		   parameter of the network now. Read as where the tail falls silent. */
+		const room = (via: 'typed' | 'signal') => ({
+			advanced: true,
+			rackGraph: {
+				nodes: [
+					{ id: 'entry', type: 'in' },
+					{ id: 'output', type: 'out' },
+					{ id: 'ex', type: 'excite' },
+					{ id: 'sp', type: 'space' },
+					{ id: 'cv', type: 'const' },
+					{ id: 'ts', type: 'tosig' }
+				],
+				cables: [
+					wire('entry', 'then', 'output', 'exec'),
+					wire('ex', 'out', 'sp', 'in'),
+					wire('sp', 'out', 'output', 'in'),
+					...(via === 'signal'
+						? [wire('cv', 'out', 'ts', 'level'), wire('ts', 'out', 'sp', 'spaceSize')]
+						: [])
+				]
+			},
+			graphParams: {
+				'cv.kind': 6, // F32
+				'cv.value': 100,
+				'sp.spaceDecay': 50,
+				'sp.spaceMix': 100,
+				...(via === 'typed' ? { 'sp.spaceSize': 100 } : {})
+			}
+		});
+		const lastHeard = (e: Envelope) =>
+			e.envelope
+				.map((v, i) => (v > 0 ? i : -1))
+				.filter((i) => i >= 0)
+				.pop() ?? -1;
+		const typed = await render(room('typed'));
+		const signal = await render(room('signal'));
+		expect(typed.ok && signal.ok).toBe(true);
+		expect(lastHeard(typed)).toBeGreaterThan(10);
+		expect(Math.abs(lastHeard(signal) - lastHeard(typed))).toBeLessThanOrEqual(1);
+	});
+});

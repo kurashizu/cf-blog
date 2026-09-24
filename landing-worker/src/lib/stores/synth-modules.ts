@@ -1320,8 +1320,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'spaceSize', label: 'SIZE', min: 1, max: 100, step: 1, def: 40, unit: '%', field: true, fixed: true },
-			{ key: 'spaceDecay', label: 'DCAY', min: 1, max: 100, step: 1, def: 50, unit: '%', field: true, fixed: true },
+			{ key: 'spaceSize', label: 'SIZE', min: 1, max: 100, step: 1, def: 40, unit: '%', field: true },
+			{ key: 'spaceDecay', label: 'DCAY', min: 1, max: 100, step: 1, def: 50, unit: '%', field: true },
 			/* Undeclared for the same reason RING's DPTH was, and with the same
 			   consequence: `knobMix(wet, dry, 'spaceMix', 30)` read it, the card
 			   never showed it, and a cable meant for it was sorted as audio and

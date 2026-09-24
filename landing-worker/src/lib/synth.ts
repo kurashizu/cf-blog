@@ -34,7 +34,8 @@ import {
 	MAP_PROCESSOR,
 	SHAPE_PROCESSOR,
 	STRINGS_PROCESSOR,
-	MODES_PROCESSOR
+	MODES_PROCESSOR,
+	SPACE_PROCESSOR
 } from './audio/live-dsp-params';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
@@ -2426,41 +2427,46 @@ class ModularSynth {
 			case 'space': {
 				/* A room. Every acoustic instrument is heard in one, and a bare
            resonator sounds like a recording made inside a box of cotton wool.
-           A short generated impulse rather than a file: the size is a knob, and
+           Synthesised rather than a recorded impulse: the size is a knob, and
            a patch has to stay self-contained. */
 				const input = ctx.createGain();
 				const out = ctx.createGain();
-				const seconds = Math.min(4, Math.max(0.05, (p('spaceSize', 40) / 100) * 3));
-				/* DECAY runs the way its label reads: turn it up and the tail lasts
-           longer. It is the exponent of the impulse envelope, so a *bigger*
-           number decays faster -- the knob was wired straight to it and ran
-           backwards, and the only thing setting the actual tail length was
-           SIZE. Invert it, and floor the exponent so the top of the knob is a
-           slow room rather than an undefined one.
+				/* A feedback delay network in the live-DSP worklet (see
+           live-dsp.worklet.ts), with SIZE and DECAY as parameters it reads
+           every render block.
 
-           50, which is what the card prints. The fallback said 60, so an
-           untouched SPACE decayed faster than its own DECAY field claimed, and
-           typing 50 -- the number already on screen -- lengthened the tail. */
-				const decay = Math.max(0.1, (1 - p('spaceDecay', 50) / 100) * 3);
-				const rate = ctx.sampleRate;
-				const len = Math.max(1, Math.floor(seconds * rate));
-				const buf = ctx.createBuffer(2, len, rate);
-				for (let ch = 0; ch < 2; ch++) {
-					const d = buf.getChannelData(ch);
-					for (let i = 0; i < len; i++) {
-						// Noise under an exponential envelope is the cheapest honest room.
-						d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay * 2 + 1);
-					}
-				}
-				const cv = ctx.createConvolver();
-				cv.buffer = buf;
+           It used to convolve with an impulse of noise generated here, when
+           the note was built -- SIZE its length, DECAY the exponent of its
+           envelope -- so both were read once and a cable into either did
+           nothing it could be heard doing. DECAY still means what it did: a
+           bigger number rings longer, and the tail ends where the old
+           impulse's did. MIX stays a native crossfade in front of it. */
+				/* Stopped four seconds after the voice -- SIZE's longest room --
+           so the tail rings out as the convolver's did, which had no `stop`
+           to obey. */
+				const room = createLiveDsp(
+					ctx,
+					SPACE_PROCESSOR,
+					{
+						numberOfInputs: 1,
+						numberOfOutputs: 1,
+						outputChannelCount: [2],
+						channelCount: 2,
+						channelCountMode: 'explicit'
+					},
+					4
+				);
+				if (!room) return null;
+				knob(room.param('size'), 'spaceSize', 40);
+				knob(room.param('decay'), 'spaceDecay', 50);
+				sources.push(room.source);
 				const wet = ctx.createGain();
 				const dry = ctx.createGain();
 				knobMix(wet, dry, 'spaceMix', 30);
 				input.connect(dry);
 				dry.connect(out);
-				input.connect(cv);
-				cv.connect(wet);
+				input.connect(room.node);
+				room.node.connect(wet);
 				wet.connect(out);
 				return { in: input, out, mod };
 			}
