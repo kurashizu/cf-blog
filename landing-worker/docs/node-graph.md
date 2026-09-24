@@ -344,7 +344,23 @@ KEY-EVENT has two exec outlets, both belonging to the same key press:
   guessed at note-on, because a continuous hold has no known length and even
   a timed note can be cut short by a choke or a voice steal. `gate` on a REL
   activation reads how long the key was actually held, not the estimate
-  THEN's own build was against.
+  THEN's own build was against. A key held live fires it at its key-up; a
+  timed note (a sequenced step, a rendered WAV) fires it at its end, which is
+  known at note-on -- scheduled then, and cancelled if a choke or a steal
+  ends the note first. Before this, sequenced and rendered notes never fired
+  REL at all.
+
+A key coming up also closes every gate THEN's build opened -- each ENV starts
+its release, a held TUBE starts to fall -- at that moment. A key held live
+has no length at note-on, so its gates are left open rather than closed on a
+guess; closing them on the old 8 s placeholder left every ENV at its sustain
+after the key was let go, and released it under a key held past 8 s.
+
+An event-fired activation into a FOLLOW OUT (REL, ON-CHOKE) has no key of its
+own to follow. It holds for as long as the key was down and then gets the
+longest release in the graph -- an ENV's A+D+R, a resonator's ring -- and its
+sources are stopped there. Nothing stopped them before, so every key-up of a
+patch with a REL branch left its sources running for the rest of the session.
 
 **ON-CHOKE** is a separate module, not a third KEY-EVENT outlet, because it
 answers a different question. THEN and REL are both about this key's own

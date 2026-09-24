@@ -923,6 +923,14 @@ class SoundEngine {
 // Global Singleton Instance
 export const soundEngine = new SoundEngine();
 
+/* An edit to the engine reloads the page rather than swapping this module in
+   place. A hot swap made a second engine next to the one the page was built
+   against: keys went to the new one while the tracks, the loaded patch and the
+   held voices stayed with the old, and a key played after the edit was silent
+   until a manual reload -- which, mid-session, reads as the synth dying. Every
+   engine change lands here, since the modules it imports propagate to it. */
+if (import.meta.hot) import.meta.hot.accept(() => location.reload());
+
 export type SoundEffectType =
 	'click' | 'toggle' | 'hover' | 'keystroke' | 'power' | 'synthPad' | 'sseTick' | 'ping' | 'bump';
 

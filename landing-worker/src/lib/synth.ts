@@ -168,6 +168,12 @@ interface ActiveVoice {
 	/** REL's own sources, once fired -- independent of `extras`, because they
 	    may still be ringing after this voice's own nodes are reaped. */
 	relSources?: AudioScheduledSourceNode[];
+	/** When a timed note's REL was scheduled for -- its end, known at note-on.
+	    Undefined for a key held live, whose REL waits for the real key-up. */
+	relAt?: number;
+	/** Every module gate this note opened, closed by `releaseVoice` when the
+	    key comes up -- see `holdGate`. */
+	gates?: AudioParam[];
 	/** The ON-CHOKE counterpart of `advRelContext`: set only when this voice's
 	    graph has something wired to ON-CHOKE. Fired by `chokeVoice` and
 	    `stopVoice`, never by `releaseVoice` -- being cut off from outside is
@@ -288,6 +294,13 @@ class ModularSynth {
 	 * bypassed — an offline render has no "now" for any of it to be relative to.
 	 */
 	private renderCtx: OfflineAudioContext | null = null;
+	/**
+	 * The gates of the note being built right now, collected so the key coming
+	 * up can close them. Set around the build in `triggerTrackVoice` and null
+	 * everywhere else -- a REL or ON-CHOKE activation is built later, against a
+	 * length it already knows, and schedules its own gates as before.
+	 */
+	private noteGates: { list: AudioParam[]; openEnded: boolean } | null = null;
 
 	/** The context the engine should build into right now. */
 	private audioCtx(): AudioContext | null {
@@ -545,6 +558,64 @@ class ModularSynth {
 	}
 
 	/**
+	 * When an event-fired activation with no DUR of its own (REL or ON-CHOKE
+	 * into a FOLLOW OUT) has finished sounding: held for as long as its key
+	 * was, then the longest release anything in the graph asks for -- an ENV's
+	 * attack, decay and release, or a resonator's ring. Its sources are stopped
+	 * then. Nothing used to stop them: every key-up of a patch with a REL
+	 * branch left a looping noise source and a worklet running for the rest of
+	 * the session, measured as 60 still running after 30 key-ups.
+	 */
+	private static activationEnd(graph: RackGraph, params: Record<string, number>, heldSec: number): number {
+		let tail = 0.1;
+		for (const n of graph.nodes ?? []) {
+			const p: Record<string, number> = {};
+			const prefix = `${n.id}.`;
+			for (const [k, v] of Object.entries(params)) if (k.startsWith(prefix)) p[k.slice(prefix.length)] = v;
+			tail = Math.max(tail, ModularSynth.moduleTail(n.type, p));
+			if (n.type === 'env') tail = Math.max(tail, (p.envA ?? 0.005) + (p.envD ?? 0.2) + (p.envR ?? 0.2));
+		}
+		return heldSec + Math.min(20, tail) + 0.1;
+	}
+
+	private static moduleTail(id: string, p: Record<string, number>): number {
+		switch (id) {
+			case 'string':
+				return p.decayTime ?? 2;
+			/* The fundamental (n=1) carries most of a tube's level and its decay
+           exponent is n-independent at n=1, so its partial rings for the
+           full DCAY setting -- not the capped 0.35s this used to return,
+           which agreed with a `min(dn, 0.35)` the builder dropped once DCAY
+           became the release its docstring describes. Left capped here after
+           that, `extrasStop` reaped the voice a third of a second in and the
+           bench could not tell a 0.1s decay from a 12s one because both were
+           cut to the same tail. 1.5 is still TUBE's own printed default. */
+			case 'tube':
+				return Math.max(0.05, p.tubeDecay ?? 1.5);
+			/* A delay line's tail is how long its echoes stay audible: each lap
+           loses (1 - feedback), so the time to fall 60 dB is time * 3 /
+           -log10(g). Capped, because g near 1 diverges. */
+			case 'delay': {
+				const time = Math.max(0.001, (p.dlTime ?? 220) / 1000);
+				const g = Math.min(0.85, Math.max(0, (p.dlFeedback ?? 35) / 100));
+				if (g <= 0.01) return time;
+				return Math.min(8, (time * 3) / -Math.log10(g));
+			}
+			// A convolver rings for exactly the length of its impulse.
+			case 'space':
+				return Math.min(4, Math.max(0.05, ((p.spaceSize ?? 40) / 100) * 3));
+			/* A struck mode rings on after the strike, the same way a string does:
+           roughly q/40 seconds on the lowest one. Without this the amp envelope
+           reaped the voice first, and a crash written to ring for 1.3 s
+           measured 0.25 -- every cymbal in the kit cut short. */
+			case 'modes':
+				return Math.min(8, Math.max(0.02, (p.modeQ ?? 14) / 12));
+			default:
+				return 0;
+		}
+		}
+
+	/**
 	 * How long the voice's chain rings after its input stops.
 	 *
 	 * The sources are stopped a moment after the amp envelope closes, which is
@@ -568,42 +639,7 @@ class ModularSynth {
        patched DELAY measured a 0.33s ring at every feedback setting from 0 to
        85% -- the tail was there, but the voice was torn down at the amp
        release before any of it could be heard. */
-		const tailOf = (id: string, p: Record<string, number>): number => {
-			switch (id) {
-				case 'string':
-					return p.decayTime ?? 2;
-				/* The fundamental (n=1) carries most of a tube's level and its decay
-           exponent is n-independent at n=1, so its partial rings for the
-           full DCAY setting -- not the capped 0.35s this used to return,
-           which agreed with a `min(dn, 0.35)` the builder dropped once DCAY
-           became the release its docstring describes. Left capped here after
-           that, `extrasStop` reaped the voice a third of a second in and the
-           bench could not tell a 0.1s decay from a 12s one because both were
-           cut to the same tail. 1.5 is still TUBE's own printed default. */
-				case 'tube':
-					return Math.max(0.05, p.tubeDecay ?? 1.5);
-				/* A delay line's tail is how long its echoes stay audible: each lap
-           loses (1 - feedback), so the time to fall 60 dB is time * 3 /
-           -log10(g). Capped, because g near 1 diverges. */
-				case 'delay': {
-					const time = Math.max(0.001, (p.dlTime ?? 220) / 1000);
-					const g = Math.min(0.85, Math.max(0, (p.dlFeedback ?? 35) / 100));
-					if (g <= 0.01) return time;
-					return Math.min(8, (time * 3) / -Math.log10(g));
-				}
-				// A convolver rings for exactly the length of its impulse.
-				case 'space':
-					return Math.min(4, Math.max(0.05, ((p.spaceSize ?? 40) / 100) * 3));
-				/* A struck mode rings on after the strike, the same way a string does:
-           roughly q/40 seconds on the lowest one. Without this the amp envelope
-           reaped the voice first, and a crash written to ring for 1.3 s
-           measured 0.25 -- every cymbal in the kit cut short. */
-				case 'modes':
-					return Math.min(8, Math.max(0.02, (p.modeQ ?? 14) / 12));
-				default:
-					return 0;
-			}
-		};
+		const tailOf = ModularSynth.moduleTail;
 
 		let tail = 0;
 		const graph = track.rackGraph;
@@ -1218,6 +1254,14 @@ class ModularSynth {
 			isValueNode(type) || type === 'env' || type === 'tocv';
 
 		for (const node of order) {
+			/* A value node carrying no signal is pulled as a number by everything
+			   that reads it -- the cable loop below skips a settled source rather
+			   than connecting it -- so building it makes nodes nothing is wired
+			   to. For MAP that was a live-DSP worklet per node per note, running
+			   for the whole voice: a piano patch mapping VEL and PITCH onto a dozen
+			   knobs built 14 of them a key and rendered 3x slower than real time. */
+			if (isValueNode(node.type) && !isPureNode(node.type) && !resolver.nodeCarriesSignal(node.id))
+				continue;
 			/* A knob reads its cable first, and its own setting when there is none.
       
          Blueprint has no separate notion of "modulatable" inputs: a pin either
@@ -2286,9 +2330,7 @@ class ModularSynth {
 				knob(env.param('decay'), 'envD', 0.2);
 				knobPct(env.param('sustain'), 'envS', 60);
 				knob(env.param('release'), 'envR', 0.2);
-				const gate = env.param('gate');
-				gate.setValueAtTime(1, t);
-				gate.setValueAtTime(0, t + heldSec);
+				this.holdGate(env.param('gate'), t, heldSec);
 				sources.push(env.source);
 				return { in: null, out: env.node, mod };
 			}
@@ -3832,11 +3874,7 @@ class ModularSynth {
 			}
 			return params;
 		};
-		const gateNote = (node: LiveDsp) => {
-			const gate = node.param('gate');
-			gate.setValueAtTime(1, _t);
-			gate.setValueAtTime(0, _t + heldSec);
-		};
+		const gateNote = (node: LiveDsp) => this.holdGate(node.param('gate'), _t, heldSec);
 		const options: AudioWorkletNodeOptions = {
 			numberOfInputs: 1,
 			numberOfOutputs: 1,
@@ -4953,6 +4991,8 @@ class ModularSynth {
 		laneVelocity?: number
 	) {
 		const trackRow = this.tracks[trackId];
+		// A build that threw last time must not hand its collector to this one.
+		this.noteGates = null;
 		// Muting silences live playback, but must not silence an offline render.
 		if (!trackRow || (!this.renderCtx && soundEngine.isMuted())) return;
 		/* A note played by hand while a render is running has nowhere to go.
@@ -5718,6 +5758,7 @@ class ModularSynth {
 		let advGraphRackTail: number | undefined;
 
 		const isContinuousHold = durationSec === 0;
+		const voiceGates: AudioParam[] = [];
 
 		if (!isContinuousHold) {
 			const holdSec = durationSec !== undefined ? Math.max(0.02, durationSec) : 60 / this.bpm / 8;
@@ -5898,6 +5939,7 @@ class ModularSynth {
 			const graphParams = track.graphParams ?? {};
 			const graphWaves = track.graphWaves ?? {};
 			const presetGain = track.presetGain ?? 1;
+			this.noteGates = { list: voiceGates, openEnded: isContinuousHold };
 			const built = this.buildRackGraph(
 				ctx,
 				graph,
@@ -5911,6 +5953,7 @@ class ModularSynth {
 				trackId,
 				graphWaves
 			);
+			this.noteGates = null;
 			if (built) {
 				/* The graph is the whole voice, and answers to none of racks 1-7.
 
@@ -6017,7 +6060,9 @@ class ModularSynth {
 		if (Array.isArray(rackChain) && rackChain.length) {
 			const rackParams = track.rackParams ?? {};
 			for (const id of rackChain) {
+				this.noteGates = { list: voiceGates, openEnded: isContinuousHold };
 				const mod = this.buildRackModule(ctx, id, rackParams, baseFreq, t, heldSec);
+				this.noteGates = null;
 				if (!mod) continue;
 				chainOut.connect(mod.in);
 				chainOut = mod.out;
@@ -6138,8 +6183,19 @@ class ModularSynth {
 				advRelContext: advRelContext ? { ...advRelContext, busInput } : undefined,
 				advChokeContext: advChokeContext ? { ...advChokeContext, busInput } : undefined,
 				advGraphOut,
-				advGraphOuts
+				advGraphOuts,
+				gates: voiceGates
 			});
+			/* A timed note's key comes up at a moment known now: its end. REL used
+			   to fire only from `releaseVoice`, which a sequenced or rendered note
+			   never reaches -- so a patch's release sound played under a hand and
+			   was missing from the song and from every exported WAV. Built now,
+			   starting then; `chokeVoice` cancels it if the note is cut first. */
+			const timed = this.activeVoices.get(voiceKey);
+			if (timed?.advRelContext && !isContinuousHold) {
+				timed.relAt = t + heldSec;
+				this.fireVoiceInterrupt(timed, ctx, timed.relAt, 'advRelContext', 'in', 'rel', 'relSources');
+			}
 		}
 
 		return voiceKey;
@@ -6188,6 +6244,24 @@ class ModularSynth {
 	 * directly and needs to release that exact one without going through
 	 * `trackHeldVoices` at all.
 	 */
+	/**
+	 * Hold a module's gate up for the note: open at `t`, closed when it ends.
+	 *
+	 * A timed note knows when it ends and closes the gate on schedule. A key
+	 * held live does not: `heldSec` is a placeholder there (8 s), and closing
+	 * on it meant two faults at once -- letting go early left every ENV at its
+	 * sustain, so a patch's release never ran and the note hung on until the
+	 * OUT faded it, and holding past 8 s released the envelopes under a key
+	 * still down. So a live note's gate stays open and is collected, and
+	 * `releaseVoice` closes it at the moment the key actually comes up.
+	 */
+	private holdGate(gate: AudioParam, t: number, heldSec: number) {
+		gate.setValueAtTime(1, t);
+		const note = this.noteGates;
+		if (!note?.openEnded) gate.setValueAtTime(0, t + heldSec);
+		note?.list.push(gate);
+	}
+
 	public releaseTrackVoice(voiceKey: string) {
 		this.releaseVoice(voiceKey);
 	}
@@ -6243,6 +6317,14 @@ class ModularSynth {
 		const { gain, filter, ampRel, vcfRel, baseCutoff, osc1, osc2, noise, lfo, extras, advGraphOut, advGraphOuts } =
 			voice;
 
+		/* The key is up: close every gate this note opened, so each ENV starts its
+		   release and a held TUBE starts to fall now rather than at a guessed
+		   length (see `holdGate`). A timed note released early is cut short the
+		   same way; one released after its gates already closed changes nothing. */
+		for (const g of voice.gates ?? []) {
+			g.cancelScheduledValues(now);
+			g.setValueAtTime(0, now);
+		}
 		try {
 			gain.gain.cancelScheduledValues(now);
 			gain.gain.setValueAtTime(gain.gain.value, now);
@@ -6412,7 +6494,28 @@ class ModularSynth {
 	 * the guess note-on made before it knew.
 	 */
 	private fireAdvActivation(voice: ActiveVoice, ctx: BaseAudioContext, now: number) {
+		/* A timed note's REL is already scheduled for its end. Let go of after
+		   that, it has fired; let go of before, the key really came up now. */
+		if (voice.relAt !== undefined) {
+			if (now >= voice.relAt) return;
+			this.cancelScheduledRel(voice, now);
+		}
 		this.fireVoiceInterrupt(voice, ctx, now, 'advRelContext', 'in', 'rel', 'relSources');
+	}
+
+	/** Drop a timed note's REL that has not sounded yet: the note ended some
+	    other way first, so the key-up it was built for never happens. */
+	private cancelScheduledRel(voice: ActiveVoice, now: number) {
+		if (voice.relAt === undefined || now >= voice.relAt) return;
+		for (const src of voice.relSources ?? []) {
+			try {
+				src.stop(now);
+			} catch {
+				/* already stopped */
+			}
+		}
+		voice.relSources = undefined;
+		voice.relAt = undefined;
 	}
 
 	/**
@@ -6541,6 +6644,18 @@ class ModularSynth {
        by a guess at how long it runs. DUR aside, a source with nothing
        stopping it never reaches that point at all -- the timeout below is
        what still reclaims it. */
+		/* FOLLOW: no length of its own, so it ends where it naturally rings out. */
+		if (!anyDurCap) {
+			anyDurCap = true;
+			latestStop = now + ModularSynth.activationEnd(snap.graph, snap.params, heldSec);
+			for (const src of built.sources) {
+				try {
+					src.stop(latestStop);
+				} catch {
+					/* already stopped */
+				}
+			}
+		}
 		let remaining = built.sources.length;
 		if (remaining === 0) {
 			built.out.disconnect();
@@ -6560,7 +6675,9 @@ class ModularSynth {
 			};
 		}
 		if (anyDurCap) {
-			const cleanupMs = Math.ceil((latestStop - now) * 1000) + 50;
+			/* From the clock as it reads now, not from `now`: a timed note's REL is
+			   built at note-on for a moment still to come. */
+			const cleanupMs = Math.ceil((latestStop - ctx.currentTime) * 1000) + 50;
 			window.setTimeout(() => {
 				for (const src of built.sources) this.ringingTails.delete(src);
 				try {
@@ -6606,6 +6723,7 @@ class ModularSynth {
 		} catch {
 			/* already stopped */
 		}
+		this.cancelScheduledRel(voice, now);
 		this.fireVoiceInterrupt(voice, ctx, now, 'advChokeContext', 'onchoke', 'then', 'chokeSources');
 		this.activeVoices.delete(voiceKey);
 		this.forgetHeldVoice(voiceKey);
@@ -7430,3 +7548,11 @@ class ModularSynth {
 }
 
 export const modularSynth = new ModularSynth();
+
+/* An edit to the engine reloads the page rather than swapping this module in
+   place. A hot swap made a second engine next to the one the page was built
+   against: keys went to the new one while the tracks, the loaded patch and the
+   held voices stayed with the old, and a key played after the edit was silent
+   until a manual reload -- which, mid-session, reads as the synth dying. Every
+   engine change lands here, since the modules it imports propagate to it. */
+if (import.meta.hot) import.meta.hot.accept(() => location.reload());

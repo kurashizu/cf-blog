@@ -411,14 +411,88 @@ describe('REL: fires once, at the real release rather than at the note', () => {
 		).toBeGreaterThan(beforeRelease * 1.1);
 	}, 60000);
 
-	it('keeps ringing after the main voice has been fully reaped', async () => {
+	it('closes the envelopes when a key held live comes up', async () => {
+		/* A key held live has no length at note-on; the gates used to close at
+		   a placeholder 8 s instead, so letting go left every ENV at its sustain
+		   and the note hung on until the OUT's fade -- stretched here to 3 s by
+		   an unwired STRING's DCAY, the way a resonator anywhere in a patch
+		   stretches it. The ENV's own 50 ms release is what should be heard. */
+		const rig = {
+			advanced: true,
+			rackGraph: {
+				nodes: [
+					{ id: 'entry', type: 'in' },
+					{ id: 'output', type: 'out' },
+					{ id: 'o', type: 'osc' },
+					{ id: 'vca', type: 'gain' },
+					{ id: 'env', type: 'env' },
+					{ id: 'ring', type: 'string' }
+				],
+				cables: [
+					{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+					{ from: 'o', fromPort: 'out', to: 'vca', toPort: 'in' },
+					{ from: 'env', fromPort: 'out', to: 'vca', toPort: 'level' },
+					{ from: 'vca', fromPort: 'out', to: 'output', toPort: 'in' }
+				]
+			},
+			graphParams: {
+				'env.envA': 0.001,
+				'env.envD': 0.001,
+				'env.envS': 100,
+				'env.envR': 0.05,
+				'ring.decayTime': 3
+			}
+		};
+		// 20 slices of 0.1 s, the key up at 0.5 s.
+		const r = await renderWithRelease(rig, 2, 20, 0.5);
+		expect(r.ok).toBe(true);
+		const e = r.envelope;
+		expect(e.slice(1, 5).every((v) => v > 0.1), `sounding while held: ${JSON.stringify(e)}`).toBe(true);
+		expect(e.slice(7).every((v) => v < 0.001), `silent after the release: ${JSON.stringify(e)}`).toBe(true);
+	}, 60000);
+
+	it('fires at the end of a timed note, which is when its key comes up', async () => {
+		/* A sequenced or rendered note never reaches `releaseVoice`, and REL
+		   fired only from there -- so a release sound played under a hand was
+		   missing from the song and from every exported WAV. A timed note's
+		   key-up is its end, known at note-on, so REL is scheduled for it. */
+		const rig = {
+			advanced: true,
+			rackGraph: {
+				nodes: [
+					{ id: 'entry', type: 'in' },
+					{ id: 'outputRel', type: 'out' },
+					{ id: 'tail', type: 'osc' }
+				],
+				cables: [
+					{ from: 'entry', fromPort: 'rel', to: 'outputRel', toPort: 'exec' },
+					{ from: 'tail', fromPort: 'out', to: 'outputRel', toPort: 'in' }
+				]
+			},
+			graphParams: {}
+		};
+		// 20 slices of 0.1 s; the note starts at 0.01 s and lasts 0.5 s.
+		const r = await run(rig, 2, 20, 0.5);
+		expect(r.ok).toBe(true);
+		const e = r.envelope;
+		expect(e.slice(0, 5).every((v) => v < 0.001), `silent while held: ${JSON.stringify(e)}`).toBe(true);
+		expect(e.slice(6, 10).every((v) => v > 0.1), `sounding after the end: ${JSON.stringify(e)}`).toBe(true);
+		expect(e.slice(14).every((v) => v < 0.001), `stopped on its own: ${JSON.stringify(e)}`).toBe(true);
+	}, 60000);
+
+	it('keeps ringing after the main voice has been reaped, and then stops', async () => {
 		/* REL's own sources are not in the voice's `extras` and are not
 		   touched by `detachVoice`/`reapVoice` -- they are connected straight
-		   to the track bus and cleaned up only when they end on their own.
-		   `ampRel` defaults to 0.1 s, so THEN's own voice is gone well inside
-		   half a second of the release; a tail still sounding a full second
-		   after that is proof the two lifecycles are genuinely independent
-		   rather than the tail happening to outlast a slow ramp. */
+		   to the track bus, so the two lifecycles are independent. `ampRel`
+		   defaults to 0.1 s, so THEN's own voice is gone well inside half a
+		   second of the release.
+
+		   Independent is not endless. A FOLLOW OUT on REL has no key of its own
+		   to follow, and nothing stopped its sources: a bare oscillator here
+		   rang for the rest of the session, and every key-up of a patch with a
+		   REL branch left its sources running -- 60 after 30 key-ups. It holds
+		   for as long as the key was down and then gets the graph's release
+		   (`activationEnd`), so held 1.5 s it sounds until about 3.2 s. */
 		const rig = {
 			advanced: true,
 			rackGraph: {
@@ -439,14 +513,18 @@ describe('REL: fires once, at the real release rather than at the note', () => {
 			},
 			graphParams: {}
 		};
-		const r = await renderWithRelease(rig, 3, 24, 0.5);
+		// 32 slices of 0.125 s, the key up at 1.5 s.
+		const r = await renderWithRelease(rig, 4, 32, 1.5);
 		expect(r.ok).toBe(true);
-		// A full second after the release -- long past THEN's own voice
-		// having been reaped -- the tail is still sounding.
-		const farAfterRelease = r.envelope.slice(20);
+		// 2.0-3.0 s: THEN's voice is long gone, REL still sounds.
 		expect(
-			farAfterRelease.every((v) => v > 0.1),
-			`expected the tail to still be ringing well after reap: ${JSON.stringify(r.envelope)}`
+			r.envelope.slice(16, 24).every((v) => v > 0.1),
+			`expected the tail to still be ringing after reap: ${JSON.stringify(r.envelope)}`
+		).toBe(true);
+		// From 3.4 s: it has ended on its own.
+		expect(
+			r.envelope.slice(28).every((v) => v < 0.001),
+			`expected the tail to have stopped: ${JSON.stringify(r.envelope)}`
 		).toBe(true);
 	}, 60000);
 });
