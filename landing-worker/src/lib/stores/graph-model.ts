@@ -319,9 +319,28 @@ export function startingGraph(): RackGraph {
 	};
 }
 
-/** ENTRY and OUTPUT stay: removing either would break the patch. */
-export function isFixedNode(id: string): boolean {
-	return id === ENTRY_ID || id === OUTPUT_ID;
+/**
+ * Would removing this node leave the patch with nowhere for a note to start
+ * or nowhere for the sound to leave?
+ *
+ * Neither KEY-EVENT nor OUT is fixed by *identity* any more -- a patch can
+ * carry several OUTs (each its own THEN/REL/ON-CHOKE activation, summing on
+ * the track bus) or none of either kind for a moment mid-edit, the way any
+ * other module can be added and removed. What still has to hold is the same
+ * thing `graphOf` restores if it is ever violated on load: at least one
+ * event source and at least one activation point somewhere in the graph, or
+ * a note has nothing to run and nothing to arrive at.
+ *
+ * So this only refuses deleting the *last* one of a kind, not a specific id.
+ * A second KEY-EVENT or OUT is exactly as deletable as an OSC; the original
+ * one stops being special the moment it is no longer alone.
+ */
+export function isFixedNode(graph: RackGraph, id: string): boolean {
+	const node = graph.nodes.find((n) => n.id === id);
+	if (!node) return false;
+	if (node.type === 'in') return graph.nodes.filter((n) => n.type === 'in').length <= 1;
+	if (node.type === 'out') return graph.nodes.filter((n) => n.type === 'out').length <= 1;
+	return false;
 }
 
 /* Port ids that were renamed, and what they are now.
@@ -556,9 +575,28 @@ export function moveNodes(graph: RackGraph, ids: Set<string>, dx: number, dy: nu
 	};
 }
 
-/** Drop a set of nodes and every cable touching them. ENTRY and OUTPUT stay. */
+/**
+ * Drop a set of nodes and every cable touching them, keeping at least one
+ * KEY-EVENT and one OUT.
+ *
+ * Checked against the whole selection at once rather than node by node
+ * against the graph as it stood before any of them left: `isFixedNode` alone
+ * would let a bulk delete take both of two OUTs, each looking safe to remove
+ * on its own because the other one was still there when it was asked -- the
+ * same way removing two legs of a three-legged stool one at a time never
+ * finds the moment it tips. */
 export function withoutNodes(graph: RackGraph, ids: Set<string>): RackGraph {
-	const gone = new Set([...ids].filter((id) => !isFixedNode(id)));
+	const requested = new Set(ids);
+	const survivingEntries = graph.nodes.filter((n) => n.type === 'in' && !requested.has(n.id)).length;
+	const survivingOuts = graph.nodes.filter((n) => n.type === 'out' && !requested.has(n.id)).length;
+	const gone = new Set(
+		[...requested].filter((id) => {
+			const node = graph.nodes.find((n) => n.id === id);
+			if (node?.type === 'in' && survivingEntries === 0) return false;
+			if (node?.type === 'out' && survivingOuts === 0) return false;
+			return true;
+		})
+	);
 	if (!gone.size) return graph;
 	// Spread for the reason withoutNode does: a box outlives its members.
 	return {
@@ -573,13 +611,17 @@ export function withoutNodes(graph: RackGraph, ids: Set<string>): RackGraph {
  *
  * Cables leaving the selection are dropped rather than dangling: a copy of half
  * a patch is a patch, not a patch with cables to modules that are not there.
- * ENTRY and OUTPUT are never copied -- there is only ever one of each.
+ *
+ * KEY-EVENT and OUT are ordinary members of the selection now that either can
+ * exist more than once -- copying one and pasting it elsewhere (or into
+ * another track) is exactly how a patch ends up with a second one. Only the
+ * *last* of a kind refuses deletion (`isFixedNode`); a copy never deletes
+ * anything, so nothing here needs to ask.
  */
 export function copyNodes(graph: RackGraph, ids: Set<string>): RackGraph {
-	const take = new Set([...ids].filter((id) => !isFixedNode(id)));
 	return {
-		nodes: graph.nodes.filter((n) => take.has(n.id)).map((n) => ({ ...n })),
-		cables: graph.cables.filter((c) => take.has(c.from) && take.has(c.to)).map((c) => ({ ...c }))
+		nodes: graph.nodes.filter((n) => ids.has(n.id)).map((n) => ({ ...n })),
+		cables: graph.cables.filter((c) => ids.has(c.from) && ids.has(c.to)).map((c) => ({ ...c }))
 	};
 }
 
@@ -754,10 +796,13 @@ export function nodesInGroup(
 	const y1 = group.y + group.h;
 	return graph.nodes
 		.filter((n) => {
-			/* ENTRY and OUTPUT are never owned. They cannot be deleted and a patch
-			   has exactly one of each, so a box that happened to be drawn over the
-			   output would drag the end of the patch around with it. */
-			if (isFixedNode(n.id)) return false;
+			/* KEY-EVENT and OUT are never owned, whether or not either is the
+			   last of its kind. A box that happened to be drawn over one would
+			   otherwise drag a structural endpoint of the patch around with a
+			   prefab's own moving parts, which reads as the prefab's box
+			   reaching further than its own contents -- not a deletion-safety
+			   question, which is what `isFixedNode` answers instead. */
+			if (n.type === 'in' || n.type === 'out') return false;
 			const s = size(n);
 			return n.x >= group.x && n.y >= top && n.x + s.w <= x1 && n.y + s.h <= y1;
 		})

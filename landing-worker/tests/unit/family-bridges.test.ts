@@ -34,8 +34,7 @@ function build(type: string, params: Record<string, number> = {}) {
 		'n1',
 		{},
 		(_n: string, port: string, f: number) => params[port] ?? f,
-		{ velocity: 0.8, noteIndex: 48, tuning: 440 },
-		0.5
+		{ velocity: 0.8, noteIndex: 48, tuning: 440 }
 	);
 	return { ctx, made, sources };
 }
@@ -135,27 +134,22 @@ describe('TO-SIG: a value made into sound', () => {
 });
 
 describe('the three doors, and no fourth', () => {
-	it('names every crossing in each direction', () => {
+	it('names every crossing into control', () => {
 		const toControl = MODULE_SPECS.filter(
 			(m) => m.inputs.some((i) => i.kind === 'audio') && m.outputs.some((o) => o.kind === 'mod')
 		).map((m) => m.id);
-		/* A bridge *carries* a value across; a generator merely takes one. OSC and
-		   PWM read a frequency and invent a waveform from nothing, so their
-		   control inlet is a setting rather than the thing being converted --
-		   what leaves is not what arrived. TO-SIG's outlet is its inlet, which is
-		   what makes it the crossing. Told apart by the port ids matching. */
-		const toAudio = MODULE_SPECS.filter(
-			(m) =>
-				m.outputs.some((o) => o.kind === 'audio') &&
-				m.inputs.length > 0 &&
-				m.inputs.every((i) => i.kind === 'mod') &&
-				m.inputs.some((i) => m.params.some((q) => q.key === i.id))
-		).map((m) => m.id);
 		/* Two ways to read a sound, because "how loud" and "what value" are
-		   different questions, and one way back. Kept as a list so a fourth
-		   cannot appear without someone deciding what question it answers. */
+		   different questions. Kept as a list so a third cannot appear without
+		   someone deciding what question it answers.
+
+		   The crossing the other way, into audio, used to be findable the same
+		   structural way -- TO-SIG's inlet doubled as a param of the same key,
+		   which told a bridge (carries a value across) apart from a generator
+		   like OSC or PWM (invents a waveform from a setting). That signal is
+		   gone now that TO-SIG's IN is cable-only, the way CMP's A is, so
+		   there is nothing left to derive here: TO-SIG remains the one door
+		   into audio, it just is not discoverable by this property any more. */
 		expect(toControl.sort()).toEqual(['follow', 'tocv']);
-		expect(toAudio).toEqual(['tosig']);
 	});
 
 	it('makes an oscillator a usable LFO, which is why there is no LFO module', () => {

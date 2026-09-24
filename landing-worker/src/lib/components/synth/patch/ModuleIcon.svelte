@@ -70,6 +70,11 @@
 		wait: 'M4 3h8M4 13h8M4 3l8 10M12 3L4 13',
 		when: 'M8 2l6 6-6 6-6-6z',
 		act: 'M4 2v12l9-6z',
+		/* A line broken by an arrow driving in from outside: the voice's own
+		   run cut off by something that is not itself, which is what makes
+		   this a different event from THEN or REL -- neither of which any
+		   other node interrupts. */
+		onchoke: 'M1 8h5M10 8h5M8 1v4l-2 2 2 2v4',
 		/* A pair of scales: two quantities weighed against each other, which is
 		   the one node where an amount becomes a yes or a no. */
 		cmp: 'M8 3v10M3 6h10M3 6l-1.5 3.5h3zM13 6l-1.5 3.5h3zM5 13h6',
@@ -80,7 +85,12 @@
 		// MATH: the operator, or the shape of what it does to a value.
 		const: 'M4 4h8M8 4v9M5 13h6',
 		add: 'M8 3v10M3 8h10',
+		sub: 'M3 8h10',
 		mul: 'M4 4l8 8M12 4l-8 8',
+		// The obelus: a bar between the two dots the ÷ sign itself draws.
+		div: 'M3 8h10M8 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0M8 11m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
+		// The % sign's own shape: a slash between two circles of unequal size.
+		mod: 'M12 4L4 12M5.5 4m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M10.5 12m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0',
 		clamp: 'M2 5h12M2 11h12M8 5v6',
 		// A value bent on its way through: the shape is the module.
 		map: 'M2 13q8 0 11-10',

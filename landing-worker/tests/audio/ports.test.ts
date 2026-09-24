@@ -272,8 +272,8 @@ describe('SPLIT and BREAK: the second outlet is not the first', () => {
 		/* Panned hard left the L socket carries the tone at 0.2406 -- half of a
 		   bare oscillator, which is MONO averaging one live channel against one
 		   dead one. Panned hard right the same socket is exactly zero. */
-		const left = await render(split('out', -100), 8);
-		const right = await render(split('out', 100), 8);
+		const left = await render(split('out', -1), 8);
+		const right = await render(split('out', 1), 8);
 		expect(steady(left)).toBeCloseTo(0.2406, 3);
 		expect(right.peak, `L socket heard a hard-right source: ${right.peak}`).toBe(0);
 	}, 45000);
@@ -284,8 +284,8 @@ describe('SPLIT and BREAK: the second outlet is not the first', () => {
 		   both would still "pass" a check that only looked for sound. The two
 		   together are what pin it -- each socket is loud exactly where the other
 		   is silent, at the same 0.2406. */
-		const right = await render(split('r', 100), 8);
-		const left = await render(split('r', -100), 8);
+		const right = await render(split('r', 1), 8);
+		const left = await render(split('r', -1), 8);
 		expect(steady(right)).toBeCloseTo(0.2406, 3);
 		expect(left.peak, `R socket heard a hard-left source: ${left.peak}`).toBe(0);
 	}, 45000);
@@ -313,7 +313,7 @@ describe('SPLIT and BREAK: the second outlet is not the first', () => {
 		   0.0722 -- which is 0.1021 / sqrt(2), the reading for a signal present
 		   in one of two summed legs. */
 		const centred = await render(brk('out', 0), 8);
-		const hardLeft = await render(brk('out', -100), 8);
+		const hardLeft = await render(brk('out', -1), 8);
 		expect(steady(centred)).toBeCloseTo(0.1021, 3);
 		expect(steady(hardLeft)).toBeCloseTo(0.0722, 3);
 	}, 45000);
@@ -542,19 +542,19 @@ describe('PAN POS: the inlet nothing rendered through', () => {
 		);
 
 	it('the knob sweeps left to right across its whole range', async () => {
-		/* Measured: 0.6824 at -100, 0.6753 at -50, 0.5244 at 0, 0.2580 at +50,
-		   and exactly 0 at +100. Monotonic down, and both endpoints render.
+		/* Measured: 0.6824 at -1, 0.6753 at -0.5, 0.5244 at 0, 0.2580 at +0.5,
+		   and exactly 0 at +1. Monotonic down, and both endpoints render.
 
 		   The two extremes are asserted hard -- silence is exact, and hard left is
 		   within a whisker of a bare oscillator's 0.4813 * sqrt(2) -- while the
 		   middle is asserted as an ordering, because equal-power panning is a
 		   cosine and the exact midpoints are the panner's business rather than
 		   this module's. */
-		const hardL = await render(rig({ 'p.panPos': -100 }), 8);
-		const halfL = await render(rig({ 'p.panPos': -50 }), 8);
+		const hardL = await render(rig({ 'p.panPos': -1 }), 8);
+		const halfL = await render(rig({ 'p.panPos': -0.5 }), 8);
 		const centre = await render(rig({ 'p.panPos': 0 }), 8);
-		const halfR = await render(rig({ 'p.panPos': 50 }), 8);
-		const hardR = await render(rig({ 'p.panPos': 100 }), 8);
+		const halfR = await render(rig({ 'p.panPos': 0.5 }), 8);
+		const hardR = await render(rig({ 'p.panPos': 1 }), 8);
 		expect(steady(hardL)).toBeCloseTo(0.6824, 3);
 		expect(steady(centre)).toBeCloseTo(0.5244, 3);
 		expect(hardR.peak, `hard right should leave channel 0 silent: ${hardR.peak}`).toBe(0);
@@ -564,23 +564,25 @@ describe('PAN POS: the inlet nothing rendered through', () => {
 		expect(steady(halfR)).toBeGreaterThan(steady(hardR));
 	}, 60000);
 
-	it('a CONST into POS arrives in the knob units, not the param units', async () => {
-		/* The units question PAN's own comment is about. The knob reads -100..100
-		   and the param wants -1..1, so a cable has to be scaled where it lands --
-		   and a CONST of 100 into POS must mean hard right, the same as typing 100
-		   into the knob, rather than a hundred times hard over.
+	it('a CONST into POS arrives in the same units as the knob', async () => {
+		/* POS used to read -100..100 against a param wanting -1..1, so a cable
+		   had to be scaled where it landed -- a CONST of 100 had to mean hard
+		   right, the same as typing 100 into the knob, rather than a hundred
+		   times hard over. POS is typed -1..1 directly now, the same unit the
+		   param holds, so there is no conversion left to prove: a CONST of -1
+		   and one of 1 should simply read as the knob's own two extremes.
 
-		   Measured: CONST -100 gives 0.6824 and CONST +100 gives exactly 0, which
-		   are the knob's own two readings. Both ends, because a scaling bug that
-		   only clipped would still pass a test of one. */
+		   Measured: CONST -1 gives 0.6824 and CONST +1 gives exactly 0, the
+		   knob's own two readings. Both ends, because a scaling bug that only
+		   clipped would still pass a test of one. */
 		const left = await render(
-			rig({ 'p.panPos': 0, ...constAt('c', 6, -100) }, [{ id: 'c', type: 'const' }], [
+			rig({ 'p.panPos': 0, ...constAt('c', 6, -1) }, [{ id: 'c', type: 'const' }], [
 				{ from: 'c', fromPort: 'out', to: 'p', toPort: 'panPos' }
 			]),
 			8
 		);
 		const right = await render(
-			rig({ 'p.panPos': 0, ...constAt('c', 6, 100) }, [{ id: 'c', type: 'const' }], [
+			rig({ 'p.panPos': 0, ...constAt('c', 6, 1) }, [{ id: 'c', type: 'const' }], [
 				{ from: 'c', fromPort: 'out', to: 'p', toPort: 'panPos' }
 			]),
 			8
@@ -589,20 +591,20 @@ describe('PAN POS: the inlet nothing rendered through', () => {
 		expect(right.peak).toBe(0);
 	}, 45000);
 
-	it('a signal into POS is scaled the same way the knob is', async () => {
-		/* The signal route through the same scaling node. TO-SIG at 10 reads
-		   0.4817 and TO-SIG at -10 reads 0.5640, straddling the centre's 0.5244 --
-		   which is where a knob at +10 and -10 put it. An unscaled signal would
-		   slam the param to ±10 and both would saturate at the two extremes
-		   instead, so the fact that these are *near* centre is the assertion. */
+	it('a signal into POS lands at the same position a knob typed the same number would', async () => {
+		/* The signal route through the same, now-unscaled socket. TO-SIG at 0.1
+		   reads 0.4817 and TO-SIG at -0.1 reads 0.5640, straddling the centre's
+		   0.5244 -- which is where a knob at +0.1 and -0.1 put it. Nothing here
+		   converts any more, so this is the same reading the knob test above
+		   would give at those two positions, reached by cable instead. */
 		const right = await render(
-			rig({ 'p.panPos': 0, 'ts.level': 10 }, [{ id: 'ts', type: 'tosig' }], [
+			rig({ 'p.panPos': 0, 'ts.level': 0.1 }, [{ id: 'ts', type: 'tosig' }], [
 				{ from: 'ts', fromPort: 'out', to: 'p', toPort: 'panPos' }
 			]),
 			8
 		);
 		const left = await render(
-			rig({ 'p.panPos': 0, 'ts.level': -10 }, [{ id: 'ts', type: 'tosig' }], [
+			rig({ 'p.panPos': 0, 'ts.level': -0.1 }, [{ id: 'ts', type: 'tosig' }], [
 				{ from: 'ts', fromPort: 'out', to: 'p', toPort: 'panPos' }
 			]),
 			8
@@ -937,122 +939,87 @@ describe('the inlets of the arithmetic', () => {
    nothing rendered through. It is how long the key is held, in seconds -- the
    one thing a patch can know about a note's *shape* rather than its pitch.
    ────────────────────────────────────────────────────────────────────────── */
-describe('ENTRY GATE: the outlet nothing rendered through', () => {
-	const valueRig = (nodes: Node[], cables: Cable[], gp: Record<string, number>) =>
-		patch(
-			[{ id: 'o', type: 'osc' }, { id: 'g', type: 'gain' }, ...nodes],
-			[
-				{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
-				{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' },
-				...cables
-			],
-			{ 'g.level': 1, ...gp }
-		);
+/* ──────────────────────────────────────────────────────────────────────────
+   ENTRY HELD -- live elapsed time, not a snapshot
 
-	it('publishes the held length in seconds, and scales with it', async () => {
-		/* The bench holds the note for exactly as long as it renders, so GATE is
-		   the render length -- which makes it the one outlet whose value this
-		   bench can dial. Through a MUL by 0.2 it reads 0.0963 on a one-second
-		   render, 0.1925 on two and 0.2888 on three: 0.4813 * 0.2 * {1, 2, 3},
-		   linear in the hold.
-
-		   Scaled down rather than read directly because GATE at 1.0 already
-		   saturates a gain, so an unscaled reading would be the same 0.4813 at
-		   every length and could not tell a working pin from one stuck at 1. */
-		const at = async (seconds: number) =>
-			steady(
-				await render(
-					valueRig(
-						[{ id: 'c', type: 'const' }, { id: 'm', type: 'mul' }],
-						[
-							{ from: 'entry', fromPort: 'gate', to: 'm', toPort: 'a' },
-							{ from: 'c', fromPort: 'out', to: 'm', toPort: 'b' },
-							{ from: 'm', fromPort: 'out', to: 'g', toPort: 'level' }
-						],
-						constAt('c', 6, 0.2)
-					),
-					4,
-					seconds
-				)
-			);
-		expect(await at(1)).toBeCloseTo(0.0963, 3);
-		expect(await at(2)).toBeCloseTo(0.1925, 3);
-		expect(await at(3)).toBeCloseTo(0.2888, 3);
-	}, 60000);
-
-	it('is a number a CMP can test, and not a stuck constant', async () => {
-		/* GATE through a comparator, which is what a patch would actually do with
-		   it -- "if the key was held longer than this". On a one-second render the
-		   test `gate > 0.99` holds and `gate > 1` does not, so the pin carries 1.0
-		   exactly rather than an approximation or a flag.
-
-		   The pair is the assertion. A GATE stuck at any single value would put
-		   both comparisons on the same side of the boundary. */
-		const cmpAt = async (threshold: number) =>
-			steady(
-				await render(
-					valueRig(
-						[{ id: 'c', type: 'const' }, { id: 'q', type: 'cmp' }],
-						[
-							{ from: 'entry', fromPort: 'gate', to: 'q', toPort: 'a' },
-							{ from: 'c', fromPort: 'out', to: 'q', toPort: 'b' },
-							{ from: 'q', fromPort: 'out', to: 'g', toPort: 'level' }
-						],
-						{ ...constAt('c', 6, threshold), 'q.test': 0 }
-					),
-					4,
-					1
-				)
-			);
-		expect(await cmpAt(0.99)).toBeCloseTo(0.4813, 3);
-		expect(await cmpAt(1)).toBe(0);
-	}, 45000);
-
-	it('reaches a knob with no value path as a connected signal', async () => {
-		/* The other half of GATE, and a genuinely separate mechanism.
-
-		   Both tests above read GATE through pure nodes, so the *resolver*
-		   answered and the engine's `outs` map was never consulted. ENTRY also
-		   publishes GATE as an audio-rate pin, and that pin is what a cable onto
-		   an inlet with no knob behind it gets -- PWM's PW is the one such inlet
-		   in the catalogue, declared as modulatable with no param of its own, so
-		   it has no value path and the signal route is the only one left.
-
-		   Measured: unwired, PW rests at 0.5 and the square reads 0.1726. Driven
-		   by GATE on a one-second render -- a pulse width of 1.0, which is as
-		   narrow as the wave gets -- it reads 0.0742, the same 0.0744 a CONST of
-		   0.05 gives. The pin carries a real number rather than the zero that
-		   `silent` used to hand out.
-
-		   The half-second render is what separates "carries gateSec" from
-		   "carries any constant": at 0.5 it reads 0.0036, because the note is over
-		   before the render is. */
-		const pwm = (seconds: number, nodes: Node[] = [], cables: Cable[] = [], gp = {}) =>
+   GATE is a number decided once, at the moment this activation was built:
+   how long the note will/did last. HELD is the other half -- how long it has
+   been, right now -- and the whole reason it exists is that it is not the
+   same claim. A patch cannot say "the longer this key is held, the more the
+   filter opens" with a constant; it needs a signal that keeps moving for as
+   long as the note runs. This is the test GATE's own could not be: an
+   envelope that changes *within* a single render, without a WAIT or a
+   discrete re-trigger anywhere in the patch.
+   ────────────────────────────────────────────────────────────────────────── */
+describe('ENTRY HELD: a live ramp, not a snapshot', () => {
+	it('rises smoothly across a render, where GATE would sit flat', async () => {
+		/* HELD onto GAIN's LVL directly: a knob with a value path GATE's own
+		   tests already prove works for a constant, so this isolates the one
+		   variable that matters -- whether the number changes with elapsed
+		   time or is read once and held. Scaled down by CONST*MUL... except
+		   HELD is a signal, not a pullable value (ENTRY's own pins are
+		   published as outlets, not values a pure node can read), so it has
+		   to be measured as a level moving across slices of one render
+		   rather than compared across renders of different lengths the way
+		   GATE's own scaling test does. */
+		const held = (seconds: number) =>
 			render(
 				patch(
-					[{ id: 'p', type: 'pwm' }, { id: 'lim', type: 'gain' }, ...nodes],
+					[{ id: 'o', type: 'osc' }, { id: 'g', type: 'gain' }],
 					[
-						{ from: 'p', fromPort: 'out', to: 'lim', toPort: 'in' },
-						{ from: 'lim', fromPort: 'out', to: 'output', toPort: 'in' },
-						...cables
+						{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+						{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' },
+						{ from: 'entry', fromPort: 'held', to: 'g', toPort: 'level' }
 					],
-					{ 'lim.level': LIM, ...gp }
+					{ 'g.level': 0 }
 				),
 				8,
 				seconds
 			);
-		const unwired = await pwm(2);
-		const gated = await pwm(1, [], [
-			{ from: 'entry', fromPort: 'gate', to: 'p', toPort: 'pw' }
-		]);
-		const short = await pwm(0.5, [], [
-			{ from: 'entry', fromPort: 'gate', to: 'p', toPort: 'pw' }
-		]);
-		expect(steady(unwired)).toBeCloseTo(0.1726, 3);
-		expect(steady(gated)).toBeCloseTo(0.0742, 3);
-		expect(steady(short)).toBeCloseTo(0.0036, 3);
-		// The signal arrived: PW is nowhere near its unwired rest.
-		expect(steady(gated)).toBeLessThan(steady(unwired) * 0.6);
+		const r = await held(2);
+		expect(r.ok).toBe(true);
+		/* Monotonically rising, slice over slice -- the signature a live ramp
+		   leaves and a constant cannot. Skipping slice 0, which holds the
+		   attack, for the same reason `steady` does elsewhere in this file. */
+		const body = r.envelope.slice(1);
+		for (let i = 1; i < body.length; i++) {
+			expect(
+				body[i],
+				`expected HELD to keep rising: ${JSON.stringify(r.envelope)}`
+			).toBeGreaterThan(body[i - 1]);
+		}
+		// And genuinely moving, not a flat line with rounding noise: the last
+		// slice reads well above the first non-attack one.
+		expect(
+			body[body.length - 1],
+			`expected real movement across the render: ${JSON.stringify(r.envelope)}`
+		).toBeGreaterThan(body[0] * 1.5);
+	}, 45000);
+
+	it('starts at zero at the moment this activation begins, not at the render start', async () => {
+		/* HELD is ramped from this build's own `t`, not from the context's own
+		   time zero -- the two coincide for THEN on a fresh render, which is
+		   the only case reachable through this bench, but the distinction is
+		   what makes HELD answer "how long has *this* run", not "how far into
+		   the render are we". Asserted here as: the very first slice, which
+		   is mostly the note's attack, still reads near zero rather than
+		   already partway up a ramp that started before the note did. */
+		const r = await render(
+			patch(
+				[{ id: 'o', type: 'osc' }, { id: 'g', type: 'gain' }],
+				[
+					{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+					{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' },
+					{ from: 'entry', fromPort: 'held', to: 'g', toPort: 'level' }
+				],
+				{ 'g.level': 0 }
+			),
+			16,
+			2
+		);
+		expect(r.envelope[0], `expected HELD near zero at the start: ${JSON.stringify(r.envelope)}`).toBeLessThan(
+			r.envelope[r.envelope.length - 1] * 0.2
+		);
 	}, 45000);
 });
 

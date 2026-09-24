@@ -1,4 +1,5 @@
 import type { PortSpec, PortRole } from './graph-model';
+import type { NoteDurationDiv } from '../track-data';
 
 /**
  * The module catalogue for the patch bay.
@@ -75,7 +76,7 @@ export interface ModuleSpec {
 	/** Which shelf of the palette it appears on. */
 	group:
 		| 'SOURCE'
-		| 'LOGIC'
+		| 'FLOW'
 		| 'SHAPE'
 		| 'RESONATE'
 		| 'MODULATE'
@@ -386,6 +387,24 @@ export const WAVE_SHAPES = [
 /** Just the labels, for a `choices` list. */
 export const WAVE_LABELS: string[] = WAVE_SHAPES.map((w) => w.label);
 
+/**
+ * OUT's STEP mode, in the same nine beat divisions the piano roll's SNAP row
+ * offers -- exported so the engine can turn a picked index back into a
+ * `NoteDurationDiv` without a second copy of this list to drift from this
+ * one.
+ */
+export const DUR_STEP_CHOICES: NoteDurationDiv[] = [
+	'4',
+	'2',
+	'1',
+	'1/2',
+	'1/3',
+	'1/4',
+	'1/6',
+	'1/8',
+	'1/12'
+];
+
 export const MODULE_SPECS: ModuleSpec[] = [
 	/* The catalogue is being rebuilt out of primitives.
 	
@@ -404,24 +423,37 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	   nowhere for a patch to start and nowhere for it to arrive. */
 	{
 		id: 'in',
-		label: 'ENTRY',
-		group: 'SOURCE',
+		label: 'KEY-EVENT',
+		group: 'FLOW',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.in',
 		inputs: [],
-		/* Blueprint's event node: pressing a key is the event, and THEN is the
-		   white pin the rest of the patch hangs off. Whatever THEN reaches runs
-		   for this note; whatever it does not reach stays silent.
-		
-		   TRIG is the older logic pin and stays: a cable from there to a WHEN
-		   node asks a question about the note rather than running a module.
-		   Audio leaves by OUT as usual. */
+		/* Blueprint's event node: pressing a key is the event, and DOWN is the
+		   white pin the rest of the patch hangs off. Whatever DOWN reaches runs
+		   for this note; whatever it does not reach stays silent. Named for
+		   what it is rather than the generic THEN every other exec outlet on
+		   the canvas carries, because it is the one event a player can point
+		   to and say "the key going down" -- REL beside it is named the same
+		   way, for the other half of the same press.
+
+		   REL is the second one: the key coming back up, which is a moment
+		   this note cannot predict at the time DOWN fires -- a continuous hold
+		   has no known length, and even a timed one can be cut short by a
+		   choke or a new note stealing the voice. Wiring something to REL asks
+		   for it to happen at release rather than at the strike, the way a
+		   real release stage does and the way nothing on this canvas could
+		   say before it existed.
+
+		   Two keys down at once are two of everything downstream of ENTRY:
+		   each key press gets its own pass through the graph, so REL firing
+		   for one held note cannot reach into another's. */
 		/* No audio outlet. ADV is a complete signal path in its own right and
 		   has nothing to do with racks 1-7 -- they are two instruments, and a
 		   socket handing one into the other would only invite the confusion the
 		   split exists to remove. What the canvas says is what plays. */
 		outputs: [
-			EXEC_OUT,
+			{ id: 'then', label: 'DOWN', kind: 'exec', role: 'exec' },
+			{ id: 'rel', label: 'REL', kind: 'exec', role: 'exec' },
 			/* What the key press was. Blueprint's event nodes hand you the data
 			   the event carried, and these are a note's: which key, how hard, how
 			   long. Velocity reached the amp gain and nothing else before this,
@@ -431,7 +463,11 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ id: 'pitch', label: 'PITCH', kind: 'mod', role: 'pitch' },
 			{ id: 'vel', label: 'VEL', kind: 'mod', role: 'unit' },
 			{ id: 'note', label: 'NOTE', kind: 'mod', role: 'index' },
-			{ id: 'gate', label: 'GATE', kind: 'mod', role: 'time' }
+			/* How long the key has been down, live. A signal, not a snapshot --
+			   it keeps moving for as long as the note runs, which is what lets a
+			   patch say "the longer this key is held, the more the filter
+			   opens" without a WAIT or a re-trigger anywhere in it. */
+			{ id: 'held', label: 'HELD', kind: 'mod', role: 'time' }
 		],
 		params: []
 	},
@@ -512,7 +548,12 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.tofreq',
 		inputs: [{ id: 'a', label: 'PITCH', kind: 'mod', role: 'pitch' }],
 		outputs: [{ id: 'out', label: 'FREQ', kind: 'mod', role: 'hz' }],
-		params: [{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 }]
+		/* `fixed`, and no socket beside it: A4 has nowhere to reach even on
+		   the live build this node now has, since it is baked into the
+		   lookup table's own exponential curve once, at construction, the
+		   same as the tuning reference on every other pitched module. A cable
+		   sweeping it would need that table rebuilt every sample. */
+		params: [{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440, fixed: true }]
 	},
 	{
 		/* White noise, and only that.
@@ -953,7 +994,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * reach. */
 		id: 'wait',
 		label: 'WAIT',
-		group: 'LOGIC',
+		group: 'FLOW',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.wait',
 		inputs: [EXEC_IN],
@@ -981,7 +1022,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * enough to read as immediate and long enough not to snap. */
 		id: 'act',
 		label: 'ACT',
-		group: 'LOGIC',
+		group: 'FLOW',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.act',
 		inputs: [EXEC_IN],
@@ -1020,7 +1061,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * test does not silence the patch. */
 		id: 'when',
 		label: 'WHEN',
-		group: 'LOGIC',
+		group: 'FLOW',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.when',
 		inputs: [EXEC_IN, { id: 'cond', label: 'IF', kind: 'mod', role: 'bool' }],
@@ -1028,6 +1069,32 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'busy', label: 'BUSY', min: 0, max: 1, step: 1, def: 0, choices: ['OFF', 'ON'] }
 		]
+	},
+	{
+		/* A voice cut off from outside itself: another key stealing its slot,
+		 * or an ACT's CUT/SOLO reaching sideways from a different note.
+		 *
+		 * Not a third outlet on KEY-EVENT. THEN and REL both describe this
+		 * key press's own timeline -- when it started, when it let go -- and
+		 * both are things the press itself can be asked about. Being choked
+		 * is not: it is decided by a *different* voice, at a time this key's
+		 * own press cannot predict or own, so it is a second, independent
+		 * event source rather than a branch of the first one. Putting it on
+		 * KEY-EVENT would also blur what a single press can produce -- THEN,
+		 * then STOLEN, then (the finger actually lifting) REL, three firings
+		 * off one node for one press, when only two of them are about the
+		 * press at all.
+		 *
+		 * No inlets, the same shape ENTRY has: it is where a chain starts,
+		 * not where one arrives. */
+		id: 'onchoke',
+		label: 'ON-CHOKE',
+		group: 'FLOW',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.onchoke',
+		inputs: [],
+		outputs: [EXEC_OUT],
+		params: []
 	},
 	{
 		/* The waveform at this point, drawn.
@@ -1391,8 +1458,16 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 *
 		 * POS is typed, not turned. The temptation was to call a pan position
 		 * "found by ear" and keep a dial, but the values anyone reaches for are
-		 * 0, -100, 100 and the odd 30 -- numbers, on a plain symmetric range,
-		 * which is exactly what the knob rule says is a field. */
+		 * 0, -1, 1 and the odd 0.3 -- numbers, on a plain symmetric range,
+		 * which is exactly what the knob rule says is a field.
+		 *
+		 * -1..1, not -100..100: the card's unit is the param's unit, the same
+		 * move DELAY's TIME made when it stopped being milliseconds against a
+		 * param in seconds. A typed field can spell out the exact number an
+		 * AudioParam wants where a dial spanning the wrong range could not, so
+		 * the conversion `knobAt` existed for had nothing left to buy -- the
+		 * cable lands on `pan` directly now, the same as any other socket with
+		 * no unit mismatch to hide. */
 		id: 'pan',
 		label: 'PAN',
 		group: 'STEREO',
@@ -1400,7 +1475,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.pan',
 		inputs: [AUDIO_IN, { id: 'panPos', label: 'POS', kind: 'mod', role: 'cv' }],
 		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'stereo' }],
-		params: [{ key: 'panPos', label: 'POS', min: -100, max: 100, step: 1, def: 0, field: true }]
+		params: [{ key: 'panPos', label: 'POS', min: -1, max: 1, step: 0.01, def: 0, field: true }]
 	},
 	{
 		/* A stereo signal taken apart, so the two sides can differ.
@@ -1561,11 +1636,13 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'CONVERT',
 		color: '#c678dd',
 		descKey: 'synthPatch.mod.tosig',
+		/* IN takes a cable only, the way CMP's A does: what crosses into the
+		   audio family here is always something a patch computed, never a
+		   number typed on the card, so a field beside the socket would sit
+		   unused on every patch that has a reason to use this module at all. */
 		inputs: [{ id: 'level', label: 'IN', kind: 'mod' }],
 		outputs: [AUDIO_OUT],
-		params: [
-			{ key: 'level', label: 'LVL', min: -10, max: 10, step: 0.001, def: 0, field: true }
-		]
+		params: []
 	},
 	{
 		/* A literal, in whichever type the socket it is going to expects.
@@ -1642,6 +1719,52 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: []
 	},
 	{
+		/* A minus B, and nothing else. Order matters here, unlike ADD or MUL,
+		 * so A is drawn above B on the card -- the same top-to-bottom order
+		 * DIFF's two audio inlets read in. An unwired B is 0, the identity
+		 * subtraction leaves A alone. */
+		id: 'sub',
+		label: 'SUB',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.sub',
+		inputs: [CV_A, CV_B],
+		outputs: [CV_OUT],
+		params: []
+	},
+	{
+		/* A over B. Order matters, drawn the same top-to-bottom way SUB is. An
+		 * unwired B is 1, MUL's own identity -- dividing by nothing leaves A
+		 * alone, the same as multiplying by nothing does. B at exactly 0 reads
+		 * as that same identity rather than as `Infinity`: a signed float has
+		 * no honest answer for that case, and `Infinity` is a value nothing
+		 * downstream in this graph -- CLAMP, a WaveShaper curve, an AudioParam
+		 * -- is prepared to receive. */
+		id: 'div',
+		label: 'DIV',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.div',
+		inputs: [CV_A, CV_B],
+		outputs: [CV_OUT],
+		params: []
+	},
+	{
+		/* A remainder B, JavaScript's own `%` -- signed, not the wrapped
+		 * Euclidean kind -- because nothing here reads this as an index that
+		 * needs to stay positive, only as a number. Unwired B is 0, and B at
+		 * exactly 0 has the identical no-answer problem DIV's B does, so both
+		 * read as MOD's own identity: A itself, no wrap at all. */
+		id: 'mod',
+		label: 'MOD',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.mod',
+		inputs: [CV_A, CV_B],
+		outputs: [CV_OUT],
+		params: []
+	},
+	{
 		/* Where a quantity becomes a truth.
 		 *
 		 * The only module that crosses from one to the other. Every other logic
@@ -1655,14 +1778,21 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * keeps MAP's ten shapes in one list. */
 		id: 'cmp',
 		label: 'CMP',
-		group: 'LOGIC',
+		group: 'FLOW',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.cmp',
-		/* No knobs, for the reason ADD has none: what is being compared could be
-		   a frequency, a velocity or a step count, and a dial here would be a
-		   third opinion about which. A fixed operand is a CONST, which is the
-		   module that says what kind of number it is. */
-		inputs: [CV_A, CV_B],
+		/* A is a bare socket: what is being compared could be a frequency, a
+		   velocity or a step count, and a dial on A would be a third opinion
+		   about which -- the reason ADD has none either.
+
+		   B is the pair CLAMP's bounds are: a socket *and* a field sharing one
+		   key, cable winning when one is wired. "Above C3" is the ordinary
+		   case and a bare number is what it is, so requiring a separate CONST
+		   for it only to compare against a fixed 60 was one more card and one
+		   more cable for the single most common use of this module. A cable
+		   still reaches B when the threshold is itself something the patch
+		   computes. */
+		inputs: [CV_A, { id: 'b', label: 'B', kind: 'mod' }],
 		outputs: [{ id: 'out', label: 'OUT', kind: 'mod', role: 'bool' }],
 		params: [
 			{
@@ -1673,7 +1803,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 				step: 1,
 				def: 0,
 				choices: CMP_TESTS.map((t) => t.label)
-			}
+			},
+			{ key: 'b', label: 'B', min: -3.4e38, max: 3.4e38, step: 0.001, def: 0, field: true }
 		]
 	},
 	{
@@ -1688,7 +1819,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * five nodes. */
 		id: 'logic',
 		label: 'LOGIC',
-		group: 'LOGIC',
+		group: 'FLOW',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.logic',
 		inputs: [
@@ -1717,7 +1848,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * worse than a card that does one thing. */
 		id: 'not',
 		label: 'NOT',
-		group: 'LOGIC',
+		group: 'FLOW',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.not',
 		inputs: [{ id: 'a', label: 'A', kind: 'mod', role: 'bool' }],
@@ -1818,8 +1949,12 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		   Rounding a pitch to the nearest semitone is QNT the module: a decision
 		   about a value, not part of what "how many semitones is this frequency"
 		   means. Keeping it here made the quantise invisible unless you opened
-		   this card, which is the opposite of what the comment above wants. */
-		params: [{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 }]
+		   this card, which is the opposite of what the comment above wants.
+
+		   `fixed`, for the reason TO-FREQ's own A4 is: baked into the lookup
+		   table once, at construction, not reachable by a cable on the live
+		   build either. */
+		params: [{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440, fixed: true }]
 	},
 	{
 		/* Move a pitch by whole semitones.
@@ -1840,17 +1975,21 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'MATH',
 		color: '#61afef',
 		descKey: 'synthPatch.mod.trsp',
+		/* BY is the pair CLAMP's bounds are: a socket with a field behind it,
+		   a cable winning when one is wired. "Up a fifth" wants a plain
+		   number, not a CONST and a cable for the module's single most
+		   common use. */
 		inputs: [
 			{ id: 'a', label: 'PITCH', kind: 'mod', role: 'pitch' },
 			{ id: 'b', label: 'BY', kind: 'mod' }
 		],
 		outputs: [{ id: 'out', label: 'PITCH', kind: 'mod', role: 'pitch' }],
-		params: []
+		params: [{ key: 'b', label: 'BY', min: -48, max: 48, step: 1, def: 0, field: true }]
 	},
 	{
 		id: 'out',
 		label: 'OUT',
-		group: 'UTILITY',
+		group: 'FLOW',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.out',
 		/* Stereo in. Folding to one channel is MONO's job now -- a button here
@@ -1862,12 +2001,68 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		   wire trail off after the last ACT with nowhere to land. */
 		inputs: [EXEC_IN, { id: 'in', label: 'IN', kind: 'audio', role: 'stereo' }],
 		outputs: [],
-		/* No knobs. OUT sends the patch to the master bus and does nothing else:
-		   panning is PAN's job and level is VCA's, both of which are already
-		   modules you can put in front of it. A primitive that also mixes is two
-		   primitives wearing one coat, and the duplicate controls were a second
-		   place to look when a patch came out quiet. */
-		params: []
+		/* Level and pan stay off this card: PAN and VCA are already modules, and
+		   a knob here would be the same control in two places. DUR is not that
+		   -- there is nowhere else a voice's own lifetime is set. */
+		params: [
+			/* FOLLOW is level-triggered: the voice is reaped when its own
+			   ring-out ends, whatever that takes -- a plucked STRING gets
+			   seconds, a plain gain envelope gets none, exactly what always
+			   happened before this knob existed. TIME and STEP are both
+			   edge-triggered instead: once whatever reaches this OUT fires, it
+			   holds for exactly that long, no more and no less, whether the
+			   graph's own sound finishes sooner (silence fills the rest) or
+			   would have run longer (cut off exactly at the mark). A resonator
+			   fed a runaway feedback loop rings indefinitely with nothing here
+			   to stop it, and an OUT reached only by REL has no envelope of its
+			   own to end it at all -- DUR is what stops either.
+
+			   Three modes rather than one field overloading -1 as a sentinel,
+			   because the number line was carrying two unrelated questions on
+			   one knob: "should this hold a fixed length at all" and "how long
+			   is it". A single field made every DUR read ambiguous at a
+			   glance -- 1.5 is a plain number until you remember -1 means
+			   something else entirely, and typing 0 by habit silently meant
+			   the shortest possible edge-triggered hold rather than the
+			   sentinel "off" a 0 elsewhere on this card would be. */
+			{
+				key: 'dur',
+				label: 'DUR',
+				min: 0,
+				max: 2,
+				step: 1,
+				def: 0,
+				choices: ['FOLLOW', 'TIME', 'STEP']
+			},
+			/* TIME's own length in seconds. Only meaningful -- and only shown
+			   -- when DUR is set to TIME; read regardless, so switching DUR
+			   away and back does not lose whatever was typed here. */
+			{
+				key: 'durSec',
+				label: 'SEC',
+				min: 0.1,
+				max: 30,
+				step: 0.1,
+				def: 1,
+				unit: 's',
+				field: true,
+				fixed: true
+			},
+			/* STEP's length as a fraction of a beat, at the song's own BPM --
+			   the same nine divisions the piano roll's SNAP row offers, so a
+			   patch can say "one beat" or "a sixteenth note" without doing the
+			   arithmetic from BPM to seconds by hand, and stays in time if the
+			   song's tempo changes later. */
+			{
+				key: 'durStep',
+				label: 'STEP',
+				min: 0,
+				max: 8,
+				step: 1,
+				def: 2,
+				choices: DUR_STEP_CHOICES
+			}
+		]
 	},
 	/*
 	 * Two terminals and a label: the tidying set.
@@ -1969,6 +2164,82 @@ export const EXEC_PORT_IDS: ReadonlySet<string> = new Set(
 );
 
 /**
+ * Which module types turn execution into sound: exec reaching one of these is
+ * what "activates" the audio network wired into it.
+ *
+ * Derived rather than a hardcoded `{'out'}`, for the same reason every other
+ * set on this page is derived: the catalogue is the one place a module's
+ * shape is declared, and a second list drifts the moment a new module has
+ * this shape and the list is not updated to match. A module qualifies by
+ * having both an exec inlet and an audio inlet -- WAIT, WHEN and ACT all have
+ * the first and none of the second, because they are logic rather than sound;
+ * OUT has both, because it is exactly "exec landing here starts the network
+ * behind it playing". Today this resolves to exactly `{'out'}`; a future
+ * module built the same way (an exec-gated sidechain input, say) is included
+ * automatically rather than needing this list edited by hand.
+ */
+export const ACTIVATION_TYPES: ReadonlySet<string> = new Set(
+	MODULE_SPECS.filter(
+		(m) =>
+			m.inputs.some((p) => p.kind === 'exec') && m.inputs.some((p) => p.kind === 'audio')
+	).map((m) => m.id)
+);
+
+/**
+ * Which module types are execution's own starting points: they emit exec and
+ * take none in, so nothing upstream ever runs them -- an event, in the sense
+ * Blueprint uses the word.
+ *
+ * ENTRY (KEY-EVENT) is one, with two outlets -- THEN and REL -- both
+ * belonging to the same key press. ON-CHOKE is the other: a voice cut off
+ * from outside itself, by a different voice's ACT or by the voice-stealing
+ * pool, which is not a property of this key's own press and so is its own
+ * event source rather than a third KEY-EVENT outlet. Both are per-*voice*:
+ * `synth.ts` snapshots a build context onto the `ActiveVoice` that owns them
+ * and fires their own activation against it later.
+ *
+ * A future event source qualifies the same way: give it an exec outlet and
+ * no exec inlet, and `execReach`/`execDelays`'s seed-discovery, which already
+ * asks "which nodes have this type" rather than hardcoding `'in'`, finds it
+ * without this set or that code needing to change. What does NOT generalise
+ * for free is anything that is not per-voice -- a transport tick belonging to
+ * no note at all needs a different anchor than `ActiveVoice`, and likely a
+ * different build strategy than "rebuild fresh on every firing", since a
+ * per-voice activation firing a handful of times across one note's life and a
+ * clock ticking many times a second are not the same performance shape. See
+ * "A known gap the current model does not paint over" in
+ * docs/node-graph.md before assuming REL/ON-CHOKE's own machinery extends to
+ * that case unchanged.
+ */
+export const EVENT_SOURCE_TYPES: ReadonlySet<string> = new Set(
+	MODULE_SPECS.filter(
+		(m) => m.outputs.some((p) => p.kind === 'exec') && !m.inputs.some((p) => p.kind === 'exec')
+	).map((m) => m.id)
+);
+
+/**
+ * Which module types are probes: SCOPE, FFT and LOUD today, and whatever
+ * joins the METER group later.
+ *
+ * A probe has no outlet at all -- it reads and hands back nothing, which is
+ * what makes placing one unable to change the patch. That is also what makes
+ * it invisible to `ACTIVATION_TYPES`'s own reasoning: nothing ever depends on
+ * a probe's output, because it has none, so a walk that only builds what an
+ * activated OUT's ancestry needs would never find one and a probe would stop
+ * working wherever it was wired. It is exempted here rather than by widening
+ * what "ancestry" means, because the exemption is specific to probes -- a
+ * card that reads and shows without producing sound -- and not a property
+ * every non-audio-producing module should get.
+ *
+ * Kept keyed on the METER group rather than "an empty `outputs` array",
+ * because "produces no outlet" could describe a module for an unrelated
+ * reason in the future and this set exists to mean "is a probe" precisely.
+ */
+export const PROBE_TYPES: ReadonlySet<string> = new Set(
+	MODULE_SPECS.filter((m) => m.group === 'METER').map((m) => m.id)
+);
+
+/**
  * How wide a module's card draws, in canvas units.
  *
  * The card is its controls plus the gutters its port labels are drawn into, so
@@ -2035,16 +2306,24 @@ export function moduleWidth(spec: ModuleSpec): number {
  * is stated rather than assumed. */
 export const WIDEST_MODULE = MODULE_SPECS.length ? Math.max(...MODULE_SPECS.map(moduleWidth)) : 176;
 
-export const FIXED_MODULE_IDS = new Set(['in', 'out']);
-
-/** The modules a player can actually add. */
-export const PALETTE_SPECS: ModuleSpec[] = MODULE_SPECS.filter((m) => !FIXED_MODULE_IDS.has(m.id));
+/**
+ * KEY-EVENT and OUT are drawable from the palette like anything else -- a
+ * patch can carry several OUTs (each its own activation) or add a second
+ * event source, so hiding either behind a wall the rest of the catalogue
+ * does not have would only be a confusing exception. What differs is not
+ * whether they can be added, but how many: KEY-EVENT is capped at one live
+ * instance (greyed out in the palette once the graph already has one, a UI
+ * affordance rather than a rule the graph itself enforces -- see
+ * `isFixedNode` for the one rule that is: the *last* of either kind refuses
+ * deletion). OUT has no such cap.
+ */
+export const PALETTE_SPECS: ModuleSpec[] = MODULE_SPECS;
 
 /* The shelves, and the rule for which one a module goes on.
  *
- * Ordered the way a patch is read: what makes sound, what shapes it, what
- * rings, what controls it, then the stereo work, the arithmetic, the meters and
- * the plumbing. No IO shelf -- ENTRY and OUTPUT are in every patch already.
+ * Ordered the way a patch is read: how it starts and branches, what makes
+ * sound, what shapes it, what rings, what controls it, then the stereo work,
+ * the arithmetic, the meters and the plumbing.
  *
  * That reading order is how the list is *sorted*. It is not how a module is
  * *assigned*, and conflating the two left the boundary undecidable: FILTER
@@ -2063,10 +2342,11 @@ export const PALETTE_SPECS: ModuleSpec[] = MODULE_SPECS.filter((m) => !FIXED_MOD
  *      MODULATE is for what *emits* control, which is what ENV and LFO do.
  *
  *   2. Within the control family, what the node does to the value picks the
- *      shelf, because the ports alone cannot: MATH, LOGIC and CONVERT are all
+ *      shelf, because the ports alone cannot: MATH, FLOW and CONVERT are all
  *      `ctl -> ctl` and collapsing them would make one shelf of eleven. MATH
- *      is arithmetic on a quantity, LOGIC is anything whose output is a truth,
- *      CONVERT changes what a value *is* rather than what it equals.
+ *      is arithmetic on a quantity, FLOW is anything whose output is a truth
+ *      or that governs when and whether the patch runs at all, CONVERT changes
+ *      what a value *is* rather than what it equals.
  *
  *      CONVERT is the one shelf step 1 does not decide, and deliberately:
  *      crossing between the families is itself a conversion, so TO-CV and
@@ -2076,10 +2356,13 @@ export const PALETTE_SPECS: ModuleSpec[] = MODULE_SPECS.filter((m) => !FIXED_MOD
  *
  * A module with no inlets and an audio outlet is SOURCE; one with no outlet is
  * METER or UTILITY. Between them these decide every module in the catalogue,
- * which is the property the previous rule lacked. */
+ * which is the property the previous rule lacked. KEY-EVENT and OUT break the
+ * rule on purpose: neither is a module you patch into a signal chain, both are
+ * the graph's fixed ends, and FLOW -- the shelf already holding what gates and
+ * sequences a patch -- is where "how it starts and stops" belongs. */
 export const MODULE_GROUPS: ModuleSpec['group'][] = [
 	'SOURCE',
-	'LOGIC',
+	'FLOW',
 	'SHAPE',
 	'RESONATE',
 	'MODULATE',

@@ -5,7 +5,15 @@ import {
 	VELOCITY_LANE_ID,
 	type NoteLane
 } from './stores/note-lanes';
-import { EXEC_PORT_IDS, FILTER_TYPES, MODULE_SPECS, WAVE_SHAPES } from './stores/synth-modules';
+import {
+	EXEC_PORT_IDS,
+	ACTIVATION_TYPES,
+	PROBE_TYPES,
+	FILTER_TYPES,
+	MODULE_SPECS,
+	WAVE_SHAPES,
+	DUR_STEP_CHOICES
+} from './stores/synth-modules';
 import {
 	createResolver,
 	execReach,
@@ -13,10 +21,11 @@ import {
 	runs,
 	isPureNode,
 	isValueNode,
+	audioAncestors,
 	PURE_NODES,
 	type NoteEvent
 } from './stores/node-graph';
-import { graphOf, type GraphCable } from './stores/graph-model';
+import { graphOf, type GraphCable, type RackGraph } from './stores/graph-model';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { UNDERWATER_TRACKS } from './songs/underwater';
@@ -82,6 +91,43 @@ interface FreqPlan {
 	ramps: { to: number; at: number }[];
 }
 
+/**
+ * Everything `buildActivation` needs to run again, later, against the graph
+ * as it stood at note-on.
+ *
+ * A snapshot rather than a live read of `this.tracks[trackId]`, because the
+ * track can be edited while a voice is held -- a knob turned, a node moved --
+ * and an activation firing at release has to build the graph the key was
+ * actually pressed against, not whatever the canvas happens to hold when the
+ * key comes back up.
+ *
+ * Kept as its own type rather than written out twice, once per event kind
+ * that needs it (REL and ON-CHOKE, both today): both are "build this
+ * activation again, at a different real time", and the inputs that requires
+ * are the same regardless of which exec outlet is asking. Kept separate from
+ * `ActiveVoice` itself for the same reason: both existing users of this type
+ * are per-voice snapshots hung off one, but a future track-level event source
+ * (a transport tick belonging to no note at all -- see docs/node-graph.md)
+ * would need the same shape of inputs without anything to snapshot onto,
+ * since it has no voice. Folding this into `ActiveVoice` would make that
+ * case require pulling the type back out later; not folding it costs
+ * nothing today.
+ */
+interface AdvBuildContext {
+	graph: RackGraph;
+	params: Record<string, number>;
+	baseFreq: number;
+	laneValues: Record<string, number>;
+	presetGain: number;
+	note: { velocity: number; noteIndex: number };
+	trackId?: number;
+	waves: Record<string, string>;
+	/** Where a second activation's own sound should land -- the track's mix
+	    bus, not the voice's own gain, which may already be fading towards
+	    zero by the time this fires. */
+	busInput: AudioNode;
+}
+
 interface ActiveVoice {
 	osc1?: OscillatorNode;
 	osc2?: OscillatorNode;
@@ -105,11 +151,51 @@ interface ActiveVoice {
 	/** Which track and mute group this voice belongs to, for the choke rules. */
 	trackId?: number;
 	muteGroup?: number;
+	/** Set only when this voice's ADV graph has a REL outlet with something
+	    wired to it -- undefined for every other voice, so `releaseVoice`
+	    finding it absent is the whole cost this feature has for the patches
+	    that do not use it. */
+	advRelContext?: AdvBuildContext;
+	/** REL's own sources, once fired -- independent of `extras`, because they
+	    may still be ringing after this voice's own nodes are reaped. */
+	relSources?: AudioScheduledSourceNode[];
+	/** The ON-CHOKE counterpart of `advRelContext`: set only when this voice's
+	    graph has something wired to ON-CHOKE. Fired by `chokeVoice` and
+	    `stopVoice`, never by `releaseVoice` -- being cut off from outside is
+	    not the same event as the key coming up, however similar the two
+	    activations look once built. */
+	advChokeContext?: AdvBuildContext;
+	/** ON-CHOKE's own sources, the same reason `relSources` are kept apart
+	    from `extras`. */
+	chokeSources?: AudioScheduledSourceNode[];
+	/** The ADV graph's own sink gain -- undefined for a classic voice, where
+	    `gain` already owns this job. Faded to 0 wherever `extras` are stopped,
+	    so a patch with no envelope module of its own does not click. */
+	advGraphOut?: GainNode;
+	/** Every OUT the graph reached, independent of the others -- see
+	    `buildActivation`'s own field of the same name. `releaseVoice` reads
+	    this to fade each OUT's own gain at its own DUR or natural stop,
+	    rather than fading the one shared `advGraphOut` and taking every
+	    other OUT down with whichever OUT's deadline arrives first. */
+	advGraphOuts?: Map<
+		string,
+		{ delay: number; durCap: number | undefined; gain: GainNode; sources: AudioScheduledSourceNode[] }
+	>;
 }
 
 class ModularSynth {
 	private tracks: TrackData[] = JSON.parse(JSON.stringify(INITIAL_TRACKS));
 	private activeVoices: Map<string, ActiveVoice> = new Map();
+	/** Every REL/ON-CHOKE source currently ringing, across every voice that
+	    has already been reaped or choked out of `activeVoices`.
+
+	    Their whole reason to exist is outliving the voice that fired them, so
+	    nothing in `activeVoices` can find them once that voice is gone -- and
+	    a tail with no envelope of its own has no natural end, which without
+	    this set would mean no way at all to silence it short of reloading the
+	    page. Entries remove themselves on `onended`; `stopAll` is the one
+	    caller that needs to reach in from outside. */
+	private ringingTails: Set<AudioScheduledSourceNode> = new Set();
 	private noiseBuffer: AudioBuffer | null = null;
 	private lastTrackFreqs: Map<number, number> = new Map();
 	private lastTrackNoteTimes: Map<number, number> = new Map();
@@ -456,6 +542,11 @@ class ModularSynth {
 	 * right for a subtractive voice: nothing downstream is still producing sound.
 	 * A resonator is exactly the opposite -- a plucked string rings on -- so the
 	 * voice has to be held open for as long as the chain will sound.
+	 *
+	 * OUT's own DUR caps this rather than replacing it: it can only shorten a
+	 * tail the graph would have rung out anyway, never lengthen one, so a knob
+	 * left at its -1 default changes nothing and a mistuned feedback loop that
+	 * would otherwise ring for the full 12s ceiling can be told to let go sooner.
 	 */
 	private rackTailSeconds(track: TrackData): number {
 		// Same rule as the chain itself: no ADV, no resonator, no ring-out.
@@ -472,13 +563,16 @@ class ModularSynth {
 			switch (id) {
 				case 'string':
 					return p.decayTime ?? 2;
-				// A tube's partials hold with the key and then fall away quickly, so
-				// its ring-out is that fall, not the full decay setting.
-				// 1.5 is TUBE's own printed default, and this has to agree with the
-				// builder's fallback or the voice is reaped on a different clock
-				// from the one its partials decay on.
+				/* The fundamental (n=1) carries most of a tube's level and its decay
+           exponent is n-independent at n=1, so its partial rings for the
+           full DCAY setting -- not the capped 0.35s this used to return,
+           which agreed with a `min(dn, 0.35)` the builder dropped once DCAY
+           became the release its docstring describes. Left capped here after
+           that, `extrasStop` reaped the voice a third of a second in and the
+           bench could not tell a 0.1s decay from a 12s one because both were
+           cut to the same tail. 1.5 is still TUBE's own printed default. */
 				case 'tube':
-					return Math.min(p.tubeDecay ?? 1.5, 0.35);
+					return Math.max(0.05, p.tubeDecay ?? 1.5);
 				/* A delay line's tail is how long its echoes stay audible: each lap
            loses (1 - feedback), so the time to fall 60 dB is time * 3 /
            -log10(g). Capped, because g near 1 diverges. */
@@ -503,13 +597,25 @@ class ModularSynth {
 		};
 
 		let tail = 0;
-		const chain = track.rackChain;
-		if (Array.isArray(chain) && chain.length) {
-			const p = track.rackParams ?? {};
-			for (const id of chain) tail = Math.max(tail, tailOf(id, p));
+		const graph = track.rackGraph;
+		const graphOwnsVoice = !!graph?.nodes?.length;
+		/* The chain plays only when there is no graph to play instead -- the
+       same precedence `triggerTrackVoice` gives them, matched here rather
+       than checked independently. Checking both unconditionally meant a
+       track carrying a `rackChain` from before it switched to ADV, or a
+       preset that saves one alongside its graph, had its silent chain's
+       modules still setting the tail: a plain OSC-only graph measured a 2s
+       ring-out because `rackChain` still named a STRING nothing was
+       playing, and DUR's own FOLLOW default read as "keep the voice two
+       seconds longer" instead of "no cap at all". */
+		if (!graphOwnsVoice) {
+			const chain = track.rackChain;
+			if (Array.isArray(chain) && chain.length) {
+				const p = track.rackParams ?? {};
+				for (const id of chain) tail = Math.max(tail, tailOf(id, p));
+			}
 		}
 
-		const graph = track.rackGraph;
 		if (graph && Array.isArray(graph.nodes)) {
 			const gp = track.graphParams ?? {};
 			for (const n of graph.nodes) {
@@ -525,6 +631,147 @@ class ModularSynth {
 	}
 
 	/**
+	 * OUT's own DUR: FOLLOW is level-triggered, following however long the
+	 * note (or its natural ring-out) actually lasts, the same as
+	 * `rackTailSeconds` on its own decides. TIME and STEP are edge-triggered
+	 * instead -- once whatever reaches this OUT fires, the voice holds for
+	 * exactly that many seconds and no more or less, independent of how long
+	 * the graph's own sound would have taken by itself. A ring shorter than
+	 * DUR sits at silence rather than being reaped early; a ring longer than
+	 * DUR is cut off exactly at the mark instead of wherever it would
+	 * naturally end. This used to be a single field, -1 folded into
+	 * `rackTailSeconds`'s own `Math.min` as a ceiling that could only shorten
+	 * a tail, never replace it outright -- which measured DUR against the
+	 * wrong clock (a rack module's tail runs from the note's *release*; DUR
+	 * runs from the *edge that set it going*), could never hold a voice open
+	 * past its natural end even when asked to, and made every value read
+	 * ambiguous until you remembered which numbers meant what.
+	 *
+	 * Undefined when no OUT sets one, so a voice with nothing to cap costs
+	 * this function nothing beyond the walk every note already pays for.
+	 */
+	private advGraphDurCap(track: TrackData): number | undefined {
+		if (!track.advanced) return undefined;
+		return ModularSynth.durCapOf(track.rackGraph, track.graphParams ?? {}, this.bpm);
+	}
+
+	/**
+	 * The latest moment any OUT in this graph could still need to be heard,
+	 * given `t` (when the activation starts) and `voiceStop` (when the voice
+	 * would naturally end if every OUT were plain FOLLOW with no WAIT ahead
+	 * of it).
+	 *
+	 * Answered before anything is built, by walking the graph the same way
+	 * `buildActivation`'s own per-OUT plan does -- `execDelays` for how late
+	 * WAIT pushes each OUT's own start, `durCapOfNode` for what TIME or STEP
+	 * asks for from there. Needed early because the voice's *reap* deadline
+	 * (when `osc1`'s own `onended` disconnects everything, including OUTs
+	 * this graph has not even started yet) is decided before the graph is
+	 * built at all -- reaping used the classic voice's own, un-extended
+	 * `reapTime` regardless, so a FOLLOW OUT sitting behind a WAIT was
+	 * disconnected out from under its own still-scheduled fade the moment
+	 * the classic (silent, muted-by-ADV) oscillator's stale stop time
+	 * arrived. Measured: a WAIT of 800ms pushed a FOLLOW OUT's own release to
+	 * 2.21s, and the voice was torn down at 1.41s regardless -- the fade was
+	 * scheduled correctly and never got to run.
+	 *
+	 * Not gated on `outputRuns`: a WHEN could route around an OUT for this
+	 * particular note despite it existing in the graph, and answering "not
+	 * reached" here would need the same exec-reach walk `buildActivation`
+	 * already does once building starts. Counting every OUT the graph
+	 * declares, reached or not, only ever holds reaping open *later* than
+	 * strictly necessary -- never earlier, which is the direction that
+	 * cannot be wrong.
+	 */
+	private advGraphLatestDeadline(track: TrackData, t: number, voiceStop: number): number | undefined {
+		if (!track.advanced) return undefined;
+		const graph = track.rackGraph;
+		if (!graph || !Array.isArray(graph.nodes)) return undefined;
+		const params = track.graphParams ?? {};
+		const delays = execDelays(graph, params, EXEC_PORT_IDS, 'in', 'then');
+		let latest: number | undefined;
+		for (const n of graph.nodes) {
+			if (n.type !== 'out') continue;
+			const delay = delays.get(n.id) ?? 0;
+			const durCap = ModularSynth.durCapOfNode(n.id, params, this.bpm);
+			const deadline = durCap !== undefined ? t + delay + durCap : voiceStop + delay;
+			latest = latest === undefined ? deadline : Math.max(latest, deadline);
+		}
+		return latest;
+	}
+
+	/**
+	 * TIME and STEP both name a length; this is what turns either into
+	 * seconds. FOLLOW has no length to name and never reaches here -- see
+	 * `durCapOf`'s own guard.
+	 */
+	private static durSecondsOf(mode: number, params: Record<string, number>, bpm: number): number {
+		if (mode === 1) return Math.max(0.001, params.durSec ?? 1);
+		const div = DUR_STEP_CHOICES[Math.round(params.durStep ?? 2)] ?? '1';
+		const stepDuration = 60 / bpm / STEPS_PER_BEAT;
+		return divToStepSpan(div) * stepDuration;
+	}
+
+	/**
+	 * The graph-walking half of `advGraphDurCap`, apart from it because REL
+	 * and ON-CHOKE fire a *second* activation of the same graph -- their own
+	 * `AdvBuildContext` snapshot, not the `TrackData` the first activation
+	 * built from. That second activation had no DUR of its own at all: its
+	 * sources were started and left running with nothing to stop them but
+	 * their own `onended`, which a plain oscillator with no envelope never
+	 * fires on its own. An OUT reached only by REL rang forever regardless
+	 * of what its DUR said, TIME and STEP alike, because nothing here ever
+	 * asked the graph what either one meant.
+	 *
+	 * `bpm` is the *current* tempo, read at the moment this activation fires
+	 * rather than baked in at note-on -- a STEP duration is a musical length,
+	 * not a fixed number of seconds, so a tempo change between a note
+	 * starting and this OUT firing changes what "one beat" means exactly the
+	 * way it changes every other beat-relative duration in the engine.
+	 */
+	private static durCapOf(
+		graph: { nodes: { id: string; type: string }[] } | undefined,
+		params: Record<string, number>,
+		bpm: number
+	): number | undefined {
+		if (!graph || !Array.isArray(graph.nodes)) return undefined;
+		let cap: number | undefined;
+		for (const n of graph.nodes) {
+			if (n.type !== 'out') continue;
+			const dur = ModularSynth.durCapOfNode(n.id, params, bpm);
+			if (dur === undefined) continue;
+			cap = cap === undefined ? dur : Math.min(cap, dur);
+		}
+		return cap;
+	}
+
+	/**
+	 * One OUT's own DUR, in seconds -- undefined at FOLLOW (0) or an OUT that
+	 * has never carried the field at all.
+	 *
+	 * Split out of `durCapOf` so a per-OUT stop plan can ask this one
+	 * question about one node without also asking every other OUT the graph
+	 * carries -- see `buildActivation`'s `outs` field, which is what a graph
+	 * with more than one OUT needed and `durCapOf`'s single tightest-cap-wins
+	 * number could not give it: two OUTs sharing one voice-wide cap meant a
+	 * TIME OUT reaching for its own second cut short a sibling OUT set to
+	 * FOLLOW, silencing a branch its own DUR never mentioned.
+	 */
+	private static durCapOfNode(
+		outId: string,
+		params: Record<string, number>,
+		bpm: number
+	): number | undefined {
+		const mode = params[`${outId}.dur`];
+		// FOLLOW (0), or an OUT that has never carried the field at all.
+		if (!mode) return undefined;
+		const prefix = `${outId}.`;
+		const own: Record<string, number> = {};
+		for (const [k, v] of Object.entries(params)) if (k.startsWith(prefix)) own[k.slice(prefix.length)] = v;
+		return ModularSynth.durSecondsOf(mode, own, bpm);
+	}
+
+	/**
 	 * Build a patched graph: modules as nodes, cables between named ports.
 	 *
 	 * Audio cables are followed in topological order, so a node's inputs exist
@@ -536,12 +783,85 @@ class ModularSynth {
 	 * an empty canvas and wiring it to nothing still makes a sound: the patch is
 	 * discovered by connecting things, not by getting it right first time.
 	 */
+	/**
+	 * The whole graph, playing exactly as it always has: THEN's own activation.
+	 *
+	 * A thin wrapper now -- see `buildActivation` for what building actually
+	 * does. Kept as its own method rather than inlining `'then'` at every call
+	 * site, so the two things every existing caller wants ("build the note")
+	 * and the one thing REL wants ("build what its own outlet reaches") read
+	 * as what they are rather than as the same call with a string threaded
+	 * through it.
+	 */
 	private buildRackGraph(
 		ctx: BaseAudioContext,
 		graph: {
 			nodes: { id: string; type: string }[];
 			cables: { from: string; fromPort: string; to: string; toPort: string }[];
 		},
+		params: Record<string, number>,
+		baseFreq: number,
+		t: number,
+		heldSec: number,
+		laneValues: Record<string, number> = {},
+		presetGain = 1,
+		note: { velocity: number; noteIndex: number } = { velocity: 1, noteIndex: 48 },
+		trackId?: number,
+		waves: Record<string, string> = {}
+	): {
+		out: AudioNode;
+		sources: AudioScheduledSourceNode[];
+		startAt: Map<AudioScheduledSourceNode, number>;
+		outs: Map<
+			string,
+			{ delay: number; durCap: number | undefined; gain: GainNode; sources: AudioScheduledSourceNode[] }
+		>;
+	} | null {
+		return this.buildActivation(
+			ctx,
+			graph,
+			'then',
+			params,
+			baseFreq,
+			t,
+			heldSec,
+			laneValues,
+			presetGain,
+			note,
+			trackId,
+			waves
+		);
+	}
+
+	/**
+	 * One exec outlet's activation: the audio network it reaches, built and
+	 * started as of `t`.
+	 *
+	 * This is the rewrite `buildRackGraph` used to be whole. Blueprint's own
+	 * split is exec versus data -- which nodes run, and what they read when
+	 * they do -- and an activation is one run of the exec side: pick the exec
+	 * outlet (`entryPort`, an outlet on one of `EVENT_SOURCE_TYPES`), walk
+	 * where it reaches, and build only the audio ancestry of whatever it
+	 * activates (`ACTIVATION_TYPES` -- an OUT, today). THEN calling this is
+	 * what plays a note; REL calling it later, at the real moment the key
+	 * comes up, with its own `t`, is what makes a release its own event rather
+	 * than a number read off in advance.
+	 *
+	 * Two activations of the same graph never share a built node. An
+	 * oscillator REL's ancestry reaches cannot be the one THEN already started
+	 * -- it has been running since the note began and cannot be rewound -- so
+	 * each call here builds its own instances from scratch, however much of
+	 * the graph the two activations have in common. A pure node has no
+	 * instance to share in the first place: it is pulled fresh by the
+	 * resolver either way, at whatever `noteEvent` this call constructs.
+	 */
+	private buildActivation(
+		ctx: BaseAudioContext,
+		graph: {
+			nodes: { id: string; type: string }[];
+			cables: { from: string; fromPort: string; to: string; toPort: string }[];
+		},
+		entryPort: string,
 		params: Record<string, number>,
 		baseFreq: number,
 		t: number,
@@ -559,13 +879,27 @@ class ModularSynth {
 		/* Per-node settings that are names rather than numbers -- an oscillator's
        waveform is the only one so far. Kept out of `params` because everything
        reading that map treats a value as a quantity. */
-		waves: Record<string, string> = {}
+		waves: Record<string, string> = {},
+		/* Which node type this activation's `entryPort` lives on -- KEY-EVENT
+       for THEN and REL, ON-CHOKE for its own outlet. Defaulted to `'in'`
+       (KEY-EVENT) rather than derived from `EVENT_SOURCE_TYPES` here, because
+       a single activation always seeds from exactly one event source and the
+       caller already knows which one fired; asking the catalogue again per
+       call would only be answering a question this parameter already
+       settles. */
+		entryType = 'in'
 	): {
 		out: AudioNode;
 		sources: AudioScheduledSourceNode[];
 		/** When each source starts, so a WAIT gap reaches the sound and not only
         the modules that happen to schedule against the note time. */
 		startAt: Map<AudioScheduledSourceNode, number>;
+		/** Every OUT this activation reached, each independent of the others --
+		 *  see the field's own construction below for why that has to be true. */
+		outs: Map<
+			string,
+			{ delay: number; durCap: number | undefined; gain: GainNode; sources: AudioScheduledSourceNode[] }
+		>;
 	} | null {
 		/* Read from the catalogue rather than listed here. The list this replaces
        said ['fm','cv'] and had fallen behind the modules: pwm, trig and do are
@@ -643,52 +977,169 @@ class ModularSynth {
 			tuning: this.masterTuningFreq,
 			velocity: note.velocity,
 			noteIndex: note.noteIndex,
-			gate: heldSec,
 			lanes: laneValues
 		};
 		const resolver = createResolver(graph, params, noteEvent);
 		const cvIn = (nodeId: string, port: string, fallback: number) =>
 			resolver.input(nodeId, port, fallback);
 
-		/* Which nodes this note runs. Execution is Blueprint's white wire: it
-       reaches the nodes that *do* something -- WHEN asks, ACT mutes, OUT hands
-       the patch to the master bus.
-    
+		/* Which nodes this activation runs. Execution is Blueprint's white wire:
+       it reaches the nodes that *do* something -- WHEN asks, ACT mutes, OUT
+       hands the patch to the master bus.
+
        There is no "unless the patch draws no exec cable" exemption; the seed
        patch draws the cable instead, so the simplest patch is still one you can
        play without building it. This comment used to claim the opposite of what
        execReach does, which is how the exemption stayed alive in the branch
-       below long after it was deleted from the resolver. */
-		const reach = execReach(graph, EXEC_PORT_IDS, 'in', (id) =>
-			this.whenHolds(params, id, note.noteIndex, trackId ?? -1, graph, noteEvent)
+       below long after it was deleted from the resolver.
+
+       `entryPort` is threaded through rather than assumed: THEN and REL are
+       two different activations of the same graph, and a WHEN or a WAIT
+       reachable from one must not be reachable from the other's walk just
+       because both outlets sit on the same ENTRY node. */
+		const reach = execReach(
+			graph,
+			EXEC_PORT_IDS,
+			entryType,
+			(id) => this.whenHolds(params, id, note.noteIndex, trackId ?? -1, graph, noteEvent),
+			entryPort
 		);
 		const outputRuns = (id: string) => runs(reach, id);
 		/* When each node runs, in seconds after the note. Zero for everything the
        event reaches directly; WAIT adds its gap as execution passes through, so
        a strike wired downstream of one lands late -- which is a flam. */
-		const delays = execDelays(graph, params, EXEC_PORT_IDS);
+		const delays = execDelays(graph, params, EXEC_PORT_IDS, entryType, entryPort);
+
+		/* Which nodes this activation actually needs built.
+
+       An activation point (an OUT, by ACTIVATION_TYPES) that this walk's exec
+       reaches is what "playing" means for this call; everything upstream of
+       it, along audio and mod cables, is its ancestry and nothing else is.
+       Restricting the build to that ancestry is what makes REL's own call
+       here not start an oscillator that belongs only to THEN's branch --
+       today, with only THEN ever calling in, it also happens to prune the
+       nodes that were built and left disconnected before, which is waste
+       rather than a behaviour anyone relied on.
+
+       A patch with no OUT module at all is the one case this cannot narrow:
+       ACTIVATION_TYPES finds no root to walk ancestry from, and the sink step
+       below falls back to its own older rule -- every node nothing else
+       listens to is an output. That rule needs the whole graph in `order`,
+       so this keeps the whole graph rather than pruning to an empty ancestry
+       and building nothing. */
+		const activatedOuts = graph.nodes.filter(
+			(n) => ACTIVATION_TYPES.has(n.type) && runs(reach, n.id)
+		);
+		/* SEND feeds RTN with no cable to say so -- see `fbBuses` and the
+       `fbsend`/`fbrtn` case below. An ancestor walk that only followed
+       cables would find RTN behind an OUT (RTN does have an audio outlet)
+       but never SEND behind RTN, and the signal the loop is meant to catch
+       would never be built. Paired here by BUS number, the same number the
+       engine itself matches them by at build time, and fed to the walk as
+       edges that are not cables but must still count as one. */
+		const fbEdges = graph.nodes
+			.filter((n) => n.type === 'fbrtn')
+			.flatMap((rtn) => {
+				const bus = params[`${rtn.id}.bus`] ?? 0;
+				return graph.nodes
+					.filter((n) => n.type === 'fbsend' && (params[`${n.id}.bus`] ?? 0) === bus)
+					.map((send) => ({ from: send.id, to: rtn.id }));
+			});
+		/* Probes are exempt from ancestry the way OUT is its own root: a SCOPE,
+       FFT or LOUD has no outlet at all, so nothing an activated OUT depends
+       on ever depends on a probe, and an ancestry walk from OUT alone would
+       never find one -- a probe on the canvas would simply stop working.
+       Placing one has to cost nothing, which is the whole reason it exists,
+       so every probe *this activation's own OUTs can actually reach* is
+       treated as a root alongside them; its own feed (a MUL's operands, say)
+       is then found the same way an OUT's is.
+
+       Not every probe in the whole graph, regardless of entry: a probe
+       tapped off a branch only THEN reaches used to be rebuilt from scratch
+       by REL's own activation too, because probes ignored `entryType` and
+       `entryPort` entirely and were roots every single time, on every walk.
+       REL firing then found the probe, walked back to whatever fed it --
+       here, a plain FOLLOW OUT's own OSC, with no REL wiring anywhere near
+       it -- and built a second, independent oscillator nothing in this
+       activation's own release logic would ever stop: `releaseVoice`
+       schedules the fade on the note-on voice's own sources, and this new
+       one belongs to `fireVoiceInterrupt`'s `relSources` instead, ringing
+       forever with no envelope of its own. Measured: a bare OSC into a
+       FOLLOW OUT, watched through a SCOPE tapped on its output, kept
+       reading a full-amplitude wave indefinitely after the key came up,
+       because the *second* OSC the probe's own root status built on every
+       REL was never released -- the first one behind the FOLLOW OUT itself
+       had already faded exactly on schedule and was inaudible; the SCOPE
+       was reading the orphan.
+
+       Answered here by computing the OUT-only ancestry first, then keeping
+       a probe only if its own *feed* -- the node on the other end of the
+       cable running into it, the same thing `audioAncestors` itself chases
+       for anything else -- is either a value node (a CONST, an ADD, and the
+       rest of the family this graph can pull as a plain number without
+       building anything that outlives the read) or already inside that
+       ancestry. A probe sits downstream of whatever it taps, never
+       upstream, so it never appears in an OUT's own ancestry the way its
+       feed does; asking about the feed instead is what makes this the same
+       question audioAncestors already answers for every other node.
+
+       The value-node exemption matters on its own: SCOPE and LOUD both take
+       a CV as well as audio, precisely so a bare CONST feeding nothing else
+       in the graph can still be watched -- that CONST is never going to be
+       any OUT's own ancestor, by design, and would be dropped by the OUT
+       reachability test alone the same wrong way an actual orphaned
+       oscillator needed to be. A value node never becomes a source this
+       activation would need to clean up later, so there is nothing here for
+       the REL-rebuilds-THEN's-OSC bug to reach through it -- unlike an OSC,
+       ENV or NODE.CV, which do build something with a lifetime of its own. */
+		const probes = graph.nodes.filter((n) => PROBE_TYPES.has(n.type));
+		const hasAnyOut = graph.nodes.some((n) => ACTIVATION_TYPES.has(n.type));
+		const outIds = activatedOuts.map((n) => n.id);
+		const outOnlyAncestry = hasAnyOut
+			? audioAncestors(graph, audioCables, modCables, outIds, fbEdges)
+			: null;
+		const feedsOf = (id: string) =>
+			[...audioCables, ...modCables].filter((c) => c.to === id).map((c) => c.from);
+		const probeFeedType = new Map(graph.nodes.map((n) => [n.id, n.type]));
+		const reachableProbes = outOnlyAncestry
+			? probes.filter((n) =>
+					feedsOf(n.id).some(
+						(f) => isValueNode(probeFeedType.get(f) ?? '') || outOnlyAncestry.has(f) || outIds.includes(f)
+					)
+				)
+			: probes;
+		const roots = [...activatedOuts, ...reachableProbes].map((n) => n.id);
+		const ancestry = hasAnyOut
+			? audioAncestors(graph, audioCables, modCables, roots, fbEdges)
+			: null;
+		const inScope = (id: string) =>
+			!ancestry || ancestry.has(id) || roots.includes(id);
+		const scopedNodes = ancestry ? graph.nodes.filter((n) => inScope(n.id)) : graph.nodes;
 
 		// Kahn's algorithm; a cycle here means a hand-edited patch file, since the
 		// editor refuses to draw one.
 		const indeg = new Map<string, number>();
-		for (const n of graph.nodes) indeg.set(n.id, 0);
-		for (const c of audioCables) if (indeg.has(c.to)) indeg.set(c.to, (indeg.get(c.to) ?? 0) + 1);
-		const queue = graph.nodes.filter((n) => (indeg.get(n.id) ?? 0) === 0);
+		for (const n of scopedNodes) indeg.set(n.id, 0);
+		for (const c of audioCables) {
+			if (!indeg.has(c.to) || !indeg.has(c.from)) continue;
+			indeg.set(c.to, (indeg.get(c.to) ?? 0) + 1);
+		}
+		const queue = scopedNodes.filter((n) => (indeg.get(n.id) ?? 0) === 0);
 		const order: typeof graph.nodes = [];
 		while (queue.length) {
 			const n = queue.shift()!;
 			order.push(n);
 			for (const c of audioCables) {
-				if (c.from !== n.id) continue;
+				if (c.from !== n.id || !indeg.has(c.to)) continue;
 				const left = (indeg.get(c.to) ?? 0) - 1;
 				indeg.set(c.to, left);
 				if (left === 0) {
-					const next = graph.nodes.find((m) => m.id === c.to);
+					const next = scopedNodes.find((m) => m.id === c.to);
 					if (next) queue.push(next);
 				}
 			}
 		}
-		if (order.length !== graph.nodes.length) return null;
+		if (order.length !== scopedNodes.length) return null;
 
 		/* One feedback bus map per voice. See the `fbBuses` parameter. */
 		const fbBuses = new Map<number, { send: GainNode; rtn: GainNode }>();
@@ -720,39 +1171,42 @@ class ModularSynth {
 
 		const sources: AudioScheduledSourceNode[] = [];
 		/* When each source starts, keyed by the node that made it.
-    
+
        WAIT's gap reaches a module that schedules against `t` -- an envelope, a
        strike -- but every AudioScheduledSourceNode was started at the note
        regardless, so an oscillator behind a WAIT played on the beat and the flam
        the module exists for did not happen. */
 		const startAt = new Map<AudioScheduledSourceNode, number>();
+		/* Which sources each node made, so a per-OUT stop plan can find them by
+       walking that OUT's own ancestry -- see the `outs` field this function
+       returns. Same slice-of-`sources` trick `startAt` already uses below. */
+		const sourcesByNode = new Map<string, AudioScheduledSourceNode[]>();
 		const typeById = new Map(graph.nodes.map((n) => [n.id, n.type]));
 		/* Modules whose output is a value, not a sound. A CONST left unwired must
        not be summed into the mix -- it is DC, and DC is a click and then a
-       silent offset eating headroom. */
-		/* Modules whose output is a value, not a sound. A CONST left unwired must
-       not be summed into the mix -- it is DC, and DC is a click and then a
        silent offset eating headroom.
-    
-       Derived from the pure-node table rather than typed out beside it: the
-       hand-written copy happened to be correct, and stayed correct only for as
-       long as whoever added a pure node remembered this list existed.
 
-       Four names sit beside it. ENV emits a control curve. MAP and TO-CV emit
-       a control value through real audio nodes -- MAP's curve is a
-       WaveShaperNode so it can bend a waveform sample by sample, and TO-CV is
-       the gain that carries one across the family line -- so the table cannot
-       classify them, and an unwired one would put its offset into the mix as
-       DC. TERM.CV is here for exactly that reason too: it is dual like MAP, so
-       the table does not call it pure, and a terminal dropped on the canvas and
-       not yet wired anywhere must not be heard. What they emit decides, not how
-       they are built. */
+       Derived from `isValueNode` rather than `isPureNode`, and this is the one
+       place the difference is load-bearing. Every entry in `PURE_NODES` used
+       to be pure -- pulled once, never built -- so asking either question gave
+       the same answer. That stopped being true the day ADD, MUL, CMP and the
+       rest of them gained a live-signal build: `isPureNode` now answers false
+       for a MUL sitting on the canvas doing nothing but multiply two CONSTs,
+       because it *can* be built, and this list would have started mixing that
+       MUL's output into the master bus as DC the moment it stopped being
+       "pure" in the classification sense -- a correct, inert node suddenly
+       audible for a reason that has nothing to do with whether it makes
+       sound. `isValueNode` answers the question this list actually asks --
+       does this node's output settle to a number rather than describe air
+       moving -- and stays true regardless of which build path served it.
+
+       Four names sit beside it, not covered by `isValueNode` because their
+       whole reason to exist is producing a live control signal rather than a
+       one-shot value: ENV, TO-CV and NODE.CV emit through real audio nodes
+       with nothing in `PURE_NODES` to answer for them structurally, and each
+       needs the same exemption from the master mix an unwired CONST does. */
 		const isModOnly = (type: string) =>
-			isPureNode(type) ||
-			type === 'env' ||
-			type === 'map' ||
-			type === 'tocv' ||
-			type === 'nodecv';
+			isValueNode(type) || type === 'env' || type === 'tocv';
 
 		for (const node of order) {
 			/* A knob reads its cable first, and its own setting when there is none.
@@ -809,7 +1263,6 @@ class ModularSynth {
 				laneValues,
 				cvIn,
 				{ ...note, tuning: this.masterTuningFreq },
-				heldSec,
 				waves[`${node.id}.wave`],
 				fbBuses,
 				new Set(
@@ -820,6 +1273,7 @@ class ModularSynth {
 			if (!made) continue;
 			// Whatever this node just created starts when this node runs.
 			for (let i = madeBefore; i < sources.length; i++) startAt.set(sources[i], runAt);
+			if (sources.length > madeBefore) sourcesByNode.set(node.id, sources.slice(madeBefore));
 
 			built.set(node.id, made);
 
@@ -867,13 +1321,18 @@ class ModularSynth {
          behind it -- a PULSE's PWM -- has no value path at all, so ENTRY's VEL
          reaching one of those is a signal and must still be connected.
       
-         And a port can be both. GAIN's LVL and TO-SIG's LVL are each a declared
-         inlet *and* a param of the same name, so the resolver reads them as a
-         value and the inlet test alone said "signal, connect it". ENTRY's VEL
-         into GAIN's LVL was therefore applied twice -- measured at 0.58 RMS
-         where the same velocity typed into the knob, and the same velocity from
-         a CONST, both read 0.4163. A 1.39x error on the first patch anyone
-         builds.
+         And a port can be both. GAIN's LVL is a declared inlet *and* a param
+         of the same name, so the resolver reads it as a value and the inlet
+         test alone said "signal, connect it". ENTRY's VEL into GAIN's LVL
+         was therefore applied twice -- measured at 0.58 RMS where the same
+         velocity typed into the knob, and the same velocity from a CONST,
+         both read 0.4163. A 1.39x error on the first patch anyone builds.
+
+         TO-SIG's own IN used to be the same shape and is not any more: it
+         has no field beside it now, cable-only the way CMP's A is, so it is
+         never "already resolved as a value" and always takes this branch --
+         which is correct for it, since carrying a live signal is the whole
+         reason the module exists.
       
          CONST never showed it: a pure node builds nothing, so `src` is
          undefined and the cable was already being dropped a line below. Only
@@ -898,13 +1357,48 @@ class ModularSynth {
 			   connected on top of it. Measured: an INV over 0..1 into GAIN's LVL
 			   read exactly 1.0 too high at every input, which is `map(midpoint)`
 			   arriving a second time.
-			
+
 			   `isValueNode` is the question that was meant: can this be pulled as a
-			   number. A MAP that is itself carrying a signal still has to connect,
+			   number. A node that is itself carrying a signal still has to connect,
 			   which is what `carriesSignal` preserves -- so a waveform through MAP
-			   is shaped per sample, and a value through MAP is read once. */
-			const carriesSignal = isValueNode(fromType) && resolver.isDrivenBySignal(c.from, 'a');
-			if (hasValuePath && !carriesSignal && (isValueNode(fromType) || fromType === 'in'))
+			   is shaped per sample, and a value through MAP is read once.
+
+			   `nodeCarriesSignal` rather than `isDrivenBySignal(c.from, 'a')`: the
+			   narrower check answered only for MAP and NODE.CV, whose one movable
+			   inlet happens to be named `a`. ADD, MUL, CMP and the rest of the
+			   family that followed them do not share that shape -- a MUL fed HELD
+			   on `b` alone still has a live output, and asking only about `a` read
+			   it as settled, which very nearly reintroduced the exact bug this
+			   whole family exists to fix, one port later. */
+			const carriesSignal = isValueNode(fromType) && resolver.nodeCarriesSignal(c.from);
+			/* ENTRY's own HELD is the one outlet on it that is never a snapshot --
+         see the resolver's `read()`, which excludes exactly this port from
+         the value path for the same reason. Skipping the connection here
+         the way every other ENTRY pin is skipped would leave the resolver's
+         fix with nothing to connect to: the value path would already have
+         backed off, and this loop would back off too, so the cable would
+         draw and carry nothing. */
+			const isEntryHeld = fromType === 'in' && c.fromPort === 'held';
+			/* A settled value node never needs a second, live connection on top of
+			   whatever `cvIn` already resolved for this exact cable -- true
+			   whether or not the destination happens to declare a `params` entry
+			   under the same key, which is all `hasValuePath` alone ever asked.
+			   WIDE, PW and PITCH all resolve their own resting number through
+			   `cvIn` with no matching param to its name, and so does every bare
+			   leg in the ADD/MUL/CMP family -- `hasValuePath` read every one of
+			   them as having nowhere for a value to land, so a CONST reaching any
+			   of them connected as well as being pulled and doubled the result
+			   (WIDE at 2 measured 0.5085 against an expected 0.41-0.44). None of
+			   this could be seen before today, because none of `PURE_NODES` built
+			   anything: `src` was always undefined and the guard two lines above
+			   dropped the cable regardless of what happens here.
+
+			   Scoped to value-node sources specifically, beside the older rule
+			   rather than instead of it -- ENTRY's own snapshot pins (PITCH, VEL,
+			   a lane) are not value nodes by this table's own definition and keep
+			   the narrower, already-relied-on rule untouched. */
+			const settledValueSource = isValueNode(fromType) && !carriesSignal;
+			if (settledValueSource || (hasValuePath && !carriesSignal && !isEntryHeld && (isValueNode(fromType) || fromType === 'in')))
 				continue;
 			const from = outletOf(src, c.fromPort);
 			/* An AudioParam and an AudioNode are both legitimate destinations, and
@@ -930,11 +1424,22 @@ class ModularSynth {
 		const sink = ctx.createGain();
 		let any = false;
 		const outs = [...built.entries()].filter(([, m]) => m.isOutput);
+		/* One gain per OUT, between that OUT's own output and the shared sink --
+       the seam a per-OUT stop plan needs and did not have. Without it, a
+       DUR fade could only ever land on the *sink itself*, which every OUT
+       feeds: fading it to end one OUT's TIME cap silenced every other OUT
+       sharing the same voice, whatever their own DUR said. Named in
+       `outGains` and handed to the per-OUT stop-plan construction below,
+       which is the only place that reads it. */
+		const outGains = new Map<string, GainNode>();
 		if (outs.length) {
 			for (const [id, m] of outs) {
 				// An OUT execution never reached does not pass anything on.
 				if (!outputRuns(id)) continue;
-				m.out.connect(sink);
+				const og = ctx.createGain();
+				m.out.connect(og);
+				og.connect(sink);
+				outGains.set(id, og);
 				any = true;
 			}
 		} else {
@@ -955,7 +1460,7 @@ class ModularSynth {
 		}
 		if (!any) return null;
 		/* The preset's own level applies here too.
-    
+
        presetGain multiplies the voice, which is the whole signal for a rack
        patch but only the excitation for a graph one -- a graph builds its own
        sound downstream of it, so the five patches whose sources are EXCT or
@@ -964,7 +1469,81 @@ class ModularSynth {
 		const level = ctx.createGain();
 		level.gain.value = presetGain;
 		sink.connect(level);
-		return { out: level, sources, startAt };
+		/* Every OUT this activation actually reached, on its own terms.
+
+       Each entry answers three questions about one OUT alone: when its own
+       activation begins (`delay`, seconds after `t` -- 0 unless something
+       like WAIT pushed it later), what its own DUR asks for (`durCap`,
+       undefined at FOLLOW), and which sources are only reachable by walking
+       backward from it (`sources`). `gain` is the seam: the per-OUT node
+       built above, sitting between this OUT's own output and the shared
+       sink, which is the only place a fade can land without also silencing
+       every other OUT feeding the same sink.
+
+       This is what makes two OUTs independent instead of sharing one
+       voice-wide stop time. Before it existed, every source the graph built
+       -- across every OUT -- stopped at one shared deadline computed from
+       whichever OUT's DUR was tightest, so a TIME OUT behind a WAIT silenced
+       a sibling OUT set to FOLLOW a full voice-width away, and that same TIME
+       OUT's own second was measured from the note's start rather than from
+       the moment WAIT actually let it fire -- so a 200ms gap ate 200ms out of
+       its own budget instead of shifting it. Both were invisible until a
+       patch actually put two OUTs a WAIT apart, because until today nothing
+       in this catalogue gave a second OUT a reason to disagree with the
+       first about when it should stop.
+
+       Nothing is scheduled on `gain` here, for either TIME/STEP or FOLLOW --
+       both need an anchor this function does not have. A first attempt had
+       TIME and STEP fade themselves immediately, `t + delay + durCap`, on
+       the reasoning that both know their whole lifetime the moment the graph
+       builds. That reasoning holds for a *timed* note, where this activation
+       both starts and is due to end by times fixed at note-on -- but a
+       continuously held note builds this exact same graph once, at note-on,
+       with no release in sight yet, and TIME's own established meaning for
+       one of those has always been "this many seconds *after the key comes
+       up*" (`releaseVoice`'s own `now + durCap`, `now` being the release
+       instant) -- not after the note started. Scheduling `t + durCap` here
+       fired a full `releaseVoice`'s worth of hold-time early on every
+       continuously held TIME note, cutting a 1-second tail at 1.0s into a
+       note released at 0.5s instead of the 1.5s DUR was asking for.
+
+       So both modes wait for a caller that knows which shape of note this
+       is: the timed-note path anchors TIME/STEP at `t` (its own activation
+       truly is fixed length) and FOLLOW at its own uncapped stop, each
+       shifted by `delay`; `releaseVoice` anchors both at the real release
+       instant instead, the same shift applied to a different `now`.
+
+       Ancestry rather than the whole graph: `audioAncestors` seeded from one
+       OUT's own id finds exactly what feeds it, the same walk the graph's own
+       build-order pruning already trusts. A node feeding two OUTs appears in
+       both entries' `sources` -- unusual, since a WAIT-forked patch normally
+       gives each branch its own generator, but not refused -- and the caller
+       takes the later of the two deadlines for stopping it outright, so
+       neither OUT's own cleanup cuts a source the other still needs. */
+		const outsMap = new Map<
+			string,
+			{ delay: number; durCap: number | undefined; gain: GainNode; sources: AudioScheduledSourceNode[] }
+		>();
+		if (outs.length) {
+			for (const [id] of outs) {
+				if (!outputRuns(id)) continue;
+				const og = outGains.get(id);
+				if (!og) continue;
+				const ancestry = audioAncestors(graph, audioCables, modCables, [id], fbEdges);
+				const ownSources: AudioScheduledSourceNode[] = [];
+				for (const nodeId of [id, ...ancestry]) {
+					const found = sourcesByNode.get(nodeId);
+					if (found) ownSources.push(...found);
+				}
+				outsMap.set(id, {
+					delay: delays.get(id) ?? 0,
+					durCap: ModularSynth.durCapOfNode(id, params, this.bpm),
+					gain: og,
+					sources: ownSources
+				});
+			}
+		}
+		return { out: level, sources, startAt, outs: outsMap };
 	}
 
 	/**
@@ -1010,7 +1589,6 @@ class ModularSynth {
 		/* The event's own data, for ENTRY's output pins and for the converters,
        which read the master tuning off it. */
 		note: { velocity: number; noteIndex: number; tuning?: number } = { velocity: 1, noteIndex: 48 },
-		gateSec = 0,
 		/* The waveform this node is set to, if it has a picker. A name rather
        than an index, so a drawn table keeps its identity when its neighbours
        are deleted. */
@@ -1882,17 +2460,21 @@ class ModularSynth {
            can differ per branch, so a patch can put the body somewhere the
            string is not. */
 				const pn = ctx.createStereoPanner();
-				/* POS is the only inlet, and `knobAt` is what makes a patched value
-           mean what a turned one means: the knob reads -100..100 and the param
-           wants -1..1, so the cable is scaled where it lands.
-        
-           There was a second registration here, under the key `cv`, left from
-           when DPTH was a gain stage on the control leg. PAN has no port called
-           `cv` -- so nothing could address it, and anything that did would have
-           arrived at gain 1 against a param that wanted hundredths, a hundred
-           times hard over. Two registrations for one destination is one more
-           than can be right; the scaled one is the one that is. */
-				knobAt(pn.pan, 'panPos', 0, 0.01, (v) => Math.max(-1, Math.min(1, v)));
+				/* POS is the only inlet, and it is typed -1..1 now -- the same unit
+           `pan` itself holds -- so a plain `knob()` reads it and registers
+           the AudioParam directly, no scaling node in front. It used to read
+           -100..100 and convert through `knobAt`; that bought nothing a
+           typed field spanning the param's own range does not already say
+           for free, the same move DELAY's TIME made dropping its own
+           millisecond/second split.
+
+           There was a second registration here once, under the key `cv`,
+           left from when DPTH was a gain stage on the control leg. PAN has
+           no port called `cv` -- so nothing could address it, and anything
+           that did would have arrived at gain 1 against a param that wanted
+           hundredths, a hundred times hard over. Two registrations for one
+           destination is one more than can be right. */
+				knob(pn.pan, 'panPos', 0);
 				return { in: pn, out: pn, mod };
 			}
 
@@ -2075,9 +2657,9 @@ class ModularSynth {
 				/* Published as outlets, not in `mod`: `mod` is the *destination* side of
            a cable -- what a module offers as a modulation target -- and these
            are sources. Filed there they were never looked up, and every cable
-           from VEL, GATE, NOTE or PITCH silently carried the zero out of
-           `silent` instead.
-        
+           from VEL, NOTE or PITCH silently carried the zero out of `silent`
+           instead.
+
            PITCH is in semitones from the tuning reference, matching what the
            resolver publishes for the same socket. It used to be `baseFreq`
            here and semitones there: one outlet, two different quantities,
@@ -2085,7 +2667,39 @@ class ModularSynth {
 				outs.set('pitch', pin(12 * Math.log2(Math.max(1e-6, baseFreq) / this.masterTuningFreq)));
 				outs.set('vel', pin(note.velocity));
 				outs.set('note', pin(note.noteIndex));
-				outs.set('gate', pin(gateSec));
+
+				/* HELD: how long the key has been down, live -- the one outlet here
+           that is not a snapshot. A `ConstantSourceNode` ramped from 0 at a
+           constant rate of one second per second is not a trick: it is
+           exactly what elapsed time is, expressed as an AudioParam schedule
+           instead of read back from the clock, so it moves at sample
+           accuracy without anything polling it every frame.
+
+           Ramped from `t`, this build's own start -- the strike for DOWN,
+           the real release instant for REL or ON-CHOKE -- not from 0 at the
+           context's start, which would answer "how far into the render are
+           we" rather than "how long has this activation been running".
+
+           There used to be a GATE outlet beside this one: a number decided
+           once, at build time, for how long the note would/did last. It was
+           removed rather than kept alongside HELD, because every use it had
+           -- "how long will this note run" -- is a question HELD answers
+           better by being true continuously rather than guessed once, and
+           keeping both meant a patch had to know which one was live before
+           wiring either.
+
+           The ceiling here is arbitrary and generous rather than exact:
+           nothing playable holds a key for ten minutes, and reading how long
+           the render or the voice's own life is expected to run instead
+           would be GATE's mistake again, wearing a ramp -- a number decided
+           in advance rather than one that is true because it is still being
+           measured. */
+				const HELD_CEILING_SEC = 600;
+				const held = ctx.createConstantSource();
+				held.offset.setValueAtTime(0, t);
+				held.offset.linearRampToValueAtTime(HELD_CEILING_SEC, t + HELD_CEILING_SEC);
+				sources.push(held);
+				outs.set('held', held);
 
 				return { in: null, out: silent, mod, outs };
 			}
@@ -2353,6 +2967,716 @@ class ModularSynth {
 				knobPct(depth.gain, 'ringDepth', 100);
 				depth.connect(g.gain);
 				return { in: g, in2: depth, out: g, mod };
+			}
+
+			/* The value nodes, built for real.
+
+         Every one of these used to be pure -- pulled once, as a plain number,
+         never an AudioNode -- until HELD reaching MUL's B leg exposed the
+         gap that shape has: a pure node has no AudioParam for a live signal
+         to land on, so the cable was drawn, the socket lit, and what MUL
+         actually multiplied by was its own unwired identity regardless.
+         See docs/node-graph.md, "Every value a pure node reads is a signed
+         float, whatever role drew the cable".
+
+         `p(key, def)` already carries exactly the right behaviour for every
+         leg built here, unchanged from what every knob in this file already
+         does: it reads the cable or the stored setting when neither is a
+         moving signal, and it reads zero when one is -- not because zero is
+         these nodes' own identity, but because the AudioParam a live signal
+         lands on sums with whatever is already there, and zero is the base
+         that leaves the connected signal uncorrupted. That is the one fact
+         a VCA's LVL and MUL's B share despite meaning different things:
+         both are "the resting number, unless a cable is about to add its own
+         on top of it". Nothing new is invented here; ten more nodes are
+         simply let through the door every knob in the catalogue already
+         walks through. */
+
+			case 'const': {
+				/* No inputs, so no live/value split to make -- but a real node all
+           the same, so a CONST fed into a chain of other live math is a
+           genuine, connectable signal rather than a value that stops the
+           chain from building further. `PURE_NODES.const` is called
+           directly rather than re-typing the pitch-kind conversion, which
+           is the same reason MAP fills its own table by calling its entry
+           in the same object: one function, so the number pulled once and
+           the number built here cannot drift apart. */
+				const c = ctx.createConstantSource();
+				c.offset.value = PURE_NODES.const({ get: (_p, f) => f }, p);
+				sources.push(c);
+				return { in: null, out: c, mod };
+			}
+
+			case 'add': {
+				/* A plus B, built as two gains sharing a destination -- which is
+           what Web Audio already does with anything connected to the same
+           node, so the sum itself costs nothing beyond naming the two legs.
+           Each leg's resting value is `p(key, 0)`, ADD's own identity for an
+           operand nothing is wired to; a live cable replaces that resting
+           zero with itself by summing on top of it, the AudioParam-signal
+           mechanism every knob in this file already relies on. */
+				const out = ctx.createGain();
+				const a = ctx.createGain();
+				a.gain.value = 1;
+				a.connect(out);
+				const b = ctx.createGain();
+				b.gain.value = 1;
+				b.connect(out);
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(a);
+				const restB = ctx.createConstantSource();
+				restB.offset.value = p('b', 0);
+				sources.push(restB);
+				restB.connect(b);
+				mod.set('a', a);
+				mod.set('b', b);
+				return { in: null, out, mod };
+			}
+
+			case 'sub': {
+				/* A minus B, the same shape ADD is with B's leg inverted -- the
+           identical trick DIFF already uses for the audio-domain version,
+           a gain of -1 rather than a second subtraction mechanism. Both
+           legs default to 0, SUB's own identity, through the same `p(key,
+           0)` that zeroes a leg the instant something live claims it. */
+				const out = ctx.createGain();
+				const a = ctx.createGain();
+				a.gain.value = 1;
+				a.connect(out);
+				const b = ctx.createGain();
+				b.gain.value = -1;
+				b.connect(out);
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(a);
+				const restB = ctx.createConstantSource();
+				restB.offset.value = p('b', 0);
+				sources.push(restB);
+				restB.connect(b);
+				mod.set('a', a);
+				mod.set('b', b);
+				return { in: null, out, mod };
+			}
+
+			case 'div': {
+				/* A over B, the same carrier/gain shape MUL already builds --
+           A is the audio-rate carrier, and what the gain multiplies by is
+           B's *reciprocal*, not B itself. Web Audio has no reciprocal
+           AudioParam (`docs/node-graph.md` names the same gap PWM's duty
+           cycle runs into), but a WaveShaperNode maps a live *signal*
+           through any fixed curve, `1/x` included -- so B is shaped into
+           its own reciprocal first, and that shaped signal drives the
+           gain the same way MUL's B drives its own.
+
+           B at exactly 0 has no answer a signed float can give that is not
+           a lie, matching `PURE_NODES.div`: the curve holds `1/x` right up
+           to a narrow dead zone around 0 and reads the identity (1, DIV's
+           own B-unwired default) there instead of jumping to +-Infinity,
+           which a GainNode would happily multiply into a very loud click. */
+				/* `DOMAIN` bounds the *magnitude* the reciprocal curve resolves,
+           not the values this graph's numbers actually take -- CLAMP and
+           TO-FREQ can both afford a domain of 1e6/120 because a bound or a
+           semitone offset outside that range is not a patch anyone is
+           writing. A divisor is different: the two operands in every test
+           this module was built against are single- and double-digit
+           numbers, the same scale ADD, MUL and SUB's own operands are, and
+           1/x changes fastest exactly there -- close to 0 is where a
+           reciprocal's precision matters, and far from it is where it
+           matters least. `DOMAIN = 1e4` (CLAMP's own bound) put a B of 2
+           or 4 both a few thousandths of the way into the curve, inside a
+           dead zone sized to be reachable at all: two different divisors
+           landed on the identical identity value and DIV stopped dividing
+           by anything a real patch would type in. 100 keeps the same
+           table resolution spent on the range that is actually used. */
+				const DOMAIN = 100;
+				const N = 4096;
+				/* A dead zone narrower than one table sample is never actually
+           reached at runtime -- `x` at the two samples nearest 0 already
+           sits several units out once `DOMAIN` spreads -1..1 across a
+           range this wide, so `1/x` right up to an infinitesimal band
+           would in practice just be `1/x` everywhere, unbounded, exactly
+           the failure this exists to avoid. Sized in samples instead of
+           in `x` units so it always covers at least a few real table
+           entries regardless of how wide `DOMAIN` is. */
+				const DEAD_ZONE_SAMPLES = 4;
+				const DEAD_ZONE = (DEAD_ZONE_SAMPLES / (N - 1)) * DOMAIN;
+				/* The honest limit a fixed-size table leaves, the same trade
+           CLAMP and TO-FREQ each name for their own domain: 1/x is
+           steepest close to 0, and `DEAD_ZONE` -- reachable at all only by
+           spending several samples on it -- eats a real fraction of the B
+           values just past it. A B under roughly half a unit measures a
+           few percent off its exact reciprocal; from 1 upward the error
+           is under a percent. Not the failure DIV's own B-at-0 identity
+           guards against, which would be silence or a click -- a patch
+           dividing by a fraction well under 1 hears a slightly detuned
+           answer, not a wrong one. */
+				const reciprocalCurve = new Float32Array(N);
+				for (let i = 0; i < N; i++) {
+					const x = ((i / (N - 1)) * 2 - 1) * DOMAIN;
+					reciprocalCurve[i] = Math.abs(x) < DEAD_ZONE ? 1 : 1 / x;
+				}
+				/* The curve computes `1/x` directly from the real (unscaled) B
+           value at each table entry, the same as `PURE_NODES.div` would
+           -- `bScale` only maps that real value onto the table's -1..1
+           index space, it does not change what the table holds. Unscaling
+           the *output* by `DOMAIN` afterwards, the way TO-FREQ never does
+           to its own Hz result, would multiply an already-correct 1/x by
+           100 on top: measured, DIV(1, 2) built to 50 rather than 0.5. */
+				const bIn = ctx.createGain();
+				bIn.gain.value = 1;
+				const restB = ctx.createConstantSource();
+				restB.offset.value = p('b', 1);
+				sources.push(restB);
+				restB.connect(bIn);
+				const bScale = ctx.createGain();
+				bScale.gain.value = 1 / DOMAIN;
+				bIn.connect(bScale);
+				const bShaper = ctx.createWaveShaper();
+				bShaper.curve = reciprocalCurve;
+				bScale.connect(bShaper);
+
+				const g = ctx.createGain();
+				g.gain.value = 0;
+				bShaper.connect(g.gain);
+				const aIn = ctx.createGain();
+				aIn.gain.value = 1;
+				aIn.connect(g);
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(aIn);
+				mod.set('a', aIn);
+				mod.set('b', bIn);
+				return { in: null, out: g, mod };
+			}
+
+			case 'mod': {
+				/* A remainder B, `A - B * trunc(A/B)` -- the same identity
+           JavaScript's own `%` uses (round *toward zero*, not down: -7 % 3
+           is -1, not the 2 a floor-based Euclidean remainder would give),
+           built rather than shaped directly because a remainder depends
+           on *two* live signals and a WaveShaperNode only ever bends one.
+           DIV's own reciprocal trick gives `A/B`; TRUNC is one more fixed
+           curve, a staircase toward zero rather than a reciprocal; MUL and
+           SUB are the two-gain shapes every other operator here already
+           is. Matching `PURE_NODES.mod` exactly is the point -- the two
+           are the same function pulled once or built live, and a live
+           build answering a different sign than its own pulled value
+           would be a second, disagreeing implementation of MOD, not one.
+
+           B at exactly 0 reads as MOD's own identity (A itself) the same
+           way DIV's B does: `bLiveGate` gates B's own live value to 0
+           wherever the dead zone is active, so `A - 0 * trunc(...)`
+           collapses to exactly A rather than to `A - B` (which DIV's
+           dead-zone-holds-1 would otherwise leave this built from). */
+				// See DIV's own comment on both of these: 100 keeps the table's
+				// resolution spent on the range B actually takes, and the dead
+				// zone is sized in samples so it is reachable at all.
+				const DOMAIN = 100;
+				const N = 4096;
+				const DEAD_ZONE_SAMPLES = 4;
+				const DEAD_ZONE = (DEAD_ZONE_SAMPLES / (N - 1)) * DOMAIN;
+				const reciprocalCurve = new Float32Array(N);
+				const deadZoneCurve = new Float32Array(N);
+				for (let i = 0; i < N; i++) {
+					const x = ((i / (N - 1)) * 2 - 1) * DOMAIN;
+					const inDeadZone = Math.abs(x) < DEAD_ZONE;
+					reciprocalCurve[i] = inDeadZone ? 0 : 1 / x;
+					deadZoneCurve[i] = inDeadZone ? 0 : 1;
+				}
+				/* The quotient A/B, before it is truncated -- not a bound on A or
+           B themselves, both already scaled to `DOMAIN`. A truncation's
+           own usefulness is its step landing within a fraction of 1, and
+           a 4096-sample table spread across 1e3 either way puts roughly
+           0.5 between two adjacent samples, coarser than the very
+           remainder MOD exists to resolve. 20 (a divisor of 1 rarely
+           needing a quotient past single digits for the same operand
+           scale DIV's own `DOMAIN` targets) keeps a table entry roughly
+           every 0.01 -- fine enough that `Math.trunc` still reads as a
+           truncation and not a coin flip between two neighbouring
+           integers. */
+				const TRUNC_DOMAIN = 20;
+				/* A whole B divides A -- 6 mod 3, say -- and the quotient this
+           truncation actually receives is not exactly 2: it already
+           travelled through the reciprocal table above, and a `1/3`
+           sampled from a 4096-point curve lands a few thousandths short
+           of the real one. `Math.trunc` on 1.9976 answers 1, not 2, and
+           the remainder that builds from a truncation short by one is
+           short by a whole extra B -- measured, 6 mod 3 built to 3 rather
+           than 0. Snapping a quotient within a small tolerance of the
+           nearest integer to that integer, before truncating, is what an
+           exact division needs and a genuine fraction never notices: the
+           snap band is far narrower than the gap between two real,
+           distinct quotients this table would ever be asked to tell
+           apart. Wider than one table step (~0.0098 at this
+           `TRUNC_DOMAIN`, N) because the reciprocal that fed this
+           quotient carries its own error on top, several thousandths for
+           a `1/3` at this table's own resolution, and the snap has to
+           clear both sources or it never actually triggers for the case
+           it exists to catch. */
+				const SNAP_EPS = 0.02;
+				/* Toward zero, not down -- `Math.trunc`, matching `%`'s own sign
+           convention rather than a floor's. -7/3 truncates to -2 and
+           floors to -3; built from a floor, -7 mod 3 would build to 2
+           (Euclidean, always B's own sign) where `PURE_NODES.mod` -- and
+           every other `%` in this codebase -- answers -1 (A's own sign).
+           A live build that disagreed with its own pulled value about
+           which number MOD means would not be two views of one function,
+           it would be two different functions sharing a name. */
+				const truncCurve = new Float32Array(N);
+				for (let i = 0; i < N; i++) {
+					const x = ((i / (N - 1)) * 2 - 1) * TRUNC_DOMAIN;
+					const rounded = Math.round(x);
+					truncCurve[i] = Math.abs(x - rounded) < SNAP_EPS ? rounded : Math.trunc(x);
+				}
+
+				const bIn = ctx.createGain();
+				bIn.gain.value = 1;
+				const restB = ctx.createConstantSource();
+				restB.offset.value = p('b', 0);
+				sources.push(restB);
+				restB.connect(bIn);
+
+				const bScale = ctx.createGain();
+				bScale.gain.value = 1 / DOMAIN;
+				bIn.connect(bScale);
+				// 0 away from the dead zone, 1 inside it -- gates B itself to 0
+				// there so the identity (A - 0 * anything = A) holds exactly.
+				const bLiveGate = ctx.createWaveShaper();
+				bLiveGate.curve = deadZoneCurve;
+				bScale.connect(bLiveGate);
+				const bGated = ctx.createGain();
+				bGated.gain.value = 0;
+				bLiveGate.connect(bGated.gain);
+				bIn.connect(bGated);
+
+				const bReciprocal = ctx.createWaveShaper();
+				bReciprocal.curve = reciprocalCurve;
+				bScale.connect(bReciprocal);
+
+				const aIn = ctx.createGain();
+				aIn.gain.value = 1;
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(aIn);
+
+				const aOverB = ctx.createGain();
+				aOverB.gain.value = 0;
+				bReciprocal.connect(aOverB.gain);
+				aIn.connect(aOverB);
+
+				/* Same shape as DIV's own curve: `truncCurve` already stores the
+           real (unscaled) truncated quotient at each entry, `aOverBScale`
+           only maps `aOverB`'s real value onto the table's index space.
+           An unscale stage after `truncated` would multiply an
+           already-real integer by `TRUNC_DOMAIN` on top of itself, DIV's
+           own bug one stage further down the chain. */
+				const aOverBScale = ctx.createGain();
+				aOverBScale.gain.value = 1 / TRUNC_DOMAIN;
+				aOverB.connect(aOverBScale);
+				const truncated = ctx.createWaveShaper();
+				truncated.curve = truncCurve;
+				aOverBScale.connect(truncated);
+
+				const bTimesTrunc = ctx.createGain();
+				bTimesTrunc.gain.value = 0;
+				truncated.connect(bTimesTrunc.gain);
+				bGated.connect(bTimesTrunc);
+
+				const out = ctx.createGain();
+				aIn.connect(out);
+				const negBTimesTrunc = ctx.createGain();
+				negBTimesTrunc.gain.value = -1;
+				bTimesTrunc.connect(negBTimesTrunc);
+				negBTimesTrunc.connect(out);
+
+				mod.set('a', aIn);
+				mod.set('b', bIn);
+				return { in: null, out, mod };
+			}
+
+			case 'trsp': {
+				/* PITCH plus BY, in semitones -- the same shape ADD is, with BY's
+           own field as the resting value rather than a bare zero, since BY
+           is a knob with a typed default as well as a socket. */
+				const out = ctx.createGain();
+				const a = ctx.createGain();
+				a.gain.value = 1;
+				a.connect(out);
+				const b = ctx.createGain();
+				b.gain.value = 1;
+				b.connect(out);
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(a);
+				const restB = ctx.createConstantSource();
+				restB.offset.value = p('b', 0);
+				sources.push(restB);
+				restB.connect(b);
+				mod.set('a', a);
+				mod.set('b', b);
+				return { in: null, out, mod };
+			}
+
+			case 'mul': {
+				/* A times B, built the way RING already builds one signal times
+           another: A is the carrier, arriving at the gain's audio input: B
+           is the gain itself, an AudioParam that live-modulates exactly the
+           way an envelope opening a VCA does. The only choice this node adds
+           is which leg plays which part, and it does not matter which,
+           because multiplication does not care about order.
+
+           Both legs default to 1, MUL's own identity, through the same
+           `p(key, 1)` that zeroes a leg the instant something live claims
+           it -- so an unwired B leaves the gain at its resting 1 and a live
+           B leaves it at 0 plus whatever arrives, never 1 plus it. That is
+           what stops "multiply by HELD" from reading as "multiply by HELD
+           plus one". */
+				const g = ctx.createGain();
+				g.gain.value = p('b', 1);
+				mod.set('b', g.gain);
+				const aIn = ctx.createGain();
+				aIn.gain.value = 1;
+				aIn.connect(g);
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 1);
+				sources.push(restA);
+				restA.connect(aIn);
+				mod.set('a', aIn);
+				return { in: null, out: g, mod };
+			}
+
+			case 'cmp': {
+				/* A minus B, then a lookup table answering the test -- the same
+           two-stage shape TO-FREQ and CLAMP use, a linear combination
+           feeding a WaveShaperNode, because Web Audio has no node that
+           compares two signals directly and a fixed curve is exactly what a
+           threshold test is.
+
+           GT/GE/LT/LE only need the *sign* of the difference, which survives
+           unscaled: a WaveShaperNode holds its curve's own end value past
+           its -1..1 domain, so a difference of 4 and a difference of 4000
+           both saturate to the same "true" as long as the step sits at
+           zero. The equality tests do not survive that -- `PURE_NODES.cmp`
+           tests within 1e-9, and 1e-9 is far narrower than one sample of a
+           1024-point table spanning -1..1 -- so the difference is scaled up
+           before the shaper only for those two tests, wide enough that the
+           tolerance band actually occupies real table entries instead of
+           collapsing into one. */
+				const test = Math.round(p('test', 0));
+				const diff = ctx.createGain();
+				const a = ctx.createGain();
+				a.gain.value = 1;
+				a.connect(diff);
+				const b = ctx.createGain();
+				b.gain.value = -1;
+				b.connect(diff);
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(a);
+				const restB = ctx.createConstantSource();
+				restB.offset.value = p('b', 0);
+				sources.push(restB);
+				restB.connect(b);
+				mod.set('a', a);
+				mod.set('b', b);
+
+				const isNear = test === 4 || test === 5;
+				const EPS = 1e-9;
+				// The tolerance band occupies half the shaper's domain, wide
+				// enough for a 1024-point table to resolve it cleanly.
+				const NEAR_HALFWIDTH = 0.5;
+				const scale = ctx.createGain();
+				scale.gain.value = isNear ? NEAR_HALFWIDTH / EPS : 1;
+				diff.connect(scale);
+
+				const shaper = ctx.createWaveShaper();
+				const N = 1024;
+				const curve = new Float32Array(N);
+				for (let i = 0; i < N; i++) {
+					const x = (i / (N - 1)) * 2 - 1;
+					let y: number;
+					switch (test) {
+						case 1:
+							y = x >= 0 ? 1 : 0; // GE
+							break;
+						case 2:
+							y = x < 0 ? 1 : 0; // LT
+							break;
+						case 3:
+							y = x <= 0 ? 1 : 0; // LE
+							break;
+						case 4:
+							y = Math.abs(x) <= NEAR_HALFWIDTH ? 1 : 0; // EQ, within tolerance
+							break;
+						case 5:
+							y = Math.abs(x) <= NEAR_HALFWIDTH ? 0 : 1; // NEQ
+							break;
+						default:
+							y = x > 0 ? 1 : 0; // GT
+					}
+					curve[i] = y;
+				}
+				shaper.curve = curve;
+				scale.connect(shaper);
+				return { in: null, out: shaper, mod };
+			}
+
+			case 'logic': {
+				/* Two truths summed land on exactly 0, 1 or 2 -- clean integers,
+           since the only things that reach these sockets are CMP or another
+           logic node, both of which hand out exactly 0 or 1 -- so a fixed
+           lookup keyed on that sum answers every test in the picker without
+           needing to see A and B separately. Offset by -1 so the three
+           values sit at the shaper's own -1, 0 and 1 exactly, with a
+           tolerance band around each in case anything upstream is not
+           perfectly clean. */
+				const op = Math.round(p('op', 0));
+				const sum = ctx.createGain();
+				const a = ctx.createGain();
+				a.gain.value = 1;
+				a.connect(sum);
+				const b = ctx.createGain();
+				b.gain.value = 1;
+				b.connect(sum);
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(a);
+				const restB = ctx.createConstantSource();
+				restB.offset.value = p('b', 0);
+				sources.push(restB);
+				restB.connect(b);
+				mod.set('a', a);
+				mod.set('b', b);
+
+				const offset = ctx.createConstantSource();
+				offset.offset.value = -1;
+				sources.push(offset);
+
+				const shaper = ctx.createWaveShaper();
+				const N = 1024;
+				const curve = new Float32Array(N);
+				const near = (x: number, target: number) => Math.abs(x - target) < 0.5;
+				for (let i = 0; i < N; i++) {
+					const x = (i / (N - 1)) * 2 - 1;
+					let y: number;
+					switch (op) {
+						case 1:
+							y = x > -0.5 ? 1 : 0; // OR: anything but both-false
+							break;
+						case 2:
+							y = near(x, 0) ? 1 : 0; // XOR: exactly one true
+							break;
+						case 3:
+							y = near(x, 1) ? 0 : 1; // NAND: not both true
+							break;
+						case 4:
+							y = near(x, -1) ? 1 : 0; // NOR: both false
+							break;
+						default:
+							y = near(x, 1) ? 1 : 0; // AND: both true
+					}
+					curve[i] = y;
+				}
+				shaper.curve = curve;
+				sum.connect(shaper);
+				offset.connect(shaper);
+				return { in: null, out: shaper, mod };
+			}
+
+			case 'not': {
+				/* True only where the input is exactly zero, false anywhere else --
+           `PURE_NODES.not` takes any nonzero at all as true, so the input is
+           scaled hard before the shaper: anything but a genuine zero
+           saturates past the tolerance band and reads false, the same
+           technique CMP's equality test uses for the same reason. */
+				const aIn = ctx.createGain();
+				aIn.gain.value = 1;
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(aIn);
+				mod.set('a', aIn);
+
+				const scale = ctx.createGain();
+				scale.gain.value = 1e9;
+				aIn.connect(scale);
+
+				const shaper = ctx.createWaveShaper();
+				const N = 1024;
+				const curve = new Float32Array(N);
+				for (let i = 0; i < N; i++) {
+					const x = (i / (N - 1)) * 2 - 1;
+					curve[i] = Math.abs(x) <= 0.5 ? 1 : 0;
+				}
+				shaper.curve = curve;
+				scale.connect(shaper);
+				return { in: null, out: shaper, mod };
+			}
+
+			case 'clamp': {
+				/* MIN(a, hi) = a - relu(a - hi); MAX(x, lo) = x + relu(lo - x).
+           Two algebraic identities rather than a single lookup table, so
+           MIN and MAX can be live signals too, the same as A -- a fixed
+           table baking the bounds in the way MAP bakes its own X range
+           would have meant a socket the canvas drew, `rolesCompatible`
+           accepted and a cable reached, doing nothing once connected,
+           which is exactly the bug this whole family of nodes exists to
+           not have any more.
+
+           ReLU is the one nonlinearity both identities need, and it is
+           the same shaper reused for both: a difference, scaled into a
+           wide domain, shaped flat-then-linear, scaled back out. The
+           domain is generous -- swings far larger than any bound this
+           catalogue's own knobs allow -- and past it the shaper holds its
+           last value rather than continuing the ramp, the one honest
+           limit a fixed-size table has, same trade TO-FREQ's semitone
+           domain takes and for the same reason. */
+				const DOMAIN = 1e6;
+				const N = 2048;
+				const reluCurve = new Float32Array(N);
+				for (let i = 0; i < N; i++) {
+					const x = (i / (N - 1)) * 2 - 1;
+					reluCurve[i] = Math.max(0, x);
+				}
+				const relu = (x: AudioNode): AudioNode => {
+					const scaleIn = ctx.createGain();
+					scaleIn.gain.value = 1 / DOMAIN;
+					x.connect(scaleIn);
+					const shaper = ctx.createWaveShaper();
+					shaper.curve = reluCurve;
+					scaleIn.connect(shaper);
+					const scaleOut = ctx.createGain();
+					scaleOut.gain.value = DOMAIN;
+					shaper.connect(scaleOut);
+					return scaleOut;
+				};
+				const diff = (x: AudioNode, y: AudioNode): AudioNode => {
+					const out = ctx.createGain();
+					x.connect(out);
+					const neg = ctx.createGain();
+					neg.gain.value = -1;
+					y.connect(neg);
+					neg.connect(out);
+					return out;
+				};
+				// Each leg is its own resting DC plus a live mod target, exactly
+				// the shape every other leg in this family already uses.
+				const leg = (key: string, def: number): AudioNode => {
+					const g = ctx.createGain();
+					g.gain.value = 1;
+					const rest = ctx.createConstantSource();
+					rest.offset.value = p(key, def);
+					sources.push(rest);
+					rest.connect(g);
+					mod.set(key, g);
+					return g;
+				};
+				const a = leg('a', 0);
+				const legLo = leg('lo', 0);
+				const legHi = leg('hi', 1);
+				/* Which physical leg plays MIN's bound and which plays MAX's is
+           decided once, from the resting values -- "MIN 100 with MAX 0"
+           is a typo PURE_NODES.clamp guards the same way, by sorting.
+           Sorting a live signal has no single answer, so this is the
+           best a build-time decision can do; a patch that drives both
+           bounds AND crosses them mid-note is the one case this does not
+           chase further. */
+				const [hiBound, loBound] = p('lo', 0) <= p('hi', 1) ? [legHi, legLo] : [legLo, legHi];
+				const minned = diff(a, relu(diff(a, hiBound)));
+				const out = ctx.createGain();
+				minned.connect(out);
+				relu(diff(loBound, minned)).connect(out);
+				return { in: null, out, mod };
+			}
+
+			case 'tofreq': {
+				/* Semitones to hertz, live: the domain is +-120 semitones (ten
+           octaves either side of the tuning reference), wide enough that no
+           patch playing an actual keyboard reaches the edge of it. Past
+           that the shaper holds its end value rather than continuing the
+           exponential, the one honest limit a fixed-size lookup table has
+           -- the same trade `docs/node-graph.md` already names for the
+           reasons an AudioWorklet would remove and this engine does not
+           have one.
+
+           The table calls `PURE_NODES.tofreq` directly rather than
+           re-deriving the exponential, so the value pulled once and the
+           value built here read the same reference and cannot drift
+           apart. */
+				const aIn = ctx.createGain();
+				aIn.gain.value = 1;
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(aIn);
+				mod.set('a', aIn);
+
+				const tuning = p('tuning', note.tuning ?? 440);
+				const DOMAIN = 120;
+				const scale = ctx.createGain();
+				scale.gain.value = 1 / DOMAIN;
+				aIn.connect(scale);
+
+				const shaper = ctx.createWaveShaper();
+				const N = 2048;
+				const curve = new Float32Array(N);
+				for (let i = 0; i < N; i++) {
+					const x = (i / (N - 1)) * 2 - 1;
+					const semis = x * DOMAIN;
+					curve[i] = PURE_NODES.tofreq({ get: (_p, _f) => semis }, () => tuning);
+				}
+				shaper.curve = curve;
+				scale.connect(shaper);
+				return { in: null, out: shaper, mod };
+			}
+
+			case 'topitch': {
+				/* Hertz to semitones, live: the lossy direction, and lossy in the
+           same place a lookup table is -- both already round. The domain is
+           a wide 0..20000 Hz, linear rather than log-spaced, which spends
+           more of the table's resolution on the top octaves than the
+           bottom; TO-PITCH was already the direction that quantises, so a
+           table coarser at the low end is the same kind of imprecision this
+           node always had, not a new one. */
+				const aIn = ctx.createGain();
+				aIn.gain.value = 1;
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(aIn);
+				mod.set('a', aIn);
+
+				const tuning = p('tuning', note.tuning ?? 440);
+				const DOMAIN_HZ = 20000;
+				const scale = ctx.createGain();
+				scale.gain.value = 2 / DOMAIN_HZ;
+				const preOffset = ctx.createConstantSource();
+				preOffset.offset.value = -1;
+				sources.push(preOffset);
+				const scaled = ctx.createGain();
+				aIn.connect(scale);
+				scale.connect(scaled);
+				preOffset.connect(scaled);
+
+				const shaper = ctx.createWaveShaper();
+				const N = 4096;
+				const curve = new Float32Array(N);
+				for (let i = 0; i < N; i++) {
+					const t = (i / (N - 1)) * 2 - 1;
+					const hz = ((t + 1) / 2) * DOMAIN_HZ;
+					curve[i] = PURE_NODES.topitch({ get: (_p, _f) => hz }, () => tuning);
+				}
+				shaper.curve = curve;
+				scaled.connect(shaper);
+				return { in: null, out: shaper, mod };
 			}
 
 			default: {
@@ -3849,7 +5173,6 @@ class ModularSynth {
 				),
 			velocity: Math.max(0, Math.min(1, (laneVelocity ?? rawVelocity ?? 100) / 127)),
 			noteIndex,
-			gate: durationSec ?? 0,
 			lanes: {}
 		});
 		if (!this.renderCtx) {
@@ -3865,7 +5188,7 @@ class ModularSynth {
 					if (v.trackId !== trackId) continue;
 					const inGroup = act.cutGroup === 0 || v.muteGroup === act.cutGroup;
 					if (act.solo ? inGroup : !inGroup) continue;
-					this.chokeVoice(k, ctx.currentTime, act.fadeSec);
+					this.chokeVoice(k, ctx, ctx.currentTime, act.fadeSec);
 				}
 			}
 		}
@@ -4508,11 +5831,43 @@ class ModularSynth {
 			lfo.start(t);
 		}
 
+		/* The graph's own sink gain, so a patch with no envelope of its own can
+       still be stopped cleanly. Undefined for a classic voice, where
+       `gainNode` already owns this job. Set later, once the graph is built
+       below -- read here already because the timed-note branch just past
+       this point needs to leave `extrasStop` somewhere for that later code
+       to find. */
+		let advGraphOut: GainNode | undefined;
+		/* When `extras` (which the graph's own sources join) are due to stop,
+       set by the timed-note branch below before `advGraphOut` exists --
+       read again once it does, past the graph-build block further down. */
+		let advGraphExtrasStop: number | undefined;
+		/* Every OUT the graph reached, keyed by node id -- see `buildActivation`'s
+       own field of the same name for what each entry answers. Read past the
+       graph-build block below to fade each FOLLOW OUT's own gain at
+       `advGraphExtrasStop` shifted by that OUT's own delay, rather than
+       fading the one shared `advGraphOut` and taking every other OUT down
+       with it. */
+		let advGraphOuts:
+			| Map<string, { delay: number; durCap: number | undefined; gain: GainNode; sources: AudioScheduledSourceNode[] }>
+			| undefined;
+		/* FOLLOW's own release anchor for a timed note -- `releaseStartTime`,
+       set inside the `!isContinuousHold` branch below, read again past
+       the graph-build block for the same reason `advGraphExtrasStop` is:
+       a FOLLOW OUT's fade has to start where `ampRelease` itself starts
+       counting, not `extrasStop`'s own deliberate buffer past it. */
+		let advGraphReleaseStart: number | undefined;
+		/* Same reasoning as `advGraphReleaseStart`: a FOLLOW OUT's own fade
+       needs `rackTail`, set inside the same branch, to know how long a
+       resonator in the graph is still owed past `ampRel` alone. */
+		let advGraphRackTail: number | undefined;
+
 		const isContinuousHold = durationSec === 0;
 
 		if (!isContinuousHold) {
 			const holdSec = durationSec !== undefined ? Math.max(0.02, durationSec) : 60 / this.bpm / 8;
 			const releaseStartTime = Math.max(t + ampAtt + ampDec, t + holdSec);
+			advGraphReleaseStart = releaseStartTime;
 			gainNode.gain.setValueAtTime(sustainGain, releaseStartTime);
 			gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseStartTime + ampRel);
 
@@ -4533,22 +5888,58 @@ class ModularSynth {
          The voice is reaped later, by the chain's ring-out, so its nodes are
          not torn down while a resonator is still sounding. */
 			const rackTail = this.rackTailSeconds(track);
+			advGraphRackTail = rackTail;
 			const stopTime = releaseStartTime + ampRel + 0.1;
 			const reapTime = stopTime + rackTail;
 			/* A resonator's partials are sources of their own and outlive the
          excitation -- a piano string rings for seconds after the hammer. Stop
          them at the reap, not with the oscillators, or the note is cut off
          mid-decay however long its DECY says.
-         
+
          Half a second past it, because the ring-out is where the partial
          envelope reaches -80 dB, not silence: stopping exactly there leaves a
          step from a quiet note to nothing, which is heard as a click. */
-			const extrasStop = rackTail > 0 ? reapTime + 0.5 : stopTime;
-			if (osc1) osc1.stop(stopTime);
-			if (osc2) osc2.stop(stopTime);
-			if (noiseSource) noiseSource.stop(stopTime);
+			const uncappedExtrasStop = rackTail > 0 ? reapTime + 0.5 : stopTime;
+			/* No DUR folded in here any more. It used to replace `extrasStop`
+         outright the moment any OUT in the graph set one, which measured
+         from the note's start and applied to every source the graph built
+         -- across every OUT, not only the one whose DUR this was. A TIME OUT
+         behind a WAIT therefore silenced a sibling OUT set to FOLLOW, and
+         even on its own reached its mark 200ms early for every 200ms WAIT
+         delayed it by, because `t + durCap` never knew a delay existed.
+
+         DUR is answered per OUT now, inside `buildActivation` itself for
+         TIME and STEP (both know their own whole lifetime the moment the
+         graph builds, `t + delay + durCap`, needing nothing from here) and
+         just past the graph-build block below for FOLLOW, which reads
+         `extrasStop` -- what this variable is still for -- shifted by each
+         FOLLOW OUT's own delay. Classic-rack `extras` answer to their own
+         envelope alone now, exactly as if no graph were attached, which is
+         correct: DUR was never a setting this array's own modules carried. */
+			const extrasStop = uncappedExtrasStop;
+			advGraphExtrasStop = extrasStop;
+			/* How much further out reaping has to be held for a WAIT-delayed OUT
+         still to be heard when it fades. Computed before the graph is even
+         built -- `advGraphLatestDeadline` only needs to walk it, not run it
+         -- because `endSrc`'s own `.stop()` decides when `onended` reaps the
+         *whole* voice, ADV graph included, and it is called below, still
+         inside this branch, well before the graph-build block further down
+         gets anywhere near existing. Left at `extrasStop`'s own value for a
+         classic (non-ADV) track, where this always answers undefined and
+         changes nothing.
+
+         Measured before this existed: a FOLLOW OUT sitting behind an 800ms
+         WAIT scheduled its own fade for 2.21s and was torn down at 1.41s
+         regardless, because reaping answered to the classic voice's own
+         stale, un-extended stop time -- the fade was correct and never got
+         to run. */
+			const advDeadline = this.advGraphLatestDeadline(track, t, uncappedExtrasStop);
+			const reapDeadline = advDeadline !== undefined ? Math.max(extrasStop, advDeadline) : extrasStop;
+			if (osc1) osc1.stop(Math.min(stopTime, extrasStop));
+			if (osc2) osc2.stop(Math.min(stopTime, extrasStop));
+			if (noiseSource) noiseSource.stop(Math.min(stopTime, extrasStop));
 			for (const x of extras) x.stop(extrasStop);
-			if (lfo) lfo.stop(stopTime);
+			if (lfo) lfo.stop(Math.min(stopTime, extrasStop));
 
 			// onended fires off the audio clock even when background-tab timer
 			// throttling delays the setTimeout fallback by seconds or minutes. It
@@ -4560,7 +5951,24 @@ class ModularSynth {
 			const endSrc = osc1 ?? osc2 ?? noiseSource;
 			/* Reaping disconnects the voice's gain node, which is the chain's input:
          do it the moment the oscillators end and a resonator still ringing is
-         cut off mid-note. Wait out the chain's tail first. */
+         cut off mid-note. Wait out the chain's tail first -- and any
+         WAIT-delayed ADV OUT still fading.
+
+         `endSrc` is re-stopped at `reapDeadline` rather than having its
+         `onended` wrapped in an extra `window.setTimeout`: `setTimeout` is
+         wall-clock time, and an offline render does not run at wall-clock
+         speed at all -- a render that finishes in fifty real milliseconds
+         would have fired a "wait 800ms more" timeout long after the buffer
+         was already read out, which is to say never, as far as the render
+         was concerned. `onended` itself is audio-clock-accurate in both
+         contexts, so moving the deadline onto the node's own `.stop()` call
+         is what makes this correct offline and not only in a live tab.
+         `endSrc` is silent under ADV regardless of when it stops, so
+         holding it open longer costs nothing but the reap it would
+         otherwise have triggered early. A later `.stop()` call before a
+         node has actually stopped replaces the earlier one, which is the
+         same rule WAIT's own re-scheduling already relies on. */
+			if (endSrc && reapDeadline > extrasStop) endSrc.stop(reapDeadline);
 			if (endSrc) {
 				endSrc.onended =
 					rackTail > 0
@@ -4570,7 +5978,7 @@ class ModularSynth {
 			if (!this.renderCtx) {
 				// Past extrasStop, so the graph outlives the partials rather than
 				// cutting them: disconnecting mid-decay is an audible click.
-				const cleanupMs = Math.ceil((reapTime - ctx.currentTime) * 1000) + 600;
+				const cleanupMs = Math.ceil((Math.max(reapTime, reapDeadline) - ctx.currentTime) * 1000) + 600;
 				void window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
 			}
 		}
@@ -4615,6 +6023,15 @@ class ModularSynth {
        the canvas committed the migrated graph and it started working with no
        edit that explained it. One reading of a saved patch, not two. */
 		const graph = advOwnsVoice && track.rackGraph?.nodes?.length ? graphOf(track) : undefined;
+		/* Set only when this note's graph actually wires something to REL or
+       ON-CHOKE -- the two fields carried out of this block for
+       `activeVoices.set` below, once `busInput` exists to put in them. Left
+       undefined for every patch that has never touched either outlet, which
+       is what keeps this feature's cost at exactly zero for them:
+       `releaseVoice`/`chokeVoice`/`stopVoice` finding it absent is the
+       entire check any of them does. */
+		let advRelContext: Omit<AdvBuildContext, 'busInput'> | undefined;
+		let advChokeContext: Omit<AdvBuildContext, 'busInput'> | undefined;
 		if (graph) {
 			/* What each lane reads for this note. Sampled once, when the note starts:
          that is what a lane means for a voice, and it is why the socket is a
@@ -4623,33 +6040,122 @@ class ModularSynth {
 			for (const l of lanesOf(trackRow as { noteLanes?: NoteLane[] })) {
 				laneValues[l.id] = laneAt(l, this.currentStep);
 			}
+			const graphParams = track.graphParams ?? {};
+			const graphWaves = track.graphWaves ?? {};
+			const presetGain = track.presetGain ?? 1;
 			const built = this.buildRackGraph(
 				ctx,
 				graph,
-				track.graphParams ?? {},
+				graphParams,
 				baseFreq,
 				t,
 				heldSec,
 				laneValues,
-				track.presetGain ?? 1,
+				presetGain,
 				{ velocity: velocityUnit, noteIndex },
 				trackId,
-				track.graphWaves ?? {}
+				graphWaves
 			);
 			if (built) {
 				/* The graph is the whole voice, and answers to none of racks 1-7.
-        
+
            Routing it through track.volume was tried and is wrong: that is rack
            7's VOL knob, so turning down a control on the instrument you are not
            playing silenced the one you are. Level inside a patch is a VCA on the
            canvas; the track's place in the mix is the mixer's business, further
            down. */
 				chainOut = built.out;
+				advGraphOut = built.out as GainNode;
+				advGraphOuts = built.outs;
 				for (const src of built.sources) {
 					src.start(built.startAt.get(src) ?? t);
 					extras.push(src);
 				}
 			}
+			/* Whether REL or ON-CHOKE reach anything at all, asked once here
+         rather than redone inside `releaseVoice`/`chokeVoice`/`stopVoice`:
+         reachability depends on the graph as it stood at this exact
+         note-on, and that is what the snapshot below freezes. An outlet
+         with no cable on it costs nothing past this one check. */
+			const snapshot: Omit<AdvBuildContext, 'busInput'> = {
+				graph,
+				params: graphParams,
+				baseFreq,
+				laneValues,
+				presetGain,
+				note: { velocity: velocityUnit, noteIndex },
+				trackId,
+				waves: graphWaves
+			};
+			if (execReach(graph, EXEC_PORT_IDS, 'in', undefined, 'rel').reached.size > 0) {
+				advRelContext = snapshot;
+			}
+			/* ON-CHOKE is its own node type, not an outlet on KEY-EVENT, so its
+         reachability is asked with `entryType: 'onchoke'` rather than a
+         different `entryPort` on the same entry -- see the module's own
+         docstring in synth-modules.ts for why the two are not the same
+         event. */
+			if (execReach(graph, EXEC_PORT_IDS, 'onchoke', undefined, 'then').reached.size > 0) {
+				advChokeContext = snapshot;
+			}
+		}
+
+		/* An ADV graph is the whole voice and answers to none of racks 1-7 --
+       `chainOut` is reassigned to the graph's own sink the moment a graph
+       builds, so `gainNode`'s own release ramp (scheduled far above, at
+       the top of the `!isContinuousHold` branch) drives a node the signal
+       path no longer passes through at all. Every OUT's own fade has to
+       happen on its own `gain` here, the per-OUT node actually wired into
+       that sink -- there is no upstream envelope already doing this job
+       to defer to, FOLLOW included.
+
+       TIME/STEP: nothing else stops this OUT's sound at its own mark, so
+       `t + durCap`, shifted by the OUT's own `delay` the same way WAIT
+       shifted when it started.
+
+       FOLLOW: anchored at `releaseStartTime + max(ampRel, rackTail)`, not
+       `releaseStartTime + ampRel` alone and not `extrasStop`'s own
+       deliberate buffer past both (`uncappedExtrasStop`'s `+0.1`/`+0.5`,
+       there for the *reap* deadline, not for how long the ear should
+       hear something). `ampRel` is what a plain FOLLOW OUT with no
+       resonator needs; `rackTail` is what one carrying a STRING, TUBE or
+       similar actually needs -- taking `ampRel` alone once cut a
+       resonator's own ring short at whatever `ampRelease` said, however
+       long DCAY/DECY asked for on top of it. Left at `extrasStop` alone,
+       a plain OSC held at full level for the gap past `ampRel` and then
+       cut in a flat 10ms, audibly nothing like `ampRelease`'s own shape.
+       Measured: a bare OSC with `ampRelease` 0.12s held at peak until
+       ~0.1s past where the release should have finished, then vanished
+       in under 15ms. The fade now spans `max(ampRel, rackTail)` itself,
+       plain FOLLOW getting the same short release its own envelope
+       always drew and a resonator keeping the tail its own module
+       already earns. */
+		if (
+			advGraphOuts &&
+			advGraphOuts.size &&
+			advGraphExtrasStop !== undefined &&
+			advGraphReleaseStart !== undefined
+		) {
+			const followFadeLen = Math.max(ampRel, advGraphRackTail ?? 0);
+			for (const { delay, durCap, gain } of advGraphOuts.values()) {
+				const stopAt =
+					durCap !== undefined ? t + durCap + delay : advGraphReleaseStart + followFadeLen + delay;
+				const anchor = durCap !== undefined ? t : advGraphReleaseStart;
+				const fadeSec =
+					durCap !== undefined ? Math.min(0.01, Math.max(0, stopAt - anchor)) : Math.max(0, stopAt - anchor);
+				gain.gain.setValueAtTime(gain.gain.value, Math.max(anchor, stopAt - fadeSec));
+				gain.gain.linearRampToValueAtTime(0, stopAt);
+			}
+		} else if (advGraphOut && advGraphExtrasStop !== undefined) {
+			// No OUT module at all -- the legacy "everything nothing else
+			// listens to is an output" shape -- so there is no per-OUT gain to
+			// fade individually; the merged sink is the only seam there is.
+			const fadeSec = Math.min(0.01, Math.max(0, advGraphExtrasStop - t));
+			advGraphOut.gain.setValueAtTime(
+				advGraphOut.gain.value,
+				Math.max(t, advGraphExtrasStop - fadeSec)
+			);
+			advGraphOut.gain.linearRampToValueAtTime(0, advGraphExtrasStop);
 		}
 
 		const rackChain = track.advanced && !graph ? track.rackChain : undefined;
@@ -4773,7 +6279,11 @@ class ModularSynth {
 				/* Which group this voice belongs to, so a later CUT can find it. Read
            from the ACT that fired for it, or the track field when there is no
            chain. */
-				muteGroup: trackRow.percussion ? act.cutGroup : 0
+				muteGroup: trackRow.percussion ? act.cutGroup : 0,
+				advRelContext: advRelContext ? { ...advRelContext, busInput } : undefined,
+				advChokeContext: advChokeContext ? { ...advChokeContext, busInput } : undefined,
+				advGraphOut,
+				advGraphOuts
 			});
 		}
 
@@ -4817,6 +6327,16 @@ class ModularSynth {
 		this.releaseVoice(voiceKey);
 	}
 
+	/**
+	 * `releaseVoice`, exposed for a caller that already has the voice key
+	 * rather than a track/note pair -- the audit bench, which triggers a voice
+	 * directly and needs to release that exact one without going through
+	 * `trackHeldVoices` at all.
+	 */
+	public releaseTrackVoice(voiceKey: string) {
+		this.releaseVoice(voiceKey);
+	}
+
 	// Set Sustain Pedal (CC 64) State
 	public setSustainPedal(down: boolean) {
 		if (this.isSustainPedalDown !== down) {
@@ -4855,11 +6375,18 @@ class ModularSynth {
 		const voice = this.activeVoices.get(voiceKey);
 		if (!voice) return;
 
-		const ctx = soundEngine.init();
+		/* `audioCtx()`, not `soundEngine.init()` directly: the latter always
+       hands back the live context, so a release during an offline render
+       scheduled its ramp against wall-clock time on a context nothing was
+       rendering from -- which is also why the audit bench has never been
+       able to call this. `audioCtx()` already prefers `renderCtx` while one
+       is set, the same way `chokeVoice` and `stopVoice` read `now`. */
+		const ctx = this.audioCtx();
 		if (!ctx) return;
 
 		const now = ctx.currentTime;
-		const { gain, filter, ampRel, vcfRel, baseCutoff, osc1, osc2, noise, lfo, extras } = voice;
+		const { gain, filter, ampRel, vcfRel, baseCutoff, osc1, osc2, noise, lfo, extras, advGraphOut, advGraphOuts } =
+			voice;
 
 		try {
 			gain.gain.cancelScheduledValues(now);
@@ -4870,18 +6397,324 @@ class ModularSynth {
 			filter.frequency.setValueAtTime(filter.frequency.value, now);
 			filter.frequency.exponentialRampToValueAtTime(baseCutoff, now + Math.max(0.02, vcfRel));
 
-			const stopTime = now + Math.max(ampRel, vcfRel) + 0.05;
-			if (osc1) osc1.stop(stopTime);
-			if (osc2) osc2.stop(stopTime);
-			if (noise) noise.stop(stopTime);
-			for (const x of extras ?? []) x.stop(stopTime);
+			const track = voice.trackId !== undefined ? this.tracks[voice.trackId] : undefined;
+			/* Same gap the timed-note path closes: a resonator's ring-out is not
+         `ampRel`/`vcfRel`, both of which are the classic voice's own release
+         and stop shaping the ADV graph the moment its oscillator does. Without
+         this, `extras.stop` fired at `uncappedStopTime` and a STRING released
+         by REL was cut off within a tenth of a second of the key coming up,
+         however long its DECY said -- audible only once the click that used
+         to hide it (a raw `.stop()` with no ramp) was fixed, not caused by it. */
+			const rackTail = track ? this.rackTailSeconds(track) : 0;
+			const uncappedStopTime = now + Math.max(ampRel, vcfRel, rackTail) + 0.05;
+			/* FOLLOW measures from the moment the key comes up here, not from the
+         note's start -- releaseVoice fires on a continuous hold, which has
+         no other clock for "how long the tail rings" to be measured from.
+
+         TIME and STEP are the opposite: both name a fixed length that starts
+         counting the moment the OUT itself starts making sound, which is
+         `voice.startTime` (+ that OUT's own WAIT `delay`), never `now`. A
+         WAIT'd OUT set to TIME=1s is a *level signal, delayed*, exactly as
+         much when the key comes up early as when it never comes up before
+         the second ends -- releasing at 0.1s must not shorten it any more
+         than releasing at 5s would lengthen it. Measured with the bug: a 1s
+         TIME OUT behind a 200ms WAIT, released at 0.1s, went silent at 1.3s
+         (`now(0.1) + durCap(1) + delay(0.2)`) instead of 1.2s
+         (`t(0) + delay(0.2) + durCap(1)`) -- release time was leaking into a
+         length that was supposed to answer to none of it.
+
+         `advGraphDurCap` (the whole-voice tightest cap, still used for the
+         one-OUT common case below) stays; what changed is that a graph with
+         more than one OUT no longer shares this single number. Each OUT in
+         `advGraphOuts` gets its own fade at its own `t + delay + durCap`
+         (TIME or STEP) or `uncappedStopTime + delay` (FOLLOW). */
+			const durCap = track ? this.advGraphDurCap(track) : undefined;
+			const stopTime = durCap !== undefined ? voice.startTime + durCap : uncappedStopTime;
+			/* Same reasoning as the note-on ramp this mirrors: a patch with its
+         own envelope is already at or near zero by `stopTime`, and a patch
+         with none has nothing else standing between its oscillator and a
+         raw `.stop()`. Per OUT where there is more than one, for the same
+         reason the timed-note path fades each OUT's own gain rather than
+         the merged sink: one shared fade took every OUT down at whichever
+         OUT's own deadline came first. */
+			let latestOutStop = stopTime;
+			/* A WAIT-delayed OUT's own oscillator used to be stopped here too, at
+         the same shared `stopTime` every other `extras` source was -- the
+         fade above was correctly delayed by the OUT's own `delay`, but the
+         sound it was fading had already been cut off by a `.stop()` call
+         that never heard of that delay. A 200ms WAIT ahead of a FOLLOW OUT
+         measured silence at exactly `stopTime`, the *un*-delayed release
+         moment, instead of `stopTime + delay` -- audible as the delayed
+         branch simply not sounding at all once the key came up before its
+         own 200ms had elapsed.
+
+         `sourceStop` below answers each source by which OUT(s) actually own
+         it -- `advGraphOuts`' own `sources`, the same ancestry walk the fade
+         loop already trusts -- rather than assuming every `extras` member
+         answers to the one shared clock. A source two OUTs both draw from
+         takes the later of the two, so neither OUT's own cleanup cuts a
+         source the other still needs; a source no tracked OUT claims (a
+         rack-chain extra, or a graph with no OUT module at all) keeps
+         answering to `stopTime` exactly as before. */
+			const sourceStop = new Map<AudioScheduledSourceNode, number>();
+			if (advGraphOuts && advGraphOuts.size) {
+				for (const { delay, durCap: outDurCap, gain: og, sources: outSources } of advGraphOuts.values()) {
+					/* An ADV graph is the whole voice and answers to none of racks
+             1-7 -- `chainOut` is reassigned to the graph's own sink the
+             moment a graph builds, so `gainNode`/`gain.gain`'s own release
+             ramp, scheduled above, drives a node the signal path no longer
+             passes through at all. Every OUT's own fade has to happen on
+             `og.gain`, the per-OUT gain actually wired into that sink --
+             there is no upstream envelope already doing this job to defer
+             to, FOLLOW included.
+
+             TIME/STEP: a fixed length from this OUT's own start
+             (`voice.startTime + delay`), the same reasoning `stopTime`
+             above already applies -- release time never enters it, early
+             or late.
+
+             FOLLOW: anchored at `now + max(ampRel, rackTail)`, not
+             `now + ampRel` alone and not `uncappedStopTime`'s own extra
+             +0.05 buffer either. `ampRel` is the length a plain FOLLOW
+             OUT with no resonator in front of it needs -- a fade held
+             open past that with nothing left to ring pointlessly delays
+             silence. `rackTail` is the length a graph carrying a STRING,
+             TUBE or similar actually needs -- taking `ampRel` alone once
+             cut a resonator's own ring short at whatever `ampRelease`
+             said, however long DCAY/DECY asked for on top of it, because
+             nothing here asked the graph what it was still doing.
+             `uncappedStopTime`'s own extra buffer was for the *reap*
+             deadline, not for how long the ear should hear something --
+             a plain OSC held at full level for that whole extra gap and
+             then cut in a flat 10ms, audibly nothing like `ampRelease`'s
+             own shape. Measured: released at 0.6s with `ampRelease`
+             0.12s and no resonator in the graph, the peak sat unmoved
+             until ~0.765s, then vanished in under 15ms. The fade now
+             spans `max(ampRel, rackTail)` itself, plain FOLLOW getting
+             the same short release its own envelope always drew and a
+             resonator keeping the tail its own module already earns. */
+					const outStop =
+						outDurCap !== undefined
+							? voice.startTime + delay + outDurCap
+							: now + Math.max(ampRel, rackTail) + delay;
+					latestOutStop = Math.max(latestOutStop, outStop);
+					const fadeSec =
+						outDurCap !== undefined
+							? Math.min(0.01, Math.max(0, outStop - now))
+							: Math.max(0, outStop - now);
+					og.gain.cancelScheduledValues(now);
+					og.gain.setValueAtTime(og.gain.value, now);
+					og.gain.setValueAtTime(og.gain.value, Math.max(now, outStop - fadeSec));
+					og.gain.linearRampToValueAtTime(0, Math.max(now, outStop));
+					for (const src of outSources)
+						sourceStop.set(src, Math.max(sourceStop.get(src) ?? outStop, outStop));
+				}
+			} else if (advGraphOut) {
+				const fadeSec = Math.min(0.01, Math.max(0, stopTime - now));
+				advGraphOut.gain.cancelScheduledValues(now);
+				advGraphOut.gain.setValueAtTime(advGraphOut.gain.value, now);
+				advGraphOut.gain.setValueAtTime(advGraphOut.gain.value, Math.max(now, stopTime - fadeSec));
+				advGraphOut.gain.linearRampToValueAtTime(0, stopTime);
+			}
+			if (osc1) osc1.stop(sourceStop.get(osc1) ?? stopTime);
+			if (osc2) osc2.stop(sourceStop.get(osc2) ?? stopTime);
+			if (noise) noise.stop(sourceStop.get(noise) ?? stopTime);
+			for (const x of extras ?? []) x.stop(sourceStop.get(x) ?? stopTime);
 			if (lfo) lfo.stop(stopTime);
 
+			/* Reaping (`detachVoice`, via `onended`) disconnects the whole voice,
+         ADV graph included -- so it has to wait for the *latest* of every
+         OUT's own deadline, not just the classic voice's own `stopTime`, or
+         a WAIT-delayed OUT's carefully scheduled fade above is severed
+         before it runs. `endSrc` is re-stopped at `latestOutStop` rather
+         than wrapping `onended` in an extra `setTimeout`: `setTimeout` is
+         wall-clock time, useless for lining up with an offline render that
+         does not run at wall-clock speed, where `onended` (audio-clock
+         accurate in every context) is the only reaper available at all. */
 			const endSrc = voice.osc1 ?? voice.osc2 ?? voice.noise;
+			if (endSrc && latestOutStop > stopTime) endSrc.stop(latestOutStop);
 			if (endSrc) endSrc.onended = () => this.reapVoice(voiceKey);
-			const cleanupMs = Math.ceil((stopTime - now) * 1000) + 50;
+			const cleanupMs = Math.ceil((latestOutStop - now) * 1000) + 50;
 			window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
 		} catch {}
+
+		this.fireAdvActivation(voice, ctx, now);
+	}
+
+	/**
+	 * REL, at the moment the key actually comes up.
+	 *
+	 * Everything above this call is the racks 1-7 ramp, unchanged: it does not
+	 * know or care whether the graph also has a REL outlet wired to something.
+	 * This is the separate event the rewrite exists for -- a second, later
+	 * activation of the same graph, built fresh rather than reusing anything
+	 * THEN already started, because an oscillator that has been running since
+	 * the note began cannot be rewound to sound like one just struck.
+	 *
+	 * `heldSec`/`gate` here is how long the key was actually down, not the
+	 * estimate THEN's own activation was built against -- REL is a real
+	 * runtime event and the data it publishes should be the real number, not
+	 * the guess note-on made before it knew.
+	 */
+	private fireAdvActivation(voice: ActiveVoice, ctx: BaseAudioContext, now: number) {
+		this.fireVoiceInterrupt(voice, ctx, now, 'advRelContext', 'in', 'rel', 'relSources');
+	}
+
+	/**
+	 * One activation of a voice's graph, fired from outside the note-on pass
+	 * that built the rest of it -- REL and ON-CHOKE both, which differ only in
+	 * which snapshot they read, which node type seeds the walk, and which
+	 * outlet on that node it leaves by. Everything past that point is the same
+	 * question: what does this event's own exec reach, build it fresh, start
+	 * it, and let it clean itself up independently of the voice that carried
+	 * the snapshot here.
+	 */
+	private fireVoiceInterrupt(
+		voice: ActiveVoice,
+		ctx: BaseAudioContext,
+		now: number,
+		contextKey: 'advRelContext' | 'advChokeContext',
+		entryType: string,
+		entryPort: string,
+		sourcesKey: 'relSources' | 'chokeSources'
+	) {
+		const snap = voice[contextKey];
+		if (!snap) return;
+		const heldSec = Math.max(0.001, now - voice.startTime);
+		const built = this.buildActivation(
+			ctx,
+			snap.graph,
+			entryPort,
+			snap.params,
+			snap.baseFreq,
+			now,
+			heldSec,
+			snap.laneValues,
+			snap.presetGain,
+			snap.note,
+			snap.trackId,
+			snap.waves,
+			entryType
+		);
+		if (!built) return;
+		built.out.connect(snap.busInput);
+		voice[sourcesKey] = built.sources;
+		for (const src of built.sources) {
+			this.ringingTails.add(src);
+			try {
+				src.start(built.startAt.get(src) ?? now);
+			} catch {
+				/* Already started, or NaN slipped through -- either way not this
+				   activation's problem to recover from beyond not throwing. */
+			}
+		}
+		/* DUR here is not a ceiling on however long this activation would
+       otherwise have rung -- it *is* the ring, exactly, once it is set to
+       TIME or STEP. A plain oscillator with no envelope of its own never
+       fires `onended` on its own account, so REL wired straight to an OUT
+       rang forever regardless of what DUR said: FOLLOW and a positive
+       length read identically, because nothing here ever asked the graph.
+       At FOLLOW this changes nothing, the same as every other DUR site.
+
+       Per OUT, through `built.outs`, not the single whole-graph cap
+       `durCapOf` answers: that shared one shared cap (and, with it, one
+       shared fade on the merged sink) across every OUT the same way the
+       timed-note and release paths once did, before a second OUT existed
+       to disagree with the first about when it should stop -- see
+       `buildActivation`'s own `outs` field. A WAIT sitting between REL and
+       an OUT compounds the same bug this fires from without: `durCapOfNode`
+       already answers `t + delay + durCap`-shaped questions through
+       `outsMap`'s own `delay`, but this call site kept computing `now +
+       durCap` with no `delay` folded in at all -- `now` *is* this
+       activation's own `t`, since it is what every source here was started
+       from, so a REL-fed OUT sitting behind a 500ms WAIT with a 1s TIME
+       measured its own second from the moment REL fired rather than from
+       500ms later, when WAIT actually let it out. Measured: released at
+       0.4s, a 500ms-WAIT-then-1s-TIME OUT went silent at 1.4s (`now +
+       durCap`) instead of 1.9s (`now + delay + durCap`). */
+		let anyDurCap = false;
+		let latestStop = now;
+		if (built.outs.size) {
+			for (const { delay, durCap: outDurCap, gain: og, sources: outSources } of built.outs.values()) {
+				if (outDurCap === undefined) continue;
+				anyDurCap = true;
+				const stopAt = now + delay + outDurCap;
+				latestStop = Math.max(latestStop, stopAt);
+				const fadeSec = Math.min(0.01, Math.max(0, stopAt - now));
+				og.gain.cancelScheduledValues(now);
+				og.gain.setValueAtTime(og.gain.value, now);
+				og.gain.setValueAtTime(og.gain.value, Math.max(now, stopAt - fadeSec));
+				og.gain.linearRampToValueAtTime(0, stopAt);
+				for (const src of outSources) {
+					try {
+						src.stop(stopAt);
+					} catch {
+						/* already stopped */
+					}
+				}
+			}
+		} else {
+			// No OUT module at all -- the legacy "everything nothing else
+			// listens to is an output" shape -- so there is no per-OUT gain
+			// or delay to read; fall back to the single whole-graph cap this
+			// site always used, unable to disagree with itself when there is
+			// only one answer to give.
+			const durCap = ModularSynth.durCapOf(snap.graph, snap.params, this.bpm);
+			if (durCap !== undefined) {
+				anyDurCap = true;
+				const stopAt = now + durCap;
+				latestStop = stopAt;
+				const fadeSec = Math.min(0.01, Math.max(0, durCap));
+				const outGain = (built.out as GainNode).gain;
+				outGain.cancelScheduledValues(now);
+				outGain.setValueAtTime(outGain.value, now);
+				outGain.setValueAtTime(outGain.value, Math.max(now, stopAt - fadeSec));
+				outGain.linearRampToValueAtTime(0, stopAt);
+				for (const src of built.sources) {
+					try {
+						src.stop(stopAt);
+					} catch {
+						/* already stopped */
+					}
+				}
+			}
+		}
+		/* Cleanup independent of the voice that fired it: `reapVoice` may run
+       long before this tail finishes ringing, since these sources have
+       nothing to do with the voice's `extras`. Disconnected once every
+       source has ended, rather than on a timer, so a tail is never cut short
+       by a guess at how long it runs. DUR aside, a source with nothing
+       stopping it never reaches that point at all -- the timeout below is
+       what still reclaims it. */
+		let remaining = built.sources.length;
+		if (remaining === 0) {
+			built.out.disconnect();
+			return;
+		}
+		for (const src of built.sources) {
+			src.onended = () => {
+				this.ringingTails.delete(src);
+				remaining--;
+				if (remaining <= 0) {
+					try {
+						built.out.disconnect();
+					} catch {
+						/* already disconnected */
+					}
+				}
+			};
+		}
+		if (anyDurCap) {
+			const cleanupMs = Math.ceil((latestStop - now) * 1000) + 50;
+			window.setTimeout(() => {
+				for (const src of built.sources) this.ringingTails.delete(src);
+				try {
+					built.out.disconnect();
+				} catch {
+					/* already disconnected */
+				}
+			}, cleanupMs);
+		}
 	}
 
 	/**
@@ -4893,7 +6726,7 @@ class ModularSynth {
 	 * group has always done. The nodes are torn down after it, so a choked voice
 	 * does not keep a graph alive.
 	 */
-	private chokeVoice(voiceKey: string, now: number, fadeSec = 0.006) {
+	private chokeVoice(voiceKey: string, ctx: BaseAudioContext, now: number, fadeSec = 0.006) {
 		const voice = this.activeVoices.get(voiceKey);
 		if (!voice) return;
 		try {
@@ -4904,6 +6737,12 @@ class ModularSynth {
 			g.exponentialRampToValueAtTime(0.0001, now + fadeSec);
 			g.linearRampToValueAtTime(0, now + fadeSec + 0.002);
 			const end = now + fadeSec + 0.01;
+			if (voice.advGraphOut) {
+				const ag = voice.advGraphOut.gain;
+				ag.cancelScheduledValues(now);
+				ag.setValueAtTime(ag.value, now);
+				ag.linearRampToValueAtTime(0, end);
+			}
 			if (voice.osc1) voice.osc1.stop(end);
 			if (voice.osc2) voice.osc2.stop(end);
 			if (voice.noise) voice.noise.stop(end);
@@ -4912,6 +6751,7 @@ class ModularSynth {
 		} catch {
 			/* already stopped */
 		}
+		this.fireVoiceInterrupt(voice, ctx, now, 'advChokeContext', 'onchoke', 'then', 'chokeSources');
 		this.activeVoices.delete(voiceKey);
 		this.forgetHeldVoice(voiceKey);
 		/* Detach after the fade rather than during it.
@@ -5162,13 +7002,20 @@ class ModularSynth {
     
        2 ms is short enough that a stolen voice is gone before the new one
        speaks, and long enough that the step to silence is not a discontinuity. */
-		const now = this.audioCtx()?.currentTime ?? 0;
+		const ctx = this.audioCtx();
+		const now = ctx?.currentTime ?? 0;
 		const end = now + 0.002;
 		try {
 			const g = voice.gain.gain;
 			g.cancelScheduledValues(now);
 			g.setValueAtTime(Math.max(0.0001, g.value), now);
 			g.linearRampToValueAtTime(0, end);
+			if (voice.advGraphOut) {
+				const ag = voice.advGraphOut.gain;
+				ag.cancelScheduledValues(now);
+				ag.setValueAtTime(ag.value, now);
+				ag.linearRampToValueAtTime(0, end);
+			}
 			if (voice.osc1) voice.osc1.stop(end);
 			if (voice.osc2) voice.osc2.stop(end);
 			if (voice.noise) voice.noise.stop(end);
@@ -5176,6 +7023,9 @@ class ModularSynth {
 			if (voice.lfo) voice.lfo.stop(end);
 		} catch {
 			/* already stopped */
+		}
+		if (ctx) {
+			this.fireVoiceInterrupt(voice, ctx, now, 'advChokeContext', 'onchoke', 'then', 'chokeSources');
 		}
 		this.activeVoices.delete(voiceKey);
 		this.forgetHeldVoice(voiceKey);
@@ -5201,6 +7051,18 @@ class ModularSynth {
 		this.trackHeldVoices.clear();
 		this.sustainedVoiceKeys.clear();
 		Array.from(this.activeVoices.keys()).forEach((k) => this.stopVoice(k));
+		/* REL and ON-CHOKE tails outlive the voice that fired them by design,
+       so stopping every voice above does not reach them -- a tail with no
+       envelope of its own would otherwise keep ringing past "stop
+       everything" until the page reloaded. */
+		for (const src of [...this.ringingTails]) {
+			try {
+				src.stop();
+			} catch {
+				/* already stopped */
+			}
+		}
+		this.ringingTails.clear();
 	}
 
 	/* -------------------------------------------------------------------------- */
@@ -5470,6 +7332,17 @@ class ModularSynth {
 			const ctx = offline as unknown as AudioContext;
 			this.regenerateNoiseBuffer();
 			this.initMasterFX(ctx);
+			/* renderMaster is otherwise set with `.value =`, a bare step from 0 to
+			   volume on the buffer's very first sample -- audible as a click a
+			   per-voice envelope can't own, since it sits above every voice. A 1 ms
+			   ramp costs nothing a listener can hear and removes the step. The
+			   matching fade-out is scheduled below, right before startRendering(),
+			   since only there do we know the buffer's true last frame. */
+			if (this.renderMaster) {
+				const vol = soundEngine.getVolume();
+				this.renderMaster.gain.setValueAtTime(0, 0);
+				this.renderMaster.gain.linearRampToValueAtTime(vol, 0.001);
+			}
 			// initMasterFX already filled a 1.8s/0.6 impulse. Regenerating is only
 			// worth 264k iterations when the settings ask for something other than
 			// that default.
@@ -5504,6 +7377,17 @@ class ModularSynth {
 					.catch(() => {
 						/* a checkpoint past the buffer, or an aborted render — ignore */
 					});
+			}
+
+			/* The buffer ends wherever `frames` ends, mid-waveform more often than
+			   not -- a hard truncation, heard as a click at the tail. Fading out
+			   over the last few ms trades an inaudible sliver of the tail for a
+			   clean stop. */
+			if (this.renderMaster) {
+				const fadeOutSec = Math.min(0.005, seconds / 2);
+				const fadeStart = Math.max(0, seconds - fadeOutSec);
+				this.renderMaster.gain.setValueAtTime(this.renderMaster.gain.value, fadeStart);
+				this.renderMaster.gain.linearRampToValueAtTime(0, seconds);
 			}
 
 			const buffer = await offline.startRendering();

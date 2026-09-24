@@ -52,8 +52,7 @@ function modTargets(type: string): Set<string> | null {
 		'n1',
 		{},
 		(_n: string, _port: string, f: number) => f,
-		{ velocity: 0.8, noteIndex: 48, tuning: 440 },
-		0.5
+		{ velocity: 0.8, noteIndex: 48, tuning: 440 }
 	);
 	return made ? new Set(made.mod.keys()) : null;
 }
@@ -250,7 +249,7 @@ describe('the node contract', () => {
 		   out here, which meant every module added to the catalogue had to be
 		   added to a second place -- and while the catalogue is being rebuilt
 		   from primitives the roster would be wrong on every commit. */
-		const LOGIC = new Set(['act', 'in', 'out', 'wait', 'when']);
+		const LOGIC = new Set(['act', 'in', 'onchoke', 'out', 'wait', 'when']);
 		const withExec = MODULE_SPECS.filter(
 			(m) => m.inputs.some((p) => p.kind === 'exec') || m.outputs.some((p) => p.kind === 'exec')
 		).map((m) => m.id);
@@ -260,7 +259,9 @@ describe('the node contract', () => {
 	it('gives an exec outlet only where there is an afterwards', () => {
 		// THEN means "and then this", so it needs a moment to point at. An
 		// oscillator runs for as long as the note does and never finishes.
-		const HAS_AFTERWARDS = new Set(['in', 'wait', 'when']);
+		// ON-CHOKE's own THEN is the whole reason it exists: it is where the
+		// afterwards a voice being cut off from outside points to.
+		const HAS_AFTERWARDS = new Set(['in', 'onchoke', 'wait', 'when']);
 		const withThen = MODULE_SPECS.filter((m) => m.outputs.some((p) => p.kind === 'exec')).map(
 			(m) => m.id
 		);
@@ -324,15 +325,9 @@ describe('the node contract', () => {
 		   hands back a value, TO-SIG does the reverse, and filing them by their
 		   outlets would put one on each side of a wall they exist to cross. */
 		const AUDIO_SHELVES = new Set(['SOURCE', 'SHAPE', 'RESONATE', 'STEREO', 'CONVERT']);
-		const CONTROL_SHELVES = new Set(['MATH', 'LOGIC', 'CONVERT', 'MODULATE']);
+		const CONTROL_SHELVES = new Set(['MATH', 'FLOW', 'CONVERT', 'MODULATE']);
 		const wrong: string[] = [];
 		for (const m of MODULE_SPECS) {
-			/* ENTRY is the one exception and it is a real one: it publishes values,
-			   but it is not a module that computes them -- it is the note itself
-			   arriving, the origin every patch starts from. Filing it with the
-			   arithmetic would put "the key you pressed" on the same shelf as ADD.
-			   It sits with the sources because that is what it is a source of. */
-			if (m.id === 'in') continue;
 			/* No outlet at all. Three ways that happens, and the exec pin tells
 			   them apart: a module that *acts* when execution reaches it belongs
 			   with the execution chain, while one with no pins at all is either
@@ -355,7 +350,17 @@ describe('the node contract', () => {
 				   between the two ends is the cycle the editor refuses. It shapes
 				   the signal path, so it files with what shapes it. */
 				const sends = m.id === 'fbsend';
-				const want = sends ? ['SHAPE'] : acts ? ['LOGIC'] : ['METER', 'UTILITY'];
+				/* OUT is the fifth way and the one true meter-shaped exception:
+				   it takes audio and ends the signal path exactly like a probe,
+				   but it is not a module you patch in to look at something -- it
+				   is the graph's other fixed end, so it sits on FLOW with the
+				   fixed end it started from. */
+				const isOut = m.id === 'out';
+				const want = sends
+					? ['SHAPE']
+					: acts || isOut
+						? ['FLOW']
+						: ['METER', 'UTILITY'];
 				if (!want.includes(m.group)) wrong.push(`${m.id}: ${m.group}`);
 				continue;
 			}
@@ -378,15 +383,18 @@ describe('the node contract', () => {
 	});
 
 	it('separates the control shelves by what they do to the value', () => {
-		/* The second step, needed because the first cannot see it: MATH, LOGIC
+		/* The second step, needed because the first cannot see it: MATH, FLOW
 		   and CONVERT are all `ctl -> ctl`, so ports alone would collapse three
 		   shelves into one of eleven entries.
-		
-		   LOGIC is the decidable one and the only one worth pinning: a module
-		   belongs there exactly when what it hands back is a truth. */
+
+		   A truth is the decidable case and the only one worth pinning: a
+		   module belongs on FLOW when what it hands back is a truth, though
+		   FLOW also holds modules pinned by the execution-chain check above
+		   rather than this one (WAIT, ACT, WHEN, ON-CHOKE emit no value at
+		   all) and the graph's two fixed ends (KEY-EVENT, OUT). */
 		for (const m of MODULE_SPECS) {
 			const emitsTruth = m.outputs.some((o) => roleOf(o) === 'bool');
-			if (emitsTruth) expect(m.group, m.id).toBe('LOGIC');
+			if (emitsTruth) expect(m.group, m.id).toBe('FLOW');
 		}
 	});
 
@@ -428,8 +436,7 @@ describe('the node contract', () => {
 				'n1',
 				{},
 				(_n: string, _p: string, f: number) => f,
-				{ velocity: 0.8, noteIndex: 48, tuning: 440 },
-				0.5
+				{ velocity: 0.8, noteIndex: 48, tuning: 440 }
 			);
 			if (made !== null) built.push(`${m.id} built a node`);
 			// And it got that far without making anything.
@@ -661,7 +668,15 @@ describe('every parameter the engine reads is declared', () => {
 			'act.action',
 			'act.actGroup',
 			'act.actMs',
-			'wait.gapMs'
+			'wait.gapMs',
+			/* OUT's DUR, SEC and STEP are read by `advGraphDurCap` /
+			   `durSecondsOf`, off `track.graphParams` directly rather than
+			   through the module builder's `p()` -- together they decide the
+			   voice's whole lifetime before any node for this note is built,
+			   the same reason WAIT's GAP is on this list. */
+			'out.dur',
+			'out.durSec',
+			'out.durStep'
 		]);
 		const dead = MODULE_SPECS.flatMap((m) =>
 			m.params

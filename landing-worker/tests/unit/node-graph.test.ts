@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { rolesCompatible } from '../../src/lib/stores/graph-model';
-import { MAP_SHAPES } from '../../src/lib/stores/synth-modules';
+import { MAP_SHAPES, ACTIVATION_TYPES, EVENT_SOURCE_TYPES } from '../../src/lib/stores/synth-modules';
 import { modularSynth } from '../../src/lib/synth';
 import { FakeCtx, FakeParam, type FakeNode } from './stubs/audio-context';
 
@@ -24,6 +24,7 @@ import {
 	isPureNode,
 	isValueNode,
 	PURE_NODES,
+	audioAncestors,
 	type EvalGraph,
 	type NoteEvent
 } from '../../src/lib/stores/node-graph';
@@ -41,7 +42,6 @@ const note: NoteEvent = {
 	pitch: 440,
 	velocity: 0.8,
 	noteIndex: 48,
-	gate: 0.5,
 	lanes: { vel: 0.9, cutoff: 0.25 }
 };
 
@@ -134,12 +134,11 @@ describe('what ENTRY publishes', () => {
 		expect(entry('note')).toBe(48);
 	});
 
-	it('hands out how hard and how long', () => {
+	it('hands out how hard it was struck', () => {
 		/* Velocity reached the amplifier and nothing else before this, so "struck
 		   harder means brighter" -- what every struck instrument does -- could
 		   not be said at all. */
 		expect(entry('vel')).toBe(0.8);
-		expect(entry('gate')).toBe(0.5);
 	});
 
 	it('hands out one outlet per lane', () => {
@@ -148,6 +147,63 @@ describe('what ENTRY publishes', () => {
 
 	it('falls back for a lane the track does not carry', () => {
 		expect(entry('lane:nope', 7)).toBe(7);
+	});
+
+	it('hands a pure node HELD as a plain float, not the unwired identity', () => {
+		/* HELD is ENTRY's one live outlet -- a ramp, not a snapshot -- and a pure
+		   node like MUL has no AudioParam for a ramp to land on: it is pulled
+		   once, when this activation is built. `x`'s B is a `cv` port, the
+		   untyped real number every arithmetic node hands out, so whatever
+		   reaches it is read as a signed float and nothing else -- not treated
+		   as though the cable carrying HELD were special and not connected at
+		   all. Reported from a real preset: TO-FREQ's output times HELD into an
+		   oscillator's pitch measured byte-identical to the cable never having
+		   been drawn, because this used to return the caller's fallback (MUL's
+		   own unwired identity, 1) instead of a number. Pulled at build time,
+		   the honest answer is 0 -- HELD's own ramp starts there. */
+		expect(entry('held')).toBe(0);
+	});
+});
+
+describe("a pure node fed HELD directly, the way TO-FREQ times HELD into an oscillator's pitch was", () => {
+	/* The exact shape of the reported preset: ENTRY.pitch through TO-FREQ,
+	   ENTRY.held straight onto a MUL alongside it, MUL's product driving an
+	   oscillator's pitch. Before this fix, MUL's B silently read 1 (its own
+	   unwired identity) whatever HELD's cable said, so the patch sounded
+	   exactly as if MUL were not there at all -- freq * 1 -- which is the
+	   report: "接了HELD和没接效果完全一样". */
+	const graph: EvalGraph = {
+		nodes: [
+			{ id: 'entry', type: 'in' },
+			{ id: 'freq', type: 'tofreq' },
+			{ id: 'mul', type: 'mul' }
+		],
+		cables: [
+			wire('entry', 'pitch', 'freq', 'a'),
+			wire('freq', 'out', 'mul', 'a'),
+			wire('entry', 'held', 'mul', 'b')
+		]
+	};
+
+	it("is not the same value as if HELD's cable had never been drawn", () => {
+		const wired = createResolver(graph, {}, note).input('mul', 'b', -1);
+		const unwiredGraph: EvalGraph = { nodes: graph.nodes, cables: graph.cables.slice(0, 2) };
+		const unwired = createResolver(unwiredGraph, {}, note).input('mul', 'b', -1);
+		// Wired reads HELD's honest pull (0); unwired falls back to the
+		// caller's own default (-1) rather than MUL's identity, since B has
+		// no knob of its own to read instead. Both differ from 1 (MUL's
+		// identity for an unwired B when nothing else is asked), which is
+		// what the cable used to silently produce.
+		expect(wired).toBe(0);
+		expect(unwired).toBe(-1);
+	});
+
+	it("evaluates MUL's own product as freq times HELD's honest zero, not freq times one", () => {
+		const r = createResolver(graph, { 'freq.tuning': 440 }, note);
+		expect(PURE_NODES.mul(
+			{ get: (port, fb) => r.input('mul', port, fb) },
+			() => 0
+		)).toBe(0);
 	});
 });
 
@@ -357,8 +413,7 @@ describe('the pure nodes', () => {
 			'n1',
 			{},
 			(_n: string, _p: string, f: number) => f,
-			{ velocity: 0.8, noteIndex: 48, tuning: 440 },
-			0.5
+			{ velocity: 0.8, noteIndex: 48, tuning: 440 }
 		);
 		expect(made).not.toBe(null);
 		const shaper = ctx.nodes.find((n) => n.kind === 'shaper') as unknown as {
@@ -391,14 +446,18 @@ describe('the pure nodes', () => {
 		/* Two questions that used to be one. `isPureNode` answers the engine's --
 		   is there nothing to build -- and `isValueNode` the resolver's -- can
 		   this be pulled as a number.
-		
-		   MAP is the node that split them. Its curve is a transfer function: fed
-		   ENTRY's velocity it is one number per note, and fed a waveform it has
-		   to bend every sample or it is shaping nothing. So it is pullable and
-		   buildable at once, and which happens is decided per cable by what sits
-		   at the far end. */
-		for (const id of ['const', 'add', 'mul', 'clamp']) {
-			expect(isPureNode(id), id).toBe(true);
+
+		   MAP was the node that first split them, and every remaining row in
+		   `PURE_NODES` has since followed it there: HELD reaching MUL's B read
+		   back MUL's own unwired identity regardless of the cable, for the
+		   identical reason a waveform through MAP once vanished at its inlet --
+		   a pure node has nothing an AudioParam or an audio input can land a
+		   live signal on. So none of them answer `isPureNode` true any more;
+		   every one is pullable *and* buildable, and which happens is decided
+		   per cable by what sits at the far end, exactly as MAP's own split
+		   already worked. */
+		for (const id of ['const', 'add', 'sub', 'mul', 'clamp', 'cmp', 'logic', 'not', 'trsp', 'tofreq', 'topitch']) {
+			expect(isPureNode(id), id).toBe(false);
 			expect(isValueNode(id), id).toBe(true);
 		}
 		expect(isPureNode('map')).toBe(false);
@@ -1060,6 +1119,39 @@ describe('execution timing', () => {
 		// A negative gap is a hand-edited file, not a rewind.
 		expect(execDelays(graph, { 's.gapMs': -500 }, EXEC).get('o')).toBe(0);
 	});
+
+	it('keeps a WAIT behind REL from reaching into THEN\'s timeline, and back', () => {
+		/* ENTRY has two outlets now, THEN and REL, and both pass the same
+		   `execPorts` test -- so a walk that seeded from the whole entry node
+		   rather than one of its outlets would let a gap on either side leak
+		   into the other's delays, because neither loop asked which outlet a
+		   cable actually left by. */
+		const EXEC_REL = new Set(['exec', 'then', 'rel']);
+		const graph = g(
+			[
+				['e', 'in'],
+				['ws', 'wait'],
+				['os', 'out'],
+				['wr', 'wait'],
+				['or', 'out']
+			],
+			[
+				wire('e', 'then', 'ws', 'exec'),
+				wire('ws', 'then', 'os', 'exec'),
+				wire('e', 'rel', 'wr', 'exec'),
+				wire('wr', 'then', 'or', 'exec')
+			]
+		);
+		const params = { 'ws.gapMs': 40, 'wr.gapMs': 90 };
+		const then = execDelays(graph, params, EXEC_REL, 'in', 'then');
+		expect(then.get('os')).toBeCloseTo(0.04, 6);
+		// REL's own WAIT must not appear on THEN's side at all.
+		expect(then.has('or')).toBe(false);
+
+		const rel = execDelays(graph, params, EXEC_REL, 'in', 'rel');
+		expect(rel.get('or')).toBeCloseTo(0.09, 6);
+		expect(rel.has('os')).toBe(false);
+	});
 });
 
 /**
@@ -1140,7 +1232,7 @@ describe('the logic chain', () => {
 				['w', 'when'],
 				['o', 'out']
 			],
-			[wire('e', 'exec', 'w', 'exec'), wire('w', 'then', 'o', 'exec')]
+			[wire('e', 'then', 'w', 'exec'), wire('w', 'then', 'o', 'exec')]
 		);
 		// No predicate: every branch is taken, which is what the editor wants.
 		expect(runs(execReach(graph, EXEC), 'o')).toBe(true);
@@ -1478,4 +1570,126 @@ describe('MAP: the ranges are affine, for every shape', () => {
 			}
 		});
 	}
+});
+
+/**
+ * The two sets exec activation is built on, pinned against the catalogue.
+ *
+ * Both are derived rather than hardcoded, which means a rename or a new
+ * module can silently change what they resolve to. These tests exist to
+ * make that change loud: whoever adds a module shaped like an activation
+ * point or an event source finds out here, rather than the day the exec
+ * rewrite's assumptions quietly stop matching the catalogue.
+ */
+describe('ACTIVATION_TYPES and EVENT_SOURCE_TYPES: derived from the catalogue', () => {
+	it('finds exactly OUT as an activation point today', () => {
+		// OUT has both an exec inlet and an audio inlet. WAIT, WHEN and ACT
+		// have the first and none of the second -- they are logic, not sound.
+		expect([...ACTIVATION_TYPES]).toEqual(['out']);
+	});
+
+	it('finds exactly ENTRY and ON-CHOKE as event sources today', () => {
+		// Both emit exec and take none in, so nothing upstream ever runs them.
+		// WAIT, WHEN and ACT all take exec in, so none of them starts a chain
+		// on their own.
+		expect([...EVENT_SOURCE_TYPES]).toEqual(['in', 'onchoke']);
+	});
+});
+
+describe('audioAncestors: what an activation actually needs built', () => {
+	const cable = (from: string, fromPort: string, to: string, toPort: string) => ({
+		from,
+		fromPort,
+		to,
+		toPort
+	});
+
+	it('walks audio cables backwards from the given roots', () => {
+		const graph: EvalGraph = {
+			nodes: [
+				{ id: 'o', type: 'osc' },
+				{ id: 'g', type: 'gain' },
+				{ id: 'out', type: 'out' }
+			],
+			cables: []
+		};
+		const audio = [cable('o', 'out', 'g', 'in'), cable('g', 'out', 'out', 'in')];
+		expect(audioAncestors(graph, audio, [], ['out'])).toEqual(new Set(['g', 'o']));
+	});
+
+	it('follows mod cables too, so a dual node\'s own audio ancestry is not missed', () => {
+		/* A NODE.CV or a MAP can sit on a mod cable into a knob, and itself be
+		   fed by an oscillator over an audio cable one step further back. An
+		   ancestor walk that only followed audio cables would stop at the dual
+		   node and never see the oscillator behind it. */
+		const graph: EvalGraph = {
+			nodes: [
+				{ id: 'o', type: 'osc' },
+				{ id: 'cv', type: 'tocv' },
+				{ id: 'm', type: 'map' },
+				{ id: 'g', type: 'gain' },
+				{ id: 'out', type: 'out' }
+			],
+			cables: []
+		};
+		const audio = [cable('g', 'out', 'out', 'in')];
+		const mod = [cable('o', 'out', 'cv', 'in'), cable('cv', 'out', 'm', 'a'), cable('m', 'out', 'g', 'level')];
+		expect(audioAncestors(graph, audio, mod, ['out'])).toEqual(new Set(['g', 'm', 'cv', 'o']));
+	});
+
+	it('does not include the roots themselves', () => {
+		const graph: EvalGraph = {
+			nodes: [
+				{ id: 'o', type: 'osc' },
+				{ id: 'out', type: 'out' }
+			],
+			cables: []
+		};
+		const audio = [cable('o', 'out', 'out', 'in')];
+		expect(audioAncestors(graph, audio, [], ['out']).has('out')).toBe(false);
+	});
+
+	it('leaves an unrelated island out of the ancestry entirely', () => {
+		// The node this exists for: a branch that feeds nothing the activated
+		// OUT can reach is not part of this activation, and should not be
+		// built for it.
+		const graph: EvalGraph = {
+			nodes: [
+				{ id: 'o', type: 'osc' },
+				{ id: 'out', type: 'out' },
+				{ id: 'island', type: 'osc' },
+				{ id: 'sink', type: 'gain' }
+			],
+			cables: []
+		};
+		const audio = [cable('o', 'out', 'out', 'in'), cable('island', 'out', 'sink', 'in')];
+		expect(audioAncestors(graph, audio, [], ['out'])).toEqual(new Set(['o']));
+	});
+
+	it('terminates on a cycle', () => {
+		const graph: EvalGraph = {
+			nodes: [
+				{ id: 'a', type: 'gain' },
+				{ id: 'b', type: 'gain' },
+				{ id: 'out', type: 'out' }
+			],
+			cables: []
+		};
+		const audio = [cable('a', 'out', 'b', 'in'), cable('b', 'out', 'a', 'in'), cable('a', 'out', 'out', 'in')];
+		expect(audioAncestors(graph, audio, [], ['out'])).toEqual(new Set(['a', 'b']));
+	});
+
+	it('takes several roots at once, the shape THEN can reach two OUTs in', () => {
+		const graph: EvalGraph = {
+			nodes: [
+				{ id: 'o1', type: 'osc' },
+				{ id: 'o2', type: 'osc' },
+				{ id: 'out1', type: 'out' },
+				{ id: 'out2', type: 'out' }
+			],
+			cables: []
+		};
+		const audio = [cable('o1', 'out', 'out1', 'in'), cable('o2', 'out', 'out2', 'in')];
+		expect(audioAncestors(graph, audio, [], ['out1', 'out2'])).toEqual(new Set(['o1', 'o2']));
+	});
 });

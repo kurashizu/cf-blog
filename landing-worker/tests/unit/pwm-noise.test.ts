@@ -146,7 +146,6 @@ describe('the PWM card draws what PW carries', () => {
 			pitch: 0,
 			velocity: 1,
 			noteIndex: 48,
-			gate: 0.5,
 			lanes: {}
 		});
 		return r.input('p', 'pw', 0.5);

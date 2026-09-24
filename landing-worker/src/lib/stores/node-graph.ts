@@ -90,8 +90,11 @@ export const PURE_NODES: Record<string, PureFn> = {
 		if (!(hz > 0)) return 0;
 		return 12 * Math.log2(hz / p('tuning', note?.tuning ?? 440));
 	},
-	/* Semitones onto a pitch, keeping it a pitch. */
-	trsp: (i) => i.get('a', 0) + i.get('b', 0),
+	/* Semitones onto a pitch, keeping it a pitch. BY is the pair CLAMP's
+	   bounds and CMP's B are: a socket with a field behind it, so "up a
+	   fifth" is a bare number on the card rather than a CONST and a cable
+	   for the single most common use of this module. */
+	trsp: (i, p) => i.get('a', 0) + i.get('b', p('b', 0)),
 	/* A control wire with a name on it: whatever arrives, unchanged.
 
 	   Dual like MAP, and for the same reason. Pulled as a number it resolves a
@@ -120,6 +123,30 @@ export const PURE_NODES: Record<string, PureFn> = {
 	   operator passes its other leg through rather than zeroing it. */
 	add: (i) => i.get('a', 0) + i.get('b', 0),
 	mul: (i) => i.get('a', 1) * i.get('b', 1),
+	/* A minus B. Order matters where it does not for ADD or MUL, so the card
+	   draws A on top and B below, the same way DIFF's two audio inlets read --
+	   and an unwired B is 0, ADD's own identity, since subtracting nothing is
+	   the same operation. */
+	sub: (i) => i.get('a', 0) - i.get('b', 0),
+	/* A over B. Unwired B is 1, MUL's own identity, since dividing by nothing
+	   is the same operation as multiplying by nothing. B at exactly 0 has no
+	   answer a signed float can give that is not itself a lie -- `Infinity`
+	   is not a number this graph's other pure nodes know how to carry any
+	   further than the next `Math.min`/`Math.max` silently swallowing it --
+	   so that one case reads as the identity too rather than as a value. */
+	div: (i) => {
+		const b = i.get('b', 1);
+		return b === 0 ? i.get('a', 0) : i.get('a', 0) / b;
+	},
+	/* A remainder B, keeping A's own sign the way `%` already does -- this is
+	   not Euclidean modulo, and does not need to be: nothing downstream reads
+	   this as a wrapped index, only as a number. Unwired B is 0, and B at 0
+	   has the identical no-answer problem DIV's own B does, so both read as
+	   MOD's identity (A itself, no wrap at all) rather than as NaN. */
+	mod: (i) => {
+		const b = i.get('b', 0);
+		return b === 0 ? i.get('a', 0) : i.get('a', 0) % b;
+	},
 	/* Two numbers compared, one truth out.
 
 	   The node where a quantity becomes a yes or no, and the only one: every
@@ -138,8 +165,12 @@ export const PURE_NODES: Record<string, PureFn> = {
 	   here, and `0.1 + 0.2 === 0.3` is false -- an `=` that is almost never
 	   true is a trap rather than a test. */
 	cmp: (i, p) => {
+		/* B is the pair CLAMP's bounds are: a socket with a field behind it,
+		   `i.get` taking the cable when one is wired and the typed number
+		   otherwise -- which is what lets "above C3" be a bare field rather
+		   than a second card. */
 		const a = i.get('a', 0);
-		const b = i.get('b', 0);
+		const b = i.get('b', p('b', 0));
 		const near = Math.abs(a - b) <= 1e-9;
 		switch (Math.round(p('test', 0))) {
 			case 1:
@@ -313,17 +344,45 @@ export const PURE_NODES: Record<string, PureFn> = {
 /**
  * Nodes whose function lives in `PURE_NODES` but which are not pure.
  *
- * MAP is the one. Its curve is the shape of a transfer function, and a
- * transfer function has to be applied to every sample or it cannot shape a
- * waveform at all -- as a pure node it read a signal at its inlet as the
- * fallback, so a wave arriving there vanished rather than being bent.
+ * MAP was the one, and the reasoning that put it here is the reasoning that
+ * put the rest here too: a node whose whole output is one number pulled once
+ * per note cannot carry a moving signal at all -- MAP read one at its inlet
+ * as the fallback, and it vanished rather than being bent. Every remaining
+ * entry in `PURE_NODES` had the identical gap: HELD reaching MUL's `B` read
+ * back MUL's own unwired identity (1) whatever the cable said, because a
+ * pure node has no AudioParam for a live ramp to land on and nothing then
+ * corrected for that. See docs/node-graph.md, "Every value a pure node
+ * reads is a signed float, whatever role drew the cable".
  *
- * It is built as a WaveShaperNode now, and the table is filled by calling the
- * entry below: the engine, the resolver and the card's preview all run one
- * function, which is what stops the drawn curve and the heard curve drifting
- * apart. So the row stays and only the classification changes.
+ * So none of these are pure any more -- `isPureNode` is false for the whole
+ * list -- but every one keeps its row in `PURE_NODES`, because pulling a
+ * plain number is still the common case and the cheap one: a CONST into a
+ * CUTOFF field is a number read once, not a GainNode built and left idle for
+ * the life of the voice. `isValueNode` (unaffected by this set) is what keeps
+ * that path alive; this set only adds the second path beside it -- a real
+ * node, built in `buildGraphNode`, for whenever a genuinely live signal
+ * reaches one of these instead of a settled number. Both paths call the same
+ * function under them (`PURE_NODES[type]` directly, or the identical
+ * arithmetic re-expressed as AudioNodes) so the value pulled once and the
+ * value heard live can never drift apart.
  */
-const NOT_PURE = new Set(['map', 'nodecv']);
+const NOT_PURE = new Set([
+	'map',
+	'nodecv',
+	'const',
+	'add',
+	'mul',
+	'sub',
+	'div',
+	'mod',
+	'trsp',
+	'cmp',
+	'logic',
+	'not',
+	'clamp',
+	'tofreq',
+	'topitch'
+]);
 
 /**
  * Does this node hand back a value rather than build audio?
@@ -370,7 +429,6 @@ export interface NoteEvent {
 	tuning?: number;
 	velocity: number;
 	noteIndex: number;
-	gate: number;
 	/** One value per lane the track carries, keyed by lane id. */
 	lanes: Record<string, number>;
 }
@@ -419,7 +477,17 @@ export function createResolver(
 		if (port === 'pitch') return note.pitch;
 		if (port === 'vel') return note.velocity;
 		if (port === 'note') return note.noteIndex;
-		if (port === 'gate') return note.gate;
+		/* HELD, pulled as a number rather than connected as a signal, same as
+		   every other quantity a pure node reads: a plain signed float, whatever
+		   role it nominally carries. A pure node has no AudioParam for a moving
+		   signal to land on -- it is asked once, when this activation is built --
+		   so the only honest answer to "how long had the key been down" at that
+		   instant is the definition HELD ramps from: zero, this build's own `t`.
+		   Not the stand-in `own` a truly unwired inlet reads as (MUL's identity
+		   1, ADD's identity 0, both meaning "as if nothing were patched here") --
+		   the cable is real and this is what it actually carries at the moment a
+		   pure node is capable of reading anything at all. */
+		if (port === 'held') return 0;
 		if (port.startsWith('lane:')) return note.lanes[port.slice(5)] ?? fallback;
 		return fallback;
 	}
@@ -504,8 +572,24 @@ export function createResolver(
 	function emitsSignal(nodeId: string, port: string, seen: Set<string>): boolean {
 		const c = feeds.get(`${nodeId}.${port}`);
 		if (!c) return false;
-		// ENTRY publishes the note's data as values, never as signals.
-		if (entryIds.has(c.from)) return false;
+		/* ENTRY publishes the note's data as values, never as signals -- except
+		   HELD, and even HELD only for one of the two questions this function is
+		   asked. Landing on a real module's own knob (GAIN's LVL, say), HELD
+		   stays a value here on purpose: `p()` reads this answer to decide
+		   whether to zero the knob's resting setting, and HELD is meant to *add*
+		   to it the way an envelope does, not replace it -- unchanged from
+		   before HELD could reach anything live at all.
+
+		   Landing on a value node's own inlet (MUL's B), the question is
+		   different: not "should this knob's resting number be zeroed", but
+		   "does this value node's own output count as live to whatever reads
+		   it downstream" -- and there the answer has to be yes. MUL fed HELD on
+		   B really does have a live output, wired by the dedicated HELD bypass
+		   the mod-cable loop carries for exactly this cable; answering no here
+		   is what silently told `nodeCarriesSignal` that MUL was settled and
+		   dropped the connection two nodes further downstream, the one time
+		   this distinction mattered. */
+		if (entryIds.has(c.from)) return c.fromPort === 'held' && isValueNode(nodeById.get(nodeId)?.type ?? '');
 		const type = nodeById.get(c.from)?.type ?? '';
 		// Anything with no value to pull is sound: an OSC, a FILTER, an ENV.
 		if (!isValueNode(type)) return true;
@@ -534,15 +618,38 @@ export function createResolver(
 		const own = Number.isFinite(stored) ? (stored as number) : fallback;
 		const c = feeds.get(`${nodeId}.${port}`);
 		if (c) {
-			if (entryIds.has(c.from)) return entryValue(c.fromPort, fallback);
+			/* ENTRY is dual, the way MAP and NODE.CV are: most of its outlets are
+			   a snapshot taken once, resolved here as a number -- but HELD is
+			   live, ramped for as long as the note runs, and pulling "its
+			   current value" once at build time would freeze it exactly the way
+			   the class of bug this file exists to prevent always looks: the
+			   cable draws, the socket lights, and what arrives is a number
+			   rather than the moving thing it was supposed to be. So HELD is
+			   excluded from the snapshot path and falls through to the signal
+			   one below, the same as an ENV or an LFO. */
+			if (entryIds.has(c.from) && c.fromPort !== 'held') return entryValue(c.fromPort, fallback);
 			/* A cable from something with no value to pull -- an ENV, an LFO, a
 			   filter's output -- is a *signal*, and the engine connects it to the
 			   knob's AudioParam so it adds to whatever the knob is set to. The
 			   knob keeps its own value as the base.
-			
+
 			   Returning 0 here is what made "ENV into the cutoff" silent: the
 			   filter opened at 0 Hz and the envelope added its 0..1 on top, so a
-			   patch anyone would try first played nothing. */
+			   patch anyone would try first played nothing.
+
+			   HELD is the same *unless* what it feeds is a pure node. A pure
+			   node's inlet is never connected to anything -- `valueOf` is the
+			   whole mechanism, and it has no AudioParam to hand the live ramp to
+			   -- so falling through to the signal path the way an ENV does would
+			   connect it to nothing and read as though the cable were never
+			   drawn, which is the bug a MUL fed HELD directly used to have: its B
+			   read back its own unwired identity (1) whatever was cabled in,
+			   because `own` is that identity and nothing then corrected it.
+			   `entryValue` gives the honest pull instead. */
+			if (entryIds.has(c.from) && c.fromPort === 'held') {
+				if (isValueNode(nodeById.get(nodeId)?.type ?? '')) return entryValue('held', fallback);
+				return own;
+			}
 			if (!isValueNode(nodeById.get(c.from)?.type ?? '')) return own;
 			return valueOf(c.from);
 		}
@@ -576,6 +683,31 @@ export function createResolver(
 		 * a signal has claimed, so the cable is what is heard.
 		 */
 		isDrivenBySignal: (nodeId: string, port: string) => emitsSignal(nodeId, port, new Set()),
+		/**
+		 * Does this node's own *output* carry a signal, whichever of its inlets
+		 * is the one moving?
+		 *
+		 * The question the mod-cable loop actually needs to ask about a value
+		 * node sitting upstream of a cable, and for a while it asked a narrower
+		 * one instead: `isDrivenBySignal(id, 'a')`, correct for MAP and NODE.CV
+		 * because both happen to carry exactly one inlet capable of being live.
+		 * ADD, MUL, CMP and the rest of `PURE_NODES`'s newly-buildable rows do
+		 * not share that shape -- MUL's carrier can sit on `a` or its multiplier
+		 * on `b`, and checking only `a` answered false for a MUL that HELD was
+		 * genuinely driving through `b`, which is the same silent-drop class
+		 * this file exists to end. This asks about every inlet the node
+		 * declares a feed for, the same recursive walk `emitsSignal` already
+		 * does for a dual node found *upstream* of the port being resolved,
+		 * just entered directly rather than as a step inside that walk. */
+		nodeCarriesSignal: (nodeId: string): boolean => {
+			const seen = new Set<string>();
+			seen.add(nodeId);
+			for (const [key] of feeds) {
+				if (!key.startsWith(`${nodeId}.`)) continue;
+				if (emitsSignal(nodeId, key.slice(nodeId.length + 1), seen)) return true;
+			}
+			return false;
+		},
 		param
 	};
 }
@@ -612,7 +744,20 @@ export function execReach(
 	 * different answers about the same white cable: a patch gating *sound* on a
 	 * WHEN muted correctly and played every note anyway.
 	 */
-	whenHolds?: (nodeId: string) => boolean
+	whenHolds?: (nodeId: string) => boolean,
+	/**
+	 * Which of ENTRY's own exec outlets to seed from.
+	 *
+	 * ENTRY has two now: THEN, which fires at the note, and REL, which fires
+	 * when the key comes up. Both are exec cables by port kind, so a walk that
+	 * seeded from the whole node rather than one of its outlets would merge
+	 * what happens at the note with what happens at its release into a single
+	 * reachable set -- a module downstream of REL would read as running at
+	 * note-on too, which is a real state to be in and not one this function
+	 * should be able to reach by accident. Defaulted to THEN so every caller
+	 * from before REL existed is unaffected.
+	 */
+	entryPort = 'then'
 ): {
 	gated: boolean;
 	reached: Set<string>;
@@ -622,9 +767,15 @@ export function execReach(
 	);
 	const typeOf = new Map(graph.nodes.map((n) => [n.id, n.type]));
 
+	const entryIds = new Set(graph.nodes.filter((n) => n.type === entryType).map((n) => n.id));
 	const reached = new Set<string>();
-	const queue = graph.nodes.filter((n) => n.type === entryType).map((n) => n.id);
-	for (const id of queue) reached.add(id);
+	const queue: string[] = [];
+	for (const c of execCables) {
+		if (entryIds.has(c.from) && c.fromPort === entryPort && !reached.has(c.to)) {
+			reached.add(c.to);
+			queue.push(c.to);
+		}
+	}
 	while (queue.length) {
 		const id = queue.shift()!;
 		/* A WHEN is reached -- it ran, and it asked -- but execution only leaves
@@ -670,7 +821,18 @@ export function execDelays(
 	graph: EvalGraph,
 	params: Record<string, number>,
 	execPorts: ReadonlySet<string>,
-	entryType = 'in'
+	entryType = 'in',
+	/**
+	 * Which of the entry node's own exec outlets seeds the walk.
+	 *
+	 * The same gap ENTRY had before REL existed: seeding from the whole entry
+	 * node rather than one of its outlets would let a WAIT behind REL push a
+	 * delay onto THEN's timeline and back, because both outlets' cables passed
+	 * the same `execPorts` test and neither loop asked which one a cable
+	 * actually left by. Defaulted to THEN so every caller from before REL
+	 * existed sees the same delays it always did.
+	 */
+	entryPort = 'then'
 ): Map<string, number> {
 	const execCables = graph.cables.filter(
 		(c) => execPorts.has(c.toPort) && execPorts.has(c.fromPort)
@@ -689,8 +851,17 @@ export function execDelays(
 		return Number.isFinite(raw) ? Math.max(0, raw as number) / 1000 : 0;
 	};
 
-	const queue = graph.nodes.filter((n) => n.type === entryType).map((n) => n.id);
-	for (const id of queue) at.set(id, 0);
+	const entryIds = new Set(graph.nodes.filter((n) => n.type === entryType).map((n) => n.id));
+	const queue: string[] = [];
+	for (const c of execCables) {
+		if (entryIds.has(c.from) && c.fromPort === entryPort) {
+			const prev = at.get(c.to);
+			if (prev === undefined) {
+				at.set(c.to, 0);
+				queue.push(c.to);
+			}
+		}
+	}
 	let guard = 0;
 	while (queue.length && guard++ < 4096) {
 		const id = queue.shift()!;
@@ -745,4 +916,60 @@ export function execDelays(
 		}
 	}
 	return at;
+}
+
+/**
+ * Everything upstream of a set of nodes, walking audio and mod cables
+ * backwards.
+ *
+ * What "upstream" has to mean here is wider than the audio graph alone. A
+ * knob a MAP or a NODE.CV feeds is a mod cable, not an audio one, and that
+ * dual node can in turn be fed by an oscillator over an audio cable one step
+ * further back -- so an ancestor walk that only followed `audioCables` would
+ * stop at the MAP and miss the oscillator behind it. Both `audioCables` and
+ * `modCables` are taken as already-classified lists rather than reclassified
+ * here, because that classification lives once, in `buildRackGraph`, and
+ * asks the catalogue what a port's kind is; duplicating it here would be the
+ * second copy of a rule this codebase has already been burned by keeping two
+ * of.
+ *
+ * `extraEdges` covers dependencies that exist without a cable at all. SEND
+ * and RTN are the one case today: `addCable` refuses the loop a cycle between
+ * them would draw, so they are paired by a BUS number read from `params`
+ * instead, and nothing in `graph.cables` says SEND feeds anything -- it has
+ * no outlet to say it with. An ancestor walk that only followed cables would
+ * therefore never find SEND behind an OUT that only RTN's side visibly feeds,
+ * and the audio reaching the loop from outside it would go unbuilt. Kept as
+ * a parameter rather than known here, because knowing what SEND and RTN mean
+ * is a question about the catalogue, and this function does not read it.
+ */
+export function audioAncestors(
+	graph: EvalGraph,
+	audioCables: readonly EvalCable[],
+	modCables: readonly EvalCable[],
+	rootIds: readonly string[],
+	extraEdges: readonly { from: string; to: string }[] = []
+): Set<string> {
+	const ancestors = new Set<string>();
+	const queue = [...rootIds];
+	let guard = 0;
+	while (queue.length && guard++ < 4096) {
+		const id = queue.shift()!;
+		for (const c of audioCables) {
+			if (c.to !== id || ancestors.has(c.from) || rootIds.includes(c.from)) continue;
+			ancestors.add(c.from);
+			queue.push(c.from);
+		}
+		for (const c of modCables) {
+			if (c.to !== id || ancestors.has(c.from) || rootIds.includes(c.from)) continue;
+			ancestors.add(c.from);
+			queue.push(c.from);
+		}
+		for (const e of extraEdges) {
+			if (e.to !== id || ancestors.has(e.from) || rootIds.includes(e.from)) continue;
+			ancestors.add(e.from);
+			queue.push(e.from);
+		}
+	}
+	return ancestors;
 }

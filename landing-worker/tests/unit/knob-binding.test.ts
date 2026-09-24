@@ -49,8 +49,7 @@ function build(type: string, params: Record<string, number> = {}) {
 		'n1',
 		{},
 		cvIn,
-		{ velocity: 0.8, noteIndex: 48, tuning: 440 },
-		0.5
+		{ velocity: 0.8, noteIndex: 48, tuning: 440 }
 	);
 	return { ctx, made, sources };
 }
@@ -237,33 +236,43 @@ describe('every knob is what the card says it is', () => {
 	});
 
 	it('scales a knob whose units are not the param’s, so turned and patched agree', () => {
-		/* PAN's POS is -100..100 on the card and the param is -1..1. Without the
-		   scaling node in front, a CONST of 100 into the same inlet lands on the
-		   param whole -- a hundred times hard right. The gain carries the same
-		   divide the knob goes through, so a patched value means what a typed
-		   one means.
-		
-		   This was written against MIX, which is gone: a mixer is GAINs into a
-		   SUM, both of which the catalogue has. The rule it checks is not about
-		   mixing, so it moved to a module that still exists. */
-		const { made } = build('pan', { panPos: 100 });
-		const target = made!.mod.get('panPos') as { gain: FakeParam } & { outgoing: unknown[] };
+		/* COMP's ATK is milliseconds on the card and seconds on the node.
+		   Without the scaling node in front, a CONST of 5 into the same inlet
+		   lands on the param whole -- five seconds of attack where five
+		   milliseconds was meant. The gain carries the same divide the knob
+		   goes through, so a patched value means what a typed one means.
+
+		   This was written against PAN's POS, which no longer needs the
+		   conversion -- see the next test -- and against MIX before that,
+		   which is gone entirely: a mixer is GAINs into a SUM, both of which
+		   the catalogue has. The rule it checks is not about either module, so
+		   it moved to one that still needs it. */
+		const { made } = build('comp', { compAttack: 5 });
+		const target = made!.mod.get('compAttack') as { gain: FakeParam } & { outgoing: unknown[] };
 		expect(target).toBeTruthy();
-		expect((target as unknown as { gain: FakeParam }).gain.value).toBeCloseTo(0.01, 6);
+		expect((target as unknown as { gain: FakeParam }).gain.value).toBeCloseTo(0.001, 6);
 	});
 
 	it('converts a knob whose units are not the param’s', () => {
-		// PAN: -100..100 on the card, -1..1 on the node.
-		const pan = build('pan', { panPos: 100 });
-		const panTarget = pan.made!.mod.get('panPos') as unknown as { gain: FakeParam };
-		expect(panTarget.gain.value).toBeCloseTo(0.01, 6);
-		/* DELAY used to be milliseconds on the card and seconds on the node, and
-		   needed the same conversion. It no longer does: TIME is typed in seconds
-		   now, which is the unit the param holds -- a field can spell out 0.25
-		   where a dial could not, so the two-unit dance had nothing left to buy.
-		   The cable therefore lands on the AudioParam directly. */
+		// COMP's ATK: milliseconds on the card, seconds on the node.
+		const comp = build('comp', { compAttack: 5 });
+		const compTarget = comp.made!.mod.get('compAttack') as unknown as { gain: FakeParam };
+		expect(compTarget.gain.value).toBeCloseTo(0.001, 6);
+		/* DELAY and PAN both used to need the same conversion -- DELAY was
+		   milliseconds on the card against seconds on the node, PAN was
+		   -100..100 against the param's -1..1 -- and neither does any more:
+		   DELAY's TIME is typed in seconds now, and PAN's POS is typed
+		   -1..1 directly, which is the unit the param holds either way. A
+		   field can spell out the number the param wants where a dial
+		   spanning the wrong range could not, so the two-unit dance had
+		   nothing left to buy. Both cables land on their AudioParam
+		   directly. */
 		const dl = build('delay');
 		expect(dl.made!.mod.get('delayTime')).toBeTruthy();
+		const pan = build('pan', { panPos: 0.5 });
+		const panTarget = pan.made!.mod.get('panPos');
+		expect(panTarget).toBeTruthy();
+		expect(panTarget instanceof FakeParam).toBe(true);
 	});
 });
 

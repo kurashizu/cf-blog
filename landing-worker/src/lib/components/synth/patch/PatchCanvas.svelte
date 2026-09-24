@@ -83,6 +83,11 @@
 	let graphParams = $derived($currentTrack?.graphParams);
 	let graphWaves = $derived($currentTrack?.graphWaves);
 	let graphLabels = $derived($currentTrack?.graphLabels);
+	/* KEY-EVENT's palette cap: a UI affordance rather than a rule the graph
+	   itself enforces (see `isFixedNode`, which only refuses deleting the
+	   *last* one) -- a second KEY-EVENT is legal data, just not something the
+	   palette hands out while a live one already exists. */
+	let hasKeyEvent = $derived(graph.nodes.some((n) => n.type === 'in'));
 
 	/* What each inlet is actually carrying, resolved the way the engine does.
 	
@@ -99,7 +104,6 @@
 				pitch: 0,
 				velocity: 1,
 				noteIndex: 48,
-				gate: 0.5,
 				lanes: {},
 				tuning: 440
 			},
@@ -119,7 +123,7 @@
 	   A signal landing on an AudioParam sums with the knob, so the engine reads
 	   a claimed knob as zero and lets the cable decide alone. The card has to
 	   say the same thing or the number shown is a number that does nothing --
-	   which is how a GAIN reading LVL 1 under a gate cable came to sound like it
+	   which is how a GAIN reading LVL 1 under a live cable came to sound like it
 	   was ignoring the patch. */
 	const claimedOf = (nodeId: string, key: string) => {
 		try {
@@ -936,7 +940,9 @@
 				? $t('synthPatch.cycle')
 				: res === 'duplicate'
 					? $t('synthPatch.duplicate')
-					: ''
+					: res === 'shared-activation'
+						? $t('synthPatch.sharedActivation')
+						: ''
 		);
 		if (res === 'ok') playSound('click');
 		pullFrom = null;
@@ -1662,7 +1668,7 @@
 									<!-- The same glyph the palette shows, so a placed module is
 								     recognisable at a glance on a crowded canvas. -->
 									<ModuleIcon type={n.type} size={9} color={spec.color} />
-									{#if !isFixedNode(n.id)}
+									{#if !isFixedNode(graph, n.id)}
 										<button
 											onpointerdown={(e) => {
 												if (e.button !== 2) e.stopPropagation();
@@ -1893,10 +1899,10 @@
 							>
 								{$t('synthPatch.prefabsTitle')}
 							</div>
-							<div class="space-y-0.5">
+							<div class="grid grid-cols-2 gap-0.5">
 								{#each $allPrefabs as p (p.key)}
 									{@const tint = p.color ?? '#abb2bf'}
-									<div class="flex items-center gap-0.5">
+									<div class="flex items-center gap-0.5 min-w-0">
 										<button
 											draggable="true"
 											ondragstart={(e) => {
@@ -1957,18 +1963,29 @@
 								</div>
 								<div class="grid grid-cols-2 gap-0.5">
 									{#each mods as m (m.id)}
+										{@const capped = m.id === 'in' && hasKeyEvent}
 										<!-- Draggable as well as clickable: dragging says where it goes,
-									     clicking is the shortcut when you do not care yet. -->
+									     clicking is the shortcut when you do not care yet. KEY-EVENT
+									     stops being either once one already exists on the canvas --
+									     `place`/`ondragstart` both no-op under the same condition, so
+									     greying it out here is not just cosmetic. -->
 										<button
-											draggable="true"
+											draggable={!capped}
 											ondragstart={(e) => {
+												if (capped) return;
 												e.dataTransfer?.setData('text/plain', m.id);
 												dragType = m.id;
 											}}
 											ondragend={() => (dragType = null)}
-											onclick={() => place(m.id)}
-											title={$t(m.descKey)}
-											class="press w-full px-1.5 py-0.5 border rounded-xs text-[10px] font-black cursor-grab active:cursor-grabbing bg-black/40 hover:bg-white/10 flex items-center justify-between gap-1"
+											onclick={() => {
+												if (capped) return;
+												place(m.id);
+											}}
+											disabled={capped}
+											title={capped ? $t('synthPatch.keyEventCapped') : $t(m.descKey)}
+											class="press w-full px-1.5 py-0.5 border rounded-xs text-[10px] font-black flex items-center justify-between gap-1 {capped
+												? 'opacity-30 cursor-not-allowed'
+												: 'cursor-grab active:cursor-grabbing bg-black/40 hover:bg-white/10'}"
 											style="border-color: {m.color}55; color: {m.color}"
 										>
 											<!-- Name left, glyph right: the eye scans the column of names

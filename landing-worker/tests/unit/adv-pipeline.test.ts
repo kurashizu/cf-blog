@@ -37,7 +37,7 @@ import type { EvalGraph } from '../../src/lib/stores/node-graph';
 const AUDIO_ROLES: PortRole[] = ['signal', 'mono', 'stereo', 'left', 'right'];
 const EXEC = new Set(['exec', 'then']);
 
-const note = { pitch: 0, tuning: 440, velocity: 0.8, noteIndex: 48, gate: 0.5, lanes: {} };
+const note = { pitch: 0, tuning: 440, velocity: 0.8, noteIndex: 48, lanes: {} };
 const spec = (id: string) => MODULE_SPECS.find((m) => m.id === id)!;
 const audioIn = (id: string) => spec(id).inputs.find((p) => AUDIO_ROLES.includes(roleOf(p)));
 const audioOut = (id: string) => spec(id).outputs.find((p) => AUDIO_ROLES.includes(roleOf(p)));
@@ -495,6 +495,7 @@ describe('what the renders proved', () => {
 			'fft',
 			'loud',
 			'note',
+			'onchoke',
 			'out',
 			'scope',
 			'wait',
@@ -603,29 +604,29 @@ describe('regressions the string tests could not see', () => {
 		   a list typed out beside the pure-node table rather than derived from
 		   it, so adding a pure node without remembering this list put DC in the
 		   mix.
-		
-		   Every entry in the table is a value node; all but the dual ones are
-		   also pure.
-		   MAP has a curve in the table *and* builds a WaveShaperNode, because a
-		   transfer function fed a waveform has to bend every sample -- so the
-		   engine names it in `isModOnly` alongside ENV and TO-CV, the others that
-		   emit control through real audio nodes. */
-		/* MAP and TERM.CV are the dual pair: pullable as a value *and* buildable
-		   as a node, so neither is pure. Listed rather than special-cased one at
-		   a time, so a third one has somewhere obvious to go. */
-		const DUAL = new Set(['map', 'nodecv']);
+
+		   Every entry in the table is a value node. None of them are pure any
+		   more: HELD reaching MUL's B read back MUL's own unwired identity
+		   regardless of the cable, the identical gap MAP's own split was cut
+		   for first, so the whole table followed it there rather than leaving
+		   nine more of the same bug for nine more reports to find one at a
+		   time. */
 		for (const type of Object.keys(PURE_NODES)) {
 			expect(isValueNode(type), type).toBe(true);
-			if (!DUAL.has(type)) expect(isPureNode(type), type).toBe(true);
+			expect(isPureNode(type), type).toBe(false);
 		}
-		/* And the engine's own list agrees that MAP is not summed into the mix.
-		   Read from the source, because the alternative is asserting a duplicate
-		   of it here. */
+		/* And the engine's own list agrees that every value node is exempt from
+		   the "nothing else listens to it, so it must be an output" fallback --
+		   derived from `isValueNode` now rather than naming each one, so this
+		   checks the derivation rather than a list that could say anything.
+		   ENV and TO-CV are the two real exceptions: neither has a row in
+		   `PURE_NODES` at all, so `isValueNode` cannot cover them, and both are
+		   named by hand instead. */
 		const src = readFileSync('src/lib/synth.ts', 'utf8');
 		const modOnly = /const isModOnly = [^;]+;/.exec(src)?.[0] ?? '';
 		expect(modOnly, 'isModOnly not found').not.toBe('');
-		for (const type of ['map', 'tocv', 'env', 'nodecv'])
-			expect(modOnly).toContain(`'${type}'`);
+		expect(modOnly).toContain('isValueNode(type)');
+		for (const type of ['tocv', 'env']) expect(modOnly).toContain(`'${type}'`);
 	});
 
 	it('gives every pure node a card to reach it from', () => {
@@ -817,20 +818,29 @@ describe('regressions the string tests could not see', () => {
 		expect(SYNTH).toContain('const knob = (');
 		expect(SYNTH.length).toBeGreaterThan(10000);
 		const raw = [...SYNTH.matchAll(/(\w+)\.(?:gain|frequency|Q|pan)\.value = p\('(\w+)'/g)];
-		/* Two exceptions, neither of them an unbound knob.
-		
+		/* Three exceptions, none of them an unbound knob.
+
 		   LFO's FM inlet takes its depth from the rate, so binding it would
 		   register `lfoRate` twice and overwrite the oscillator's own frequency
 		   as that knob's target.
-		
+
 		   OSC's FREQ is registered, just not through `knob`: FM needs the base to
 		   be *zero* when a signal drives the port, and `knob` writes the resolved
 		   value unconditionally. So it assigns through `p` -- which returns 0 for
 		   a signal-driven port -- and registers the param itself. The rule here
 		   is "a param a knob writes must also be reachable by a cable", and OSC
-		   meets it by the second route rather than escaping it. */
+		   meets it by the second route rather than escaping it.
+
+		   MUL's B is the same shape as OSC's FREQ: it is the gain multiplying
+		   MUL's carrier leg, so a live B has to arrive at zero base and sum
+		   rather than at B's own resting identity (1) and multiply the result
+		   by one too many. `g.gain.value = p('b', 1)` is that base, and
+		   `mod.set('b', g.gain)` two lines below is the second route. */
 		const unbound = raw.filter(
-			(m) => !(m[1] === 'fm' && m[2] === 'lfoRate') && !(m[1] === 'osc' && m[2] === 'pitch')
+			(m) =>
+				!(m[1] === 'fm' && m[2] === 'lfoRate') &&
+				!(m[1] === 'osc' && m[2] === 'pitch') &&
+				!(m[1] === 'g' && m[2] === 'b')
 		);
 		expect(unbound.map((m) => m[0])).toEqual([]);
 		/* Checked rather than trusted: without this the exemption above would be
@@ -910,15 +920,18 @@ describe('regressions the string tests could not see', () => {
 	});
 
 	it("hands a knob its cable in the knob's own units", () => {
-		/* `knobAt` reads a knob in the card's units and converts, so PAN's POS of
-		   100 is a param of 1 -- hard right. Registering the AudioParam directly
-		   made a cable bypass that conversion: a CONST of 100 landed whole and
-		   meant a hundred times hard right. The scaling node in front is what
-		   makes "100" mean the same thing turned or patched.
-		
-		   Asked of the built node rather than of MIX, which is gone: a mixer is
-		   GAINs into a SUM, and the rule here is about units rather than about
-		   mixing. */
+		/* `knobAt` reads a knob in the card's units and converts, so COMP's ATK
+		   of 5 (milliseconds) is a param of 0.005 (seconds). Registering the
+		   AudioParam directly made a cable bypass that conversion: a CONST of 5
+		   landed whole and meant five seconds of attack, not five milliseconds.
+		   The scaling node in front is what makes "5" mean the same thing turned
+		   or patched.
+
+		   Asked of COMP rather than of PAN, which no longer needs the
+		   conversion -- POS is typed -1..1 directly now, the same unit the param
+		   holds -- or of MIX, which is gone entirely: a mixer is GAINs into a
+		   SUM, and the rule here is about units rather than about either
+		   module. */
 		const ctx = new FakeCtx();
 		const S = modularSynth as unknown as {
 			noiseBuffer: unknown;
@@ -927,8 +940,8 @@ describe('regressions the string tests could not see', () => {
 		S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
 		const made = S.buildGraphNode(
 			ctx,
-			'pan',
-			(k: string, d: number) => ({ panPos: 100 })[k as 'panPos'] ?? d,
+			'comp',
+			(k: string, d: number) => ({ compAttack: 5 })[k as 'compAttack'] ?? d,
 			220,
 			0,
 			0.5,
@@ -936,17 +949,16 @@ describe('regressions the string tests could not see', () => {
 			'n1',
 			{},
 			(_n: string, _p: string, f: number) => f,
-			{ velocity: 0.8, noteIndex: 48, tuning: 440 },
-			0.5
+			{ velocity: 0.8, noteIndex: 48, tuning: 440 }
 		);
 		/* The registered target is a scaling node, not the param itself, and its
 		   gain carries the same conversion the knob goes through -- so a CONST of
-		   100 arriving on it means 1, exactly as the knob at 100 does. */
-		const target = made!.mod.get('panPos') as {
+		   5 arriving on it means 0.005, exactly as the knob at 5 does. */
+		const target = made!.mod.get('compAttack') as {
 			gain: FakeParam;
 			outgoing: { to: unknown }[];
 		};
-		expect(target.gain.value).toBeCloseTo(0.01, 6);
+		expect(target.gain.value).toBeCloseTo(0.001, 6);
 		expect(target.outgoing.some((e) => e.to instanceof FakeParam)).toBe(true);
 	});
 

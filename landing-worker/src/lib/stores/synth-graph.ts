@@ -39,6 +39,7 @@ import {
 	type PortKind
 } from './graph-model';
 import { findPrefab, savePrefab, type Prefab } from './synth-prefabs';
+import { EXEC_PORT_IDS, ACTIVATION_TYPES, EVENT_SOURCE_TYPES } from './synth-modules';
 
 /* The graph's own rules live in graph-model, which has no Web Audio in it and
    so can be unit tested; this module is the half that edits the active track. */
@@ -204,6 +205,12 @@ export function moveNode(graph: RackGraph, id: string, x: number, y: number): vo
 }
 
 export function removeNode(graph: RackGraph, id: string, params?: Record<string, number>): void {
+	/* Guarded here as well as by the button that calls it -- the button being
+	   hidden is the only thing standing between a stray call and a patch with
+	   nowhere for a note to start or nowhere for the sound to leave, and a
+	   second entry point that reaches this without going through the button
+	   should not have to remember the same rule again. */
+	if (isFixedNode(graph, id)) return;
 	pushUndo(get(activeTrackId));
 	modularSynth.updateTrack(get(activeTrackId), {
 		rackGraph: withoutNode(graph, id),
@@ -230,6 +237,55 @@ function cableIsAudio(graph: RackGraph, cable: GraphCable): boolean {
 	const port = spec.inputs.find((q) => q.id === cable.toPort);
 	if (port) return port.kind === 'audio';
 	return false;
+}
+
+/**
+ * Which event-source outlets (KEY-EVENT's THEN, KEY-EVENT's REL, ON-CHOKE's
+ * own outlet -- whatever `EVENT_SOURCE_TYPES` holds) can already reach this
+ * node by exec cables alone.
+ *
+ * An activation is one *outlet's* own build of the audio network it reaches
+ * -- THEN and REL are two separate activations of the same KEY-EVENT node,
+ * not one, so the identity that matters here is `<nodeId>:<outletPort>`
+ * rather than the node alone. Two outlets reaching the same OUT would have
+ * that OUT's whole ancestry built by whichever activates first, including
+ * whatever the other one's own branch was ever meant to be exclusive to.
+ * Answering "which outlets reach this node today" is what lets `addCable`
+ * catch the second wire before it is drawn, the same way `wouldCycle` catches
+ * an audio loop before it exists rather than after the engine mis-builds it.
+ */
+function execEntriesReaching(graph: RackGraph, targetId: string): Set<string> {
+	const execCables = graph.cables.filter(
+		(c) => EXEC_PORT_IDS.has(c.toPort) && EXEC_PORT_IDS.has(c.fromPort)
+	);
+	const reached = new Set<string>();
+	const sources = graph.nodes.filter((n) => EVENT_SOURCE_TYPES.has(n.type));
+	for (const src of sources) {
+		const outlets = execCables.filter((c) => c.from === src.id).map((c) => c.fromPort);
+		for (const outlet of new Set(outlets)) {
+			const entryId = `${src.id}:${outlet}`;
+			const seen = new Set<string>([src.id]);
+			const queue = execCables
+				.filter((c) => c.from === src.id && c.fromPort === outlet)
+				.map((c) => c.to);
+			for (const id of queue) seen.add(id);
+			let hit = queue.includes(targetId);
+			while (queue.length && !hit) {
+				const id = queue.shift()!;
+				for (const c of execCables) {
+					if (c.from !== id || seen.has(c.to)) continue;
+					if (c.to === targetId) {
+						hit = true;
+						break;
+					}
+					seen.add(c.to);
+					queue.push(c.to);
+				}
+			}
+			if (hit) reached.add(entryId);
+		}
+	}
+	return reached;
 }
 
 /** Does this cable land on a port the module declares, rather than on a knob? */
@@ -304,16 +360,43 @@ export function addCable(
 	graph: RackGraph,
 	cable: GraphCable,
 	kind: PortKind
-): 'ok' | 'cycle' | 'duplicate' {
+): 'ok' | 'cycle' | 'duplicate' | 'shared-activation' {
 	if (hasCable(graph, cable)) return 'duplicate';
 	/* Audio cannot loop -- a delay loop measured stable only to about g = 0.90
 	   and screamed past it -- but modulation can, and often should.
-	
+
 	   Only audio cables are walked. Walking all of them refused the envelope
 	   follower patch: BREAK's AMP already reaches the filter over a mod cable,
 	   so feeding that filter looked like a loop and was reported as one. */
 	if (kind === 'audio' && wouldCycle(graph, cable.from, cable.to, (c) => cableIsAudio(graph, c)))
 		return 'cycle';
+	/* An activation point (an OUT, by ACTIVATION_TYPES) reached by more than
+	   one event-source outlet would have its whole audio ancestry built by
+	   whichever of them activates first -- including a branch someone drew
+	   meaning it to be exclusive to the other one. Measured: a KEY-EVENT with
+	   both THEN and REL wired to the same OUT, and an oscillator meant only
+	   for REL's own tail, audio-cabled into that OUT -- the oscillator played
+	   from note-on, because THEN's own activation already owned that OUT's
+	   entire ancestry and never asked which entry a given upstream node was
+	   "supposed" to belong to. There is no cable-level signal that could tell
+	   the two apart after the fact, so the wire that would create the second
+	   path is refused here instead, the same way `wouldCycle` refuses an
+	   audio loop before the engine ever has to mis-build it.
+
+	   Checked by comparing the reaching set before and after the candidate
+	   cable, rather than trying to name "the new entry" directly: the cable
+	   being drawn might itself originate mid-chain (through a WHEN or a
+	   WAIT), in which case what it adds to the target's reachers is whatever
+	   already reaches its own `from` end -- exactly what re-running the same
+	   walk on the graph with the cable already in it answers for free. */
+	if (kind === 'exec' && EXEC_PORT_IDS.has(cable.toPort)) {
+		const toType = graph.nodes.find((n) => n.id === cable.to)?.type;
+		if (toType && ACTIVATION_TYPES.has(toType)) {
+			const before = execEntriesReaching(graph, cable.to);
+			const after = execEntriesReaching({ ...graph, cables: [...graph.cables, cable] }, cable.to);
+			if (after.size > 1 && after.size > before.size) return 'shared-activation';
+		}
+	}
 	/* A knob takes one cable, and the newest one wins.
 	
 	   A knob is not a summing inlet: a value *replaces* it, and the resolver
@@ -635,8 +718,11 @@ export function groupSelection(
 	   and leaves that group's members with it -- to move them, ungroup the box
 	   that holds them first, which releases them, then group again. */
 	const owned = ownedNodes(graph);
+	/* KEY-EVENT and OUT are never group members -- see `nodesInGroup`'s own
+	   comment on why this is a grouping question, not a deletion-safety one,
+	   and asks `type` directly rather than `isFixedNode`. */
 	const members = graph.nodes.filter(
-		(n) => ids.has(n.id) && !isFixedNode(n.id) && !owned.has(n.id)
+		(n) => ids.has(n.id) && n.type !== 'in' && n.type !== 'out' && !owned.has(n.id)
 	);
 	/* Two is the floor, not one. A box around a single node says nothing the
 	   node does not already say, and a box around nothing is a rectangle in

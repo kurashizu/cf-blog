@@ -100,7 +100,16 @@
 	/* Three kinds of control, because they answer three kinds of question:
 	   "which one" is a row of buttons, "what number exactly" is a field you
 	   type into, and "how much" is a dial you turn by feel. */
-	let selectors = $derived(spec.params.filter((p) => p.choices));
+	let selectors = $derived(
+		spec.params
+			.filter((p) => p.choices)
+			/* STEP is a second question hiding behind DUR's first one -- "how
+			   is the length decided" and, only once the answer is STEP, "which
+			   length". Showing it regardless made a card asking a question
+			   whose answer was already FOLLOW or TIME, both of which have
+			   nothing to do with a beat division. */
+			.filter((p) => (spec.id === 'out' && p.key === 'durStep' ? val('dur', 0) === 2 : true))
+	);
 	let wavePickers = $derived(spec.params.filter((p) => p.wave));
 	let fields = $derived(
 		spec.params
@@ -110,6 +119,9 @@
 			   these two would be fields that visibly do nothing, which is the same
 			   mistake as a knob a cable has already claimed. */
 			.filter((p) => (p.key === 'cvLo' || p.key === 'cvHi' ? probeIsCv : true))
+			/* Same reasoning as STEP just above: SEC only answers anything once
+			   DUR itself is set to TIME. */
+			.filter((p) => (spec.id === 'out' && p.key === 'durSec' ? val('dur', 0) === 1 : true))
 			.map((p) => {
 				/* CONST's value takes the range of the kind it was set to: a
 				   velocity stops at 1 and a pitch runs to the top of hearing.

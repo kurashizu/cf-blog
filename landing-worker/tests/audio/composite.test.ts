@@ -772,27 +772,26 @@ describe('a value carried through four converters', () => {
 	}, 90000);
 });
 
-describe('a cycle in the audio cables silences the entire patch', () => {
+describe('a cycle in the audio cables silences only its own branch', () => {
 	/* A DELAY fed back through a GAIN into its own input is the first thing
 	   anyone tries to build a comb filter or a resonator with, and Web Audio
 	   supports it -- a DelayNode is exactly the node that makes a cycle legal,
 	   because it guarantees a block of latency.
 
-	   This engine refuses it anyway, and the refusal is total. `buildRackGraph`
-	   sorts the audio cables with Kahn's algorithm and bails on
-	   `order.length !== graph.nodes.length` -- so a cycle anywhere returns null
-	   for the whole voice, not just for the loop.
+	   This engine refuses it anyway. Before the activation rewrite the refusal
+	   was total: `buildRackGraph` sorted every node in the patch with Kahn's
+	   algorithm in one pass and bailed on `order.length !== graph.nodes.length`,
+	   so a cycle anywhere returned null for the whole voice -- an OSC wired
+	   straight to OUT, with an entirely separate DELAY/GAIN loop elsewhere in
+	   the same patch, went from 0.4813 to exact silence the moment the loop's
+	   last cable was drawn, though the oscillator shared no node with it.
 
-	   Measured, and the measurement is the point: an OSC wired straight to OUT,
-	   with an entirely separate DELAY/GAIN loop elsewhere in the same patch,
-	   goes from 0.4813 to exact silence when the loop's last cable is drawn. The
-	   oscillator has nothing to do with the loop. It is silenced anyway.
-
-	   Pinned rather than fixed, because which behaviour is right is a design
-	   question -- refusing a cycle is defensible, and so is building everything
-	   outside it -- but the current blast radius is surprising enough that
-	   changing it should be deliberate. If someone makes the sort skip only the
-	   cycle, this test fails and says so. */
+	   `buildActivation` no longer sorts the whole graph for one activation: it
+	   builds only what is in the activated OUT's own ancestry (`audioAncestors`),
+	   so a cycle the OUT never depends on is not in the set being sorted at all
+	   and cannot fail that sort. The refusal is now scoped the way the blast
+	   radius always should have read as being -- a loop off to one side is a
+	   broken branch, not a broken patch. */
 	const withLoop = (wired: boolean) =>
 		graphOf(
 			[
@@ -813,26 +812,23 @@ describe('a cycle in the audio cables silences the entire patch', () => {
 			{ 'e.exLength': 8, 'fbg.level': 0.5 }
 		);
 
-	it('takes an unrelated voice down with it', async () => {
+	it('leaves an unrelated voice sounding', async () => {
 		const open = await render(withLoop(false), 8, 1);
 		const looped = await render(withLoop(true), 8, 1);
-		// The same oscillator, at full level, with the loop left open.
+		// The same oscillator, at full level, whether the unrelated loop is
+		// open or closed -- it was never in OUT's ancestry either way.
 		expect(open.envelope[2]).toBeCloseTo(BARE, 3);
-		/* And exactly nothing once the loop closes. Exact, because the voice is
-		   never built at all rather than being built and attenuated. */
-		expect(looped.peak, 'a cycle anywhere silences everything').toBe(0);
+		expect(looped.envelope[2]).toBeCloseTo(BARE, 3);
 	}, 45000);
 
-	it('renders as a normal empty patch rather than as an error', async () => {
-		/* What the caller sees. A refused graph is not reported as a failure --
-		   `ok` stays true and `builtVoice` stays true -- so the only evidence a
-		   cycle was refused is the silence. That is worth pinning precisely
-		   because it is the reason a feedback patch is hard to debug from inside
-		   the app: nothing anywhere says no. */
+	it('renders as a normal voice rather than as an error', async () => {
+		/* What the caller sees. A cycle off to one side is not reported as a
+		   failure -- `ok` stays true and `builtVoice` stays true -- and now
+		   neither is the sound: the loop simply is not part of what plays. */
 		const looped = await render(withLoop(true), 8, 1);
 		expect(looped.ok).toBe(true);
 		expect(looped.builtVoice).toBe(true);
-		expect(looped.envelope.every((v) => v === 0)).toBe(true);
+		expect(looped.peak).toBeGreaterThan(0.1);
 	}, 30000);
 
 	it('a loop through a mod cable is silent too, by a different mechanism', async () => {

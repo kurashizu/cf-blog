@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { modularSynth } from '../../src/lib/synth';
 import { MODULE_SPECS } from '../../src/lib/stores/synth-modules';
-import { isPureNode } from '../../src/lib/stores/node-graph';
+import { isPureNode, isValueNode } from '../../src/lib/stores/node-graph';
 import { roleOf, rolesCompatible } from '../../src/lib/stores/graph-model';
 import { FakeCtx } from './stubs/audio-context';
 
@@ -43,7 +43,6 @@ function build(type: string, params: Record<string, number> = {}, wave?: string)
 		{},
 		cvIn,
 		{ velocity: 0.8, noteIndex: 48, tuning: 440 },
-		0.5,
 		wave
 	);
 	return { ctx, made, sources };
@@ -64,13 +63,20 @@ describe('GAIN, the audio half of multiplication', () => {
 		expect(rolesCompatible(oscOut, roleOf(spec('gain').inputs[0]))).toBe(true);
 	});
 
-	it('is an audio node, where MUL is a pure one', () => {
+	it('is an audio node, where MUL is a control-value one', () => {
 		/* The reason they are two modules rather than one card with an extra
-		   socket: a pure node's whole output is a number pulled once per note,
-		   and an audio node's is a signal carried sample by sample. One card
-		   doing both would be two modules wearing one name. */
-		expect(isPureNode('mul')).toBe(true);
+		   socket is the port family, not whether either one builds a node any
+		   more -- MUL gained a live-signal build the day HELD reaching its own
+		   B leg turned out to need one, the same as MAP's A did first. What
+		   still keeps them apart is `rolesCompatible`: MUL's sockets are `cv`
+		   and GAIN's are `signal`, two families that never meet, so an
+		   oscillator cannot reach MUL's inlet however the engine builds it --
+		   proven above. GAIN is a genuinely different module because it carries
+		   a *signal*, not because MUL is inert. */
+		expect(isPureNode('mul')).toBe(false);
+		expect(isValueNode('mul')).toBe(true);
 		expect(isPureNode('gain')).toBe(false);
+		expect(isValueNode('gain')).toBe(false);
 	});
 
 	it('passes the signal through the gain it was set to', () => {

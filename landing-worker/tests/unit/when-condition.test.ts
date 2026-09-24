@@ -20,7 +20,7 @@ import { roleOf, rolesCompatible } from '../../src/lib/stores/graph-model';
  */
 
 const spec = (id: string) => MODULE_SPECS.find((m) => m.id === id)!;
-const note = { pitch: 0, velocity: 0.8, noteIndex: 48, gate: 0.5, lanes: {} };
+const note = { pitch: 0, velocity: 0.8, noteIndex: 48, lanes: {} };
 
 /** ENTRY -> WHEN -> OUT, with whatever feeds the condition. */
 function chain(extra: EvalGraph['nodes'] = [], cables: EvalGraph['cables'] = []): EvalGraph {
@@ -218,7 +218,7 @@ describe('WAIT, which is a delay and says so', () => {
 		expect(spec('delay').inputs.some((q) => q.kind === 'audio')).toBe(true);
 		expect(spec('wait').inputs.every((q) => q.kind === 'exec')).toBe(true);
 		expect(spec('delay').group).toBe('SHAPE');
-		expect(spec('wait').group).toBe('LOGIC');
+		expect(spec('wait').group).toBe('FLOW');
 	});
 });
 

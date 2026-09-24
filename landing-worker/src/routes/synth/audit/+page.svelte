@@ -18,6 +18,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { modularSynth } from '$lib/synth';
+	import { soundEngine } from '$lib/sound';
 	/* The default timbre every preset is built on, used here as the reset
 	   between renders -- see `setTrack`. Same object as the catalogue's, so the
 	   bench cannot drift from what a preset actually clears. */
@@ -185,11 +186,289 @@
 		}
 	}
 
+	/**
+	 * `renderNote`, but the key comes up mid-render rather than being held for
+	 * the whole thing -- what a graph wired to REL actually needs proven.
+	 *
+	 * `triggerTrackVoice`'s own `holdSec` still ends the note eventually, the
+	 * same as any other render; what this adds is a real `noteOff` partway
+	 * through, which is the one thing REL fires on and the one thing no other
+	 * bench call can produce. `suspend`/`resume` are what makes that possible
+	 * offline: the render is not wall-clock time, so "call `releaseTrackVoice`
+	 * after 0.4 s" cannot mean `setTimeout` here -- it means pausing the
+	 * render at that offline instant, releasing the voice against `ctx` at
+	 * exactly that `currentTime`, and letting the render continue from there.
+	 */
+	async function renderWithRelease(
+		seconds: number,
+		noteIndex: number,
+		slices: number,
+		releaseAtSec: number
+	): Promise<Result> {
+		const rate = 44100;
+		const frames = Math.ceil(seconds * rate);
+		const offline = new OfflineAudioContext(2, frames, rate);
+		const S = modularSynth as unknown as {
+			renderCtx: unknown;
+			renderMaster: GainNode | null;
+			masterFXCtx: unknown;
+			initMasterFX(ctx: unknown): void;
+			regenerateNoiseBuffer(): void;
+			triggerTrackVoice(...a: unknown[]): unknown;
+			releaseTrackVoice?(k: unknown): void;
+			activeVoices: Map<string, unknown>;
+			clearGraphCache?(): void;
+		};
+		const savedCtx = S.renderCtx;
+		let builtVoice = false;
+		try {
+			S.renderCtx = offline;
+			S.renderMaster = null;
+			S.masterFXCtx = null;
+			S.clearGraphCache?.();
+			S.activeVoices.clear();
+			S.regenerateNoiseBuffer();
+
+			const bus = offline.createGain();
+			bus.gain.value = 1;
+			S.renderMaster = bus;
+			const tap = offline.createGain();
+			bus.connect(tap);
+			tap.connect(offline.destination);
+
+			// durationSec 0: held until released, the continuous-hold shape REL
+			// exists for -- a timed note already knows its own end and does not
+			// need this bench to manufacture one.
+			const key = S.triggerTrackVoice(0, noteIndex, 0, 0.01, 0, 110, 110);
+			builtVoice = key != null;
+
+			if (builtVoice && releaseAtSec < seconds) {
+				offline.suspend(releaseAtSec).then(() => {
+					S.releaseTrackVoice?.(key);
+					offline.resume();
+				});
+			}
+
+			const buf = await offline.startRendering();
+			const d = buf.getChannelData(0);
+			const per = Math.floor(d.length / slices);
+			const envelope: number[] = [];
+			let peak = 0;
+			for (let s = 0; s < slices; s++) {
+				let sum = 0;
+				for (let i = s * per; i < (s + 1) * per; i++) {
+					sum += d[i] * d[i];
+					const a = Math.abs(d[i]);
+					if (a > peak) peak = a;
+				}
+				envelope.push(Math.round(Math.sqrt(sum / per) * 10000) / 10000);
+			}
+			return {
+				ok: true,
+				builtVoice,
+				envelope,
+				sliceSeconds: per / rate,
+				peak: Math.round(peak * 10000) / 10000
+			};
+		} catch (e) {
+			return {
+				ok: false,
+				builtVoice,
+				error: e instanceof Error ? e.message : String(e),
+				envelope: [],
+				sliceSeconds: 0,
+				peak: 0
+			};
+		} finally {
+			S.renderCtx = savedCtx;
+			S.renderMaster = null;
+			S.masterFXCtx = null;
+			S.clearGraphCache?.();
+			S.activeVoices.clear();
+		}
+	}
+
+	/**
+	 * Two keys held on the same track, one released and one left down --
+	 * proof that REL belongs to the key it fired for and not to the track.
+	 *
+	 * Each `triggerTrackVoice` call is its own `ActiveVoice`, keyed by its own
+	 * `voiceKey`; `releaseTrackVoice` only ever touches the one key it is
+	 * given. This exists to say so with a render rather than by reading the
+	 * map lookup and trusting it: two notes in, one `noteOff`, and the other
+	 * voice's own envelope should show nothing happened to it at all.
+	 */
+	async function renderTwoKeysReleaseOne(
+		seconds: number,
+		noteA: number,
+		noteB: number,
+		slices: number,
+		releaseAtSec: number
+	): Promise<Result> {
+		const rate = 44100;
+		const frames = Math.ceil(seconds * rate);
+		const offline = new OfflineAudioContext(2, frames, rate);
+		const S = modularSynth as unknown as {
+			renderCtx: unknown;
+			renderMaster: GainNode | null;
+			masterFXCtx: unknown;
+			regenerateNoiseBuffer(): void;
+			triggerTrackVoice(...a: unknown[]): unknown;
+			releaseTrackVoice?(k: unknown): void;
+			activeVoices: Map<string, unknown>;
+			clearGraphCache?(): void;
+		};
+		const savedCtx = S.renderCtx;
+		let builtVoice = false;
+		try {
+			S.renderCtx = offline;
+			S.renderMaster = null;
+			S.masterFXCtx = null;
+			S.clearGraphCache?.();
+			S.activeVoices.clear();
+			S.regenerateNoiseBuffer();
+
+			const bus = offline.createGain();
+			bus.gain.value = 1;
+			S.renderMaster = bus;
+			const tap = offline.createGain();
+			bus.connect(tap);
+			tap.connect(offline.destination);
+
+			const keyA = S.triggerTrackVoice(0, noteA, 0, 0.01, 0, 110, 110);
+			const keyB = S.triggerTrackVoice(0, noteB, 0, 0.01, 0, 110, 110);
+			builtVoice = keyA != null && keyB != null;
+
+			if (builtVoice) {
+				// Only A comes up; B stays held for the whole render.
+				offline.suspend(releaseAtSec).then(() => {
+					S.releaseTrackVoice?.(keyA);
+					offline.resume();
+				});
+			}
+
+			const buf = await offline.startRendering();
+			const d = buf.getChannelData(0);
+			const per = Math.floor(d.length / slices);
+			const envelope: number[] = [];
+			let peak = 0;
+			for (let s = 0; s < slices; s++) {
+				let sum = 0;
+				for (let i = s * per; i < (s + 1) * per; i++) {
+					sum += d[i] * d[i];
+					const a = Math.abs(d[i]);
+					if (a > peak) peak = a;
+				}
+				envelope.push(Math.round(Math.sqrt(sum / per) * 10000) / 10000);
+			}
+			return {
+				ok: true,
+				builtVoice,
+				envelope,
+				sliceSeconds: per / rate,
+				peak: Math.round(peak * 10000) / 10000
+			};
+		} catch (e) {
+			return {
+				ok: false,
+				builtVoice,
+				error: e instanceof Error ? e.message : String(e),
+				envelope: [],
+				sliceSeconds: 0,
+				peak: 0
+			};
+		} finally {
+			S.renderCtx = savedCtx;
+			S.renderMaster = null;
+			S.masterFXCtx = null;
+			S.clearGraphCache?.();
+			S.activeVoices.clear();
+		}
+	}
+
+	/**
+	 * A live-playback sample of the master bus, for testing anything that only
+	 * fires outside a render.
+	 *
+	 * Voice stealing and ACT's CUT/SOLO are both guarded by `!this.renderCtx`
+	 * -- polyphony limits and mute groups are a live-playing concern, and an
+	 * offline render triggers explicit voices with explicit lengths rather
+	 * than competing for a limited pool. ON-CHOKE fires from exactly those two
+	 * places, so proving it fires means playing a real note through a real
+	 * `AudioContext` and reading the master analyser some milliseconds later,
+	 * the same way `probeValue` already does for a graph's own probes.
+	 */
+	async function playAndSample(patch: Record<string, unknown>, waitMs: number): Promise<number> {
+		const S = modularSynth as unknown as {
+			updateTrack(i: number, t: unknown): void;
+			triggerTrackVoice(...a: unknown[]): unknown;
+			stopAll(): void;
+		};
+		S.updateTrack(0, { graphWaves: {}, graphParams: {}, ...patch, muted: false });
+		S.triggerTrackVoice(0, 48, 0);
+		await new Promise((r) => setTimeout(r, waitMs));
+		const an = soundEngine.getAnalyser();
+		let peak = 0;
+		if (an) {
+			const f = new Float32Array(an.fftSize);
+			an.getFloatTimeDomainData(f);
+			for (const v of f) peak = Math.max(peak, Math.abs(v));
+		}
+		/* `stopAll`, not `releaseTrackVoice`: a graph wired to ON-CHOKE can
+		   leave a tail ringing on a source no longer in `activeVoices` at all
+		   (see `stopAll`'s own docstring on `ringingTails`), and this bench
+		   runs many patches in one page session -- a tail with no envelope of
+		   its own left playing would bleed into the very next measurement. */
+		S.stopAll();
+		await new Promise((r) => setTimeout(r, 60));
+		return peak;
+	}
+
+	/**
+	 * Note A, then note B on the same track a moment later -- what ON-CHOKE
+	 * needs proven, since `noteActions`' CUT/SOLO loop only ever reaches
+	 * voices already in `activeVoices` when a *later* note's own ACT fires.
+	 * A note cannot choke itself: it is filed into that map only after its
+	 * own CUT/SOLO decision has already been read, so testing "a voice
+	 * choked from outside" means two notes, not one.
+	 */
+	async function playTwoAndSample(
+		patch: Record<string, unknown>,
+		gapMs: number,
+		waitMs: number
+	): Promise<number> {
+		const S = modularSynth as unknown as {
+			updateTrack(i: number, t: unknown): void;
+			triggerTrackVoice(...a: unknown[]): unknown;
+			stopAll(): void;
+		};
+		S.updateTrack(0, { graphWaves: {}, graphParams: {}, ...patch, muted: false });
+		S.triggerTrackVoice(0, 48, 0);
+		await new Promise((r) => setTimeout(r, gapMs));
+		S.triggerTrackVoice(0, 55, 0);
+		await new Promise((r) => setTimeout(r, waitMs));
+		const an = soundEngine.getAnalyser();
+		let peak = 0;
+		if (an) {
+			const f = new Float32Array(an.fftSize);
+			an.getFloatTimeDomainData(f);
+			for (const v of f) peak = Math.max(peak, Math.abs(v));
+		}
+		// See `playAndSample`'s comment on `stopAll` versus `releaseTrackVoice`.
+		S.stopAll();
+		await new Promise((r) => setTimeout(r, 60));
+		return peak;
+	}
+
 	onMount(() => {
 		/* Driven from outside: Playwright sets the patch, calls this, and reads
 		   the JSON back out of the DOM. */
 		(window as unknown as Record<string, unknown>).__audit = {
 			renderNote,
+			renderWithRelease,
+			renderTwoKeysReleaseOne,
+			playAndSample,
+			playTwoAndSample,
 			setTrack: (patch: Record<string, unknown>) => {
 				/* Silence every other track, so what the bench records is one voice.
 				   Track 0 is the one played; the rest of a loaded song would
@@ -337,8 +616,7 @@
 				   a CMP on VEL differently. */
 				return S.noteActions(S.getTrack(0), noteIndex, 0, {
 					velocity,
-					pitch: noteIndex - 69,
-					gate: 1
+					pitch: noteIndex - 69
 				});
 			},
 			run: async (seconds = 2, noteIndex = 40, slices = 8, holdSec?: number) => {
@@ -393,7 +671,7 @@
 				undo: () => undoGraph(),
 				redo: () => redoGraph(),
 				clearHistory: () => clearGraphHistory(),
-				isFixedNode: (id: string) => isFixedNode(id)
+				isFixedNode: (id: string) => isFixedNode(graphOf(modularSynth.getTrack(0)), id)
 			},
 			/* Does a signal land on this inlet, asked of a whole patch?
 
@@ -408,7 +686,6 @@
 					pitch: 0,
 					velocity: 1,
 					noteIndex: 40,
-					gate: 1,
 					lanes: {}
 				});
 				return { signal: r.isDrivenBySignal(nodeId, port), wired: r.isWired(nodeId, port) };

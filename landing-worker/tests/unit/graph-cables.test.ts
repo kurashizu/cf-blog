@@ -59,3 +59,137 @@ describe('a knob takes one cable', () => {
 	   weakened, because it is the test that has to pass before the
 	   primitive it covers can be called done. */
 });
+
+describe('an activation point answers to exactly one event source', () => {
+	/* An OUT reached by two event-source outlets would have its whole audio
+	   ancestry built by whichever activates first -- including a branch
+	   someone drew meaning it to be exclusive to the other one. See the
+	   comment on this check in `addCable` for the measured failure. */
+	beforeEach(() => {
+		activeTrackId.set(TRACK);
+		clearGraphHistory();
+	});
+
+	it('refuses REL landing on the same OUT that THEN already reaches', () => {
+		const graph: RackGraph = {
+			nodes: [
+				{ id: 'entry', type: 'in', x: 0, y: 0 },
+				{ id: 'output', type: 'out', x: 5, y: 0 },
+				{ id: 'o', type: 'osc', x: 1, y: 0 }
+			],
+			cables: [
+				{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+				{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+			]
+		};
+		modularSynth.updateTrack(TRACK, { rackGraph: graph } as never);
+		const res = addCable(
+			live(),
+			{ from: 'entry', fromPort: 'rel', to: 'output', toPort: 'exec' },
+			'exec'
+		);
+		expect(res).toBe('shared-activation');
+		expect(live().cables.some((c) => c.fromPort === 'rel')).toBe(false);
+	});
+
+	it('refuses ON-CHOKE landing on the same OUT that THEN already reaches', () => {
+		const graph: RackGraph = {
+			nodes: [
+				{ id: 'entry', type: 'in', x: 0, y: 0 },
+				{ id: 'onchoke', type: 'onchoke', x: 0, y: 1 },
+				{ id: 'output', type: 'out', x: 5, y: 0 },
+				{ id: 'o', type: 'osc', x: 1, y: 0 }
+			],
+			cables: [
+				{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+				{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+			]
+		};
+		modularSynth.updateTrack(TRACK, { rackGraph: graph } as never);
+		const res = addCable(
+			live(),
+			{ from: 'onchoke', fromPort: 'then', to: 'output', toPort: 'exec' },
+			'exec'
+		);
+		expect(res).toBe('shared-activation');
+	});
+
+	it('still allows a second OUT reached only by REL', () => {
+		/* The fix, not just the refusal: REL's own OUT is a separate node, so
+		   it never shares an activation with THEN's and this must go through
+		   cleanly. */
+		const graph: RackGraph = {
+			nodes: [
+				{ id: 'entry', type: 'in', x: 0, y: 0 },
+				{ id: 'output', type: 'out', x: 5, y: 0 },
+				{ id: 'outputRel', type: 'out', x: 5, y: 1 },
+				{ id: 'o', type: 'osc', x: 1, y: 0 },
+				{ id: 'tail', type: 'osc', x: 1, y: 1 }
+			],
+			cables: [
+				{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+				{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' },
+				{ from: 'tail', fromPort: 'out', to: 'outputRel', toPort: 'in' }
+			]
+		};
+		modularSynth.updateTrack(TRACK, { rackGraph: graph } as never);
+		const res = addCable(
+			live(),
+			{ from: 'entry', fromPort: 'rel', to: 'outputRel', toPort: 'exec' },
+			'exec'
+		);
+		expect(res).toBe('ok');
+	});
+
+	it('allows WAIT and WHEN between THEN and OUT, and still catches REL sharing past them', () => {
+		/* The check has to see through the logic chain, not just a direct
+		   cable from the entry itself -- a real patch routes THEN through a
+		   WAIT or a WHEN before it ever reaches OUT. */
+		const graph: RackGraph = {
+			nodes: [
+				{ id: 'entry', type: 'in', x: 0, y: 0 },
+				{ id: 'w', type: 'wait', x: 2, y: 0 },
+				{ id: 'output', type: 'out', x: 5, y: 0 },
+				{ id: 'o', type: 'osc', x: 1, y: 0 }
+			],
+			cables: [
+				{ from: 'entry', fromPort: 'then', to: 'w', toPort: 'exec' },
+				{ from: 'w', fromPort: 'then', to: 'output', toPort: 'exec' },
+				{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+			]
+		};
+		modularSynth.updateTrack(TRACK, { rackGraph: graph } as never);
+		const res = addCable(
+			live(),
+			{ from: 'entry', fromPort: 'rel', to: 'output', toPort: 'exec' },
+			'exec'
+		);
+		expect(res).toBe('shared-activation');
+	});
+
+	it('allows a second cable from THEN\'s own already-reaching chain', () => {
+		/* Not every second exec cable into an OUT is a second entry -- a
+		   branch that rejoins its own source (WHEN's two outcomes both
+		   eventually reaching the same OUT, say) must not be refused just for
+		   arriving by a second wire. */
+		const graph: RackGraph = {
+			nodes: [
+				{ id: 'entry', type: 'in', x: 0, y: 0 },
+				{ id: 'output', type: 'out', x: 5, y: 0 },
+				{ id: 'o', type: 'osc', x: 1, y: 0 }
+			],
+			cables: [{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }]
+		};
+		modularSynth.updateTrack(TRACK, { rackGraph: graph } as never);
+		addCable(live(), { from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' }, 'exec');
+		// A second, direct cable from the same THEN outlet to the same OUT.
+		const res = addCable(
+			live(),
+			{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+			'exec'
+		);
+		// Already a cable, so this is 'duplicate' rather than 'shared-activation'
+		// -- the same entry drawn twice, not a second one arriving.
+		expect(res).toBe('duplicate');
+	});
+});

@@ -1899,6 +1899,8 @@ const OBJECT_TIMBRE_KEYS = new Set<string>([
 	'rackGraph',
 	'rackParams',
 	'graphParams',
+	'graphWaves',
+	'graphLabels',
 	'waveParams',
 	'modRoutes'
 ]);

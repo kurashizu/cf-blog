@@ -741,10 +741,16 @@ describe('knob takeover: a signal claims the knob, a value replaces it', () => {
 			)
 		).toEqual({ signal: false, wired: true });
 
-		/* An ADD fed by an ENV is still a value: a pure node pulls a number from
-		   whatever reaches it and cannot pass a waveform on. The row that
-		   separates "is pure" from "is fed by something pure", which the walk has
-		   to get right in that order. */
+		/* An ADD fed by an ENV is a signal out, the same as MAP's own row above:
+		   ADD used to be a true pure node -- pulled once, unable to carry a
+		   waveform on -- and this row asserted exactly that, before HELD
+		   reaching MUL's B leg exposed why that was a gap and not a
+		   simplification (see docs/node-graph.md, "Every value a pure node
+		   reads is a signed float, whatever role drew the cable"). ADD, MUL,
+		   CMP and the rest of `PURE_NODES` followed MAP into the same dual
+		   shape: pullable as a value when nothing feeding them moves, and
+		   genuinely live when something does. An ENV into ADD's A is now
+		   exactly the second case. */
 		expect(
 			await driven(
 				mk(
@@ -761,7 +767,7 @@ describe('knob takeover: a signal claims the knob, a value replaces it', () => {
 				'g',
 				'level'
 			)
-		).toEqual({ signal: false, wired: true });
+		).toEqual({ signal: true, wired: true });
 
 		// And on a different module's socket entirely, both ways round.
 		expect(

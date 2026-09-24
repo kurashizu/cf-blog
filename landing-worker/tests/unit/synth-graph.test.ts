@@ -296,13 +296,20 @@ describe('the fixed ends', () => {
 		});
 	});
 
-	it('protects both ends and nothing else', () => {
-		expect(isFixedNode(ENTRY_ID)).toBe(true);
-		expect(isFixedNode(OUTPUT_ID)).toBe(true);
-		// An OUT-type node under some other id is a module, not the fixed end --
-		// which is exactly how a hand-written preset lost its output to Delete.
-		expect(isFixedNode('o')).toBe(false);
-		expect(isFixedNode('out-1')).toBe(false);
+	it('protects the last KEY-EVENT and the last OUT, and nothing else', () => {
+		const g = startingGraph();
+		expect(isFixedNode(g, ENTRY_ID)).toBe(true);
+		expect(isFixedNode(g, OUTPUT_ID)).toBe(true);
+		// Neither is fixed by its id -- it is being the only one of its kind
+		// that protects it, so a second OUT is free to be deleted.
+		const withSecondOut: RackGraph = {
+			...g,
+			nodes: [...g.nodes, node('out2')]
+		};
+		expect(isFixedNode(withSecondOut, OUTPUT_ID)).toBe(false);
+		expect(isFixedNode(withSecondOut, 'out2')).toBe(false);
+		expect(isFixedNode(g, 'osc1')).toBe(false);
+		expect(isFixedNode(g, 'not-a-node')).toBe(false);
 	});
 
 	it('hands back a fresh graph each time, so one patch cannot edit another', () => {
@@ -348,7 +355,7 @@ describe('execution flow', () => {
 
 	it('publishes what the key press was, so velocity can drive timbre', () => {
 		const outs = specOf('in').outputs.map((p) => p.id);
-		for (const pin of ['pitch', 'vel', 'note', 'gate']) expect(outs).toContain(pin);
+		for (const pin of ['pitch', 'vel', 'note', 'held']) expect(outs).toContain(pin);
 	});
 
 	it('keeps exec off the sound modules', () => {
@@ -359,7 +366,7 @@ describe('execution flow', () => {
 		   The roster named nine modules and had to be edited every time one was
 		   added or removed, which during a rebuild is every commit -- and a name
 		   that no longer resolves reads the same as a module with no exec pin. */
-		const LOGIC = new Set(['in', 'out', 'wait', 'when', 'act']);
+		const LOGIC = new Set(['in', 'out', 'wait', 'when', 'act', 'onchoke']);
 		const sound = MODULE_SPECS.filter((m) => !LOGIC.has(m.id));
 		for (const m of sound) {
 			expect(

@@ -259,6 +259,29 @@ describe('a saved patch is a copy, not a view', () => {
 		expect(saved.graphParams).toEqual({ 'a.b': 1 });
 		expect(saved.eqOn).toBe(true);
 	});
+
+	it("keeps graphWaves, an OSC's own waveform choice and the same shape of bug rackGraph once was", () => {
+		/* An OSC's WAVE picker lives here, keyed per node id, not in
+		   `graphParams` alongside every other module's own picker -- those are
+		   numbers, this is a string naming a `SynthWaveform`. Missing from
+		   `OBJECT_TIMBRE_KEYS` the same way `rackGraph` and `graphParams` once
+		   were, a saved patch carried the graph and the params but every OSC on
+		   it came back reading `undefined` for its own wave, which
+		   `buildGraphNode`'s own `?? 'sine'` fallback turned into a silent
+		   waveform change rather than a missing note -- a square-wave OSC
+		   played back as a sine with no error anywhere in the round trip. */
+		const track = { rackGraph: { nodes: [{ id: 'osc-1' }], cables: [] }, graphWaves: { 'osc-1.wave': 'square' } };
+		const saved = pickTimbre(track);
+		expect(saved.graphWaves).toEqual({ 'osc-1.wave': 'square' });
+		track.graphWaves['osc-1.wave'] = 'sawtooth';
+		expect(saved.graphWaves).toEqual({ 'osc-1.wave': 'square' });
+	});
+
+	it('keeps graphLabels, the same object-shaped field graphWaves is', () => {
+		const track = { graphLabels: { 'osc-1': 'LEAD' } };
+		const saved = pickTimbre(track);
+		expect(saved.graphLabels).toEqual({ 'osc-1': 'LEAD' });
+	});
 });
 
 /**

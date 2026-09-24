@@ -21,10 +21,36 @@ more.
 
 Two kinds of wire, and they do not mix.
 
-**Execution** (white, chevron sockets) says _which nodes run, and in what
-order_. It starts at ENTRY -- a key going down is the event -- and reaches the
-nodes that do something: ask a question, take an action, hand the patch to the
-master bus.
+**Execution** (white, chevron sockets) says _which nodes run, and when_. It
+starts at an **event source** -- a module with an exec outlet and no exec
+inlet, so nothing upstream ever runs it (`EVENT_SOURCE_TYPES`, derived from
+the catalogue rather than a hand-kept list) -- and reaches the nodes that do
+something: ask a question, take an action, or **activate** an OUT.
+
+An activation is not "turn this node on". Exec reaching an OUT builds and
+starts, from scratch, the whole audio network upstream of it -- fresh
+`AudioNode`s, every time, for every event source that fires. KEY-EVENT's THEN
+outlet fires once, at the note; its REL outlet fires later, at the real
+moment the key comes up, as an independent build against the graph as it
+stood when the note began; ON-CHOKE fires when a *different* voice's ACT or
+the voice-stealing pool cuts this one off, independent of both. None of these
+three builds shares a node with either of the others -- an oscillator THEN
+already started cannot be handed to REL's build, because it has been running
+since the note began and cannot be rewound to sound like one just struck. A
+pure node has nothing to share in the first place: it is pulled fresh by the
+resolver on each build, whichever event fired.
+
+**This is why one OUT cannot answer to two event sources.** Audio and mod
+cables carry no notion of "which activation this belongs to" -- they are pure
+topology, walked backwards from whichever OUT just got activated to find
+what it needs built. If THEN and REL both wired their exec to the same OUT,
+THEN's own build would find *everything* upstream of that OUT, including a
+branch someone drew meaning it to be exclusive to REL, and build it at the
+note whether REL ever fired or not. `addCable` refuses the second wire before
+this can happen, the same way it refuses an audio cycle: a patch that wants
+"THEN plays the voice, REL layers a tail on top" needs two OUT nodes, one per
+event source, summing on the track bus the way any two independent voices
+already do.
 
 **Data** (coloured, shaped by type) says _where a value comes from_. It is
 pulled, not pushed: nobody runs a data node, its consumer asks it for a value
@@ -105,6 +131,46 @@ Returning 0 for the second case is what made `ENV -> VCF.FREQ` -- the first
 patch anyone tries -- play silence: the filter opened at 0 Hz and the envelope
 added its 0..1 on top of nothing. Measured after the fix: 320 Hz unmodulated,
 2068 Hz at the attack, 660 Hz as it decays.
+
+### Every value a pure node reads is a signed float, whatever role drew the cable
+
+`NodeValue` is `number` -- not an int, not a `bool` kept apart from its 0/1
+encoding, not a live ramp with its own type. A role (`hz`, `pitch`, `time`,
+`bool`, `index`...) governs which sockets a cable is *offered between* and how
+the canvas draws it; it says nothing about what a pure node does with the
+number once a cable lands. `PURE_NODES.mul` does not know or care whether its
+`b` leg carries a frequency, a beat count or a duty cycle -- it multiplies two
+floats, because that is what every role collapses into the moment it enters
+arithmetic. `cv` is that fallback made a socket in its own right: the diamond,
+amber, "an untyped value" a bare inlet with no declared role resolves to
+(`roleOf`), and the shape MUL and ADD draw both their legs with, since neither
+declares anything narrower.
+
+The one outlet this almost broke is HELD. Everything else ENTRY publishes
+(`pitch`, `vel`, `note`, a lane) is a snapshot taken once, at the note --
+`entryValue` just returns the number. HELD is not: it ramps continuously for
+as long as the activation runs, which is why a real audio module receives it
+as a *signal*, wired onto an AudioParam, rather than a value pulled once. A
+pure node has no AudioParam for that signal to land on -- `valueOf` pulls it
+once, at build, the same as every other pure node -- so routing HELD into one
+through the signal path connects it to nothing, and the inlet silently read
+back whatever the caller's own fallback happened to be. Measured: a MUL fed
+HELD on its `B` leg read exactly as though the cable had never been drawn,
+because `read()` special-cased HELD's cable straight to `own` -- the stand-in
+for "nothing is wired here" -- for *every* destination, pure nodes included.
+Multiplying a frequency by 1 instead of by elapsed time is not a smaller
+version of the patch; it is silence about a cable that is plainly drawn on
+the canvas, which is the exact class of bug this whole document exists to
+keep out.
+
+The fix is not a new mechanism, it is retiring one that reached further than
+it should have: `read()` now asks whether the *destination* is a pure node,
+not merely whether the source is HELD. A pure node gets HELD's honest pull --
+0, since that is where HELD's own ramp starts and a pure node can only ever
+be asked at that instant -- and every other destination keeps the live signal
+it already had. Any future outlet that is live rather than a snapshot
+inherits the same rule for free, because the branch is keyed on what the
+destination can do with a value, not on which outlet this one happens to be.
 
 ### Bind a knob where you read it
 
@@ -242,14 +308,32 @@ context, which is what keeps it honest.
 
 ## The note event
 
-ENTRY publishes what the key press was: `pitch`, `vel`, `note`, `gate`, and one
-outlet per lane the track carries. Velocity used to reach the amplifier and
-nothing else, so "struck harder means brighter" -- which is what every struck
-instrument does -- could not be said at all.
+ENTRY (labelled KEY-EVENT on the canvas) publishes what the key press was:
+`pitch`, `vel`, `note`, `gate`, and one outlet per lane the track carries.
+Velocity used to reach the amplifier and nothing else, so "struck harder means
+brighter" -- which is what every struck instrument does -- could not be said
+at all.
 
 There is one VEL. The velocity lane and a key's own velocity are the same
 quantity read two ways: the lane when a part plays back, the key press when it
 is played live.
+
+KEY-EVENT has two exec outlets, both belonging to the same key press:
+
+- **THEN** fires at the note, and is what every patch has always used.
+- **REL** fires later, at the real moment the key comes up -- not a number
+  guessed at note-on, because a continuous hold has no known length and even
+  a timed note can be cut short by a choke or a voice steal. `gate` on a REL
+  activation reads how long the key was actually held, not the estimate
+  THEN's own build was against.
+
+**ON-CHOKE** is a separate module, not a third KEY-EVENT outlet, because it
+answers a different question. THEN and REL are both about this key's own
+timeline -- when it started, when it let go -- and a KEY-EVENT node can
+answer both from its own event alone. Being cut off from outside (another
+key stealing this voice's slot, or a different voice's ACT reaching sideways
+with CUT or SOLO) is decided by *something else*, at a time this key's own
+press cannot predict or own. It fires as its own activation, on its own OUT.
 
 ## ADV is its own instrument
 
@@ -509,3 +593,45 @@ commitment than one module: a second build artefact, a second thread, and its ow
 story for offline rendering. It is also a door rather than a module. Granular,
 true phase distortion and frequency shifting all sit behind the same one, so the
 time to open it is when several of those are wanted together, not for sync alone.
+
+## A known gap the current model does not paint over: a track-level event source
+
+KEY-EVENT and ON-CHOKE are the two `EVENT_SOURCE_TYPES` today, and both are
+**per-voice**: each fires for one key press's own graph, built and reaped
+alongside that one voice. A transport tick -- one clock advancing every step
+regardless of whether any note is held, belonging to no voice at all -- is a
+different shape of event source and is not implemented. `onStepListeners`
+already exists as a real, independent tick in the sequencer engine, consumed
+today only by the UI's playhead; nothing wires it into the graph.
+
+It is a distinct piece of work, not a variant of REL/ON-CHOKE, for three
+reasons. A per-voice activation's whole reason to rebuild is that it happens
+at most a handful of times across one note's life; a transport tick can fire
+many times a second, and rebuilding a fresh `AudioNode` graph on every one of
+them is not the same performance shape at all -- it likely wants a
+persistent, parameter-driven build rather than "build fresh, every time",
+which is the opposite of the rule REL and ON-CHOKE both keep. It has no
+`ActiveVoice` to hang a snapshot on, because it is not caused by a note --
+its anchor would be the *track*, a new and different kind of "whose activation
+is this" than the ones that exist now. And it can fire while no voice is
+held at all, which nothing in today's model expects.
+
+None of the work already done should make this harder to add later, and that
+was checked rather than assumed:
+
+- `ACTIVATION_TYPES`/`EVENT_SOURCE_TYPES` are derived from the catalogue by
+  port shape, not hand-listed by name -- a future STEP module with an exec
+  outlet and no exec inlet is picked up by `EVENT_SOURCE_TYPES` automatically.
+- `buildActivation`'s `entryType`/`entryPort` parameters already generalise
+  past "KEY-EVENT's two outlets": ON-CHOKE proved the seed can be any node
+  type with any outlet name, not a hardcoded `'in'`.
+- The context a per-voice activation snapshots (`AdvBuildContext` in
+  `synth.ts`) is its own type rather than fields folded into `ActiveVoice`
+  directly, so a track-level equivalent can exist beside it without the two
+  being entangled.
+
+What a STEP design still has to answer, and does not today: where its own
+snapshot lives if not on a voice, and what "build fresh every time" should
+mean at a rate where that could be many times a second. Neither is solved by
+extrapolating from REL or ON-CHOKE, which is why this is recorded as a gap
+rather than sketched as a plan.

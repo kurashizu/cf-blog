@@ -815,6 +815,26 @@ describe('CMP: six tests, as a truth table', () => {
 		for (let t = 0; t < 6; t++) equal.push(await cmp(0.3, 0.3, t));
 		expect(equal).toEqual([false, true, false, true, true, false]);
 	}, 120000);
+
+	it('takes B from its own field when nothing is wired to it', async () => {
+		/* The common case: "above C3" wants a plain number, not a second CONST
+		   card and a second cable. B is a socket with a field behind it, the
+		   pair CLAMP's bounds are -- a cable still wins when B is wired, which
+		   the row above already covers. */
+		const fieldOnly = async (a: number, b: number) =>
+			(
+				await valueOf(
+					[{ id: 'k', type: 'cmp' }, { id: 'ca', type: 'const' }],
+					[
+						{ from: 'ca', fromPort: 'out', to: 'k', toPort: 'a' },
+						{ from: 'k', fromPort: 'out', to: 'g', toPort: 'level' }
+					],
+					{ ...constAt('ca', 6, a), 'k.b': b }
+				)
+			).loud;
+		expect(await fieldOnly(0.7, 0.3), 'a > b through the field').toBe(true);
+		expect(await fieldOnly(0.2, 0.3), 'a < b through the field').toBe(false);
+	}, 45000);
 });
 
 describe('LOGIC: five ops, as a truth table', () => {
@@ -1501,9 +1521,9 @@ describe('PAN: equal power, measured in the left channel', () => {
 
 	it('moves the sound across, and hard right is silence on the left', async () => {
 		const at = async (pos: number) => await render(panned(pos), 4, 1);
-		const left = await at(-100);
+		const left = await at(-1);
 		const centre = await at(0);
-		const right = await at(100);
+		const right = await at(1);
 		// Monotone across the sweep.
 		expect(left.envelope[2]).toBeGreaterThan(centre.envelope[2]);
 		expect(centre.envelope[2]).toBeGreaterThan(0.1);
@@ -1512,15 +1532,19 @@ describe('PAN: equal power, measured in the left channel', () => {
 		expect(right.peak).toBe(0);
 	}, 60000);
 
-	it('scales POS from the knob units, not the param units', async () => {
-		/* The knob reads -100..100 and `StereoPannerNode.pan` wants -1..1, so
-		   `knobAt` scales by 0.01 where the cable lands. Lose that and a POS of
-		   50 clamps to hard right -- silence -- instead of landing partway.
-		
-		   50 is the load-bearing value: at the endpoints a lost scale is
-		   indistinguishable from a working one, because both clamp to the same
-		   place. Measured at 0.258 against 0.524 at centre. */
-		const half = await render(panned(50), 4, 1);
+	it('a half-right POS lands partway, not hard right', async () => {
+		/* POS is typed -1..1 directly now, the same unit `StereoPannerNode.pan`
+		   itself holds -- it used to be -100..100 against the param's -1..1,
+		   scaled by `knobAt` where the cable landed, and a POS of 50 clamping
+		   to hard right (silence) rather than landing partway was exactly what
+		   a lost scale looked like. There is no scale left to lose, so this is
+		   now a plainer claim: a POS between the two ends puts the sound
+		   between the two ends' readings, not at either one.
+
+		   0.5 is still the load-bearing value: at the endpoints a clamp is
+		   indistinguishable from a correct reading, because both land in the
+		   same place. Measured at 0.258 against 0.524 at centre. */
+		const half = await render(panned(0.5), 4, 1);
 		expect(half.envelope[2]).toBeGreaterThan(0.15);
 		expect(half.envelope[2]).toBeLessThan(0.35);
 	}, 30000);
@@ -1556,11 +1580,11 @@ describe('SPLIT: L and R come out of the ports they are named for', () => {
 
 	it('takes the side the source is actually on', async () => {
 		// Hard left: the L outlet has it, the R outlet has nothing.
-		expect((await splitAt(-100, 'out')).envelope[2]).toBeCloseTo(0.4813, 3);
-		expect((await splitAt(-100, 'r')).peak).toBe(0);
+		expect((await splitAt(-1, 'out')).envelope[2]).toBeCloseTo(0.4813, 3);
+		expect((await splitAt(-1, 'r')).peak).toBe(0);
 		// Hard right: the mirror.
-		expect((await splitAt(100, 'out')).peak).toBe(0);
-		expect((await splitAt(100, 'r')).envelope[2]).toBeCloseTo(0.4813, 3);
+		expect((await splitAt(1, 'out')).peak).toBe(0);
+		expect((await splitAt(1, 'r')).envelope[2]).toBeCloseTo(0.4813, 3);
 	}, 90000);
 });
 
@@ -2350,8 +2374,8 @@ describe('BREAK: mid and side, from the ports named for them', () => {
 		/* Hard right puts equal energy in mid and side, so that position cannot
 		   tell the coefficients apart. Half right can: mid 0.314 against side
 		   0.130 pins both, not merely their difference. */
-		const mid = (await breakAt(50, 'out')).envelope[2];
-		const side = (await breakAt(50, 'side')).envelope[2];
+		const mid = (await breakAt(0.5, 'out')).envelope[2];
+		const side = (await breakAt(0.5, 'side')).envelope[2];
 		expect(mid).toBeGreaterThan(side * 2);
 		expect(side).toBeGreaterThan(0.05);
 	}, 45000);
@@ -2793,27 +2817,27 @@ describe('SPACE: DECAY runs the way its label reads', () => {
 	}, 90000);
 });
 
-describe('an audio cycle silences the whole voice, not just the loop', () => {
-	/* The most surprising reading on this bench, and the one that contradicts
-	   what the catalogue says out loud.
+describe('an audio cycle silences only its own branch', () => {
+	/* Before the activation rewrite, this was the most surprising reading on
+	   this bench, and it contradicted what the catalogue said out loud.
 
 	   DELAY's docstring: "a comb filter is this with its output fed back, a
 	   flanger is that with the time moving... the feedback path is a GAIN you can
-	   see, rather than a knob that hides how much is going round." Measured, that
-	   patch is exactly silent at every feedback level -- 0, 0.5 and 0.9 all
-	   render peak 0. You cannot build a comb filter.
+	   see, rather than a knob that hides how much is going round." Measured
+	   then, that patch was exactly silent at every feedback level -- 0, 0.5 and
+	   0.9 all rendered peak 0.
 
-	   The reason is one line in `buildRackGraph`: audio cables are ordered by
-	   Kahn's algorithm, and `if (order.length !== graph.nodes.length) return
-	   null` drops the *entire graph* when the sort does not complete. A cycle
-	   anywhere on the canvas takes the whole voice with it, including branches
-	   that never touched it.
+	   The reason was one line in the old `buildRackGraph`: audio cables were
+	   ordered by Kahn's algorithm over the *whole graph* in one pass, and
+	   `order.length !== graph.nodes.length` dropped everything when the sort
+	   did not complete -- a cycle anywhere on the canvas took the whole voice
+	   with it, including branches that never touched it.
 
-	   Which is a defensible thing for an engine to do -- a DelayNode in a
-	   feedback loop with no limiter is how you get a runaway -- but it is not
-	   what the card says, and nothing in the suite said either way. These pin the
-	   behaviour that is actually there, so changing it is a decision someone
-	   makes rather than a comment someone believes. */
+	   `buildActivation` sorts only what an activated OUT's own ancestry needs
+	   (`audioAncestors`), so a cycle that OUT does not depend on is not part of
+	   what gets sorted for it at all. These now pin the narrower, correct
+	   failure: the loop itself still cannot be built, and nothing outside it
+	   is affected by that. */
 	const loopedGraph = (loop: boolean) =>
 		graphOf(
 			[
@@ -2830,18 +2854,13 @@ describe('an audio cycle silences the whole voice, not just the loop', () => {
 			{ 'a.level': 0.5, 'b.level': 0.5 }
 		);
 
-	it('takes down a branch that never touched the loop', async () => {
+	it('leaves a branch that never touched the loop sounding', async () => {
 		/* One OSC wired straight to OUT, and two GAINs off to the side wired to
-		   nothing else. Adding the single cable that closes those two into a ring
-		   moves the reading from 0.4813 to exact zero -- and the oscillator's path
-		   to OUT is the same cable in both renders.
-
-		   This is the assertion that says the failure is whole-graph rather than
-		   local. A `return null` narrowed to "drop the cycle" would keep the
-		   oscillator sounding and fail here, which is the right way for it to
-		   fail if anyone narrows it. */
+		   nothing else. Closing those two into a ring no longer touches the
+		   oscillator's own reading -- its path to OUT is the same cable in both
+		   renders, and it is not in the ring's ancestry either way. */
 		expect((await render(loopedGraph(false), 8, 1)).envelope[2]).toBeCloseTo(0.4813, 3);
-		expect((await render(loopedGraph(true), 8, 1)).peak, 'a cycle silences everything').toBe(0);
+		expect((await render(loopedGraph(true), 8, 1)).envelope[2]).toBeCloseTo(0.4813, 3);
 	}, 45000);
 
 	it('so DELAY cannot be fed back, whatever the docstring says', async () => {
