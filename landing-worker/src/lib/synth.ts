@@ -29,7 +29,7 @@ import { graphOf, type GraphCable, type RackGraph } from './stores/graph-model';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { createLiveDsp, ensureLiveDsp } from './audio/live-dsp';
-import { ENV_PROCESSOR, MAP_PROCESSOR } from './audio/live-dsp-params';
+import { ENV_PROCESSOR, MAP_PROCESSOR, SHAPE_PROCESSOR } from './audio/live-dsp-params';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
 import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
@@ -1731,6 +1731,45 @@ class ModularSynth {
 			down.connect(dry.gain);
 			mod.set(key, up);
 		};
+		/**
+		 * A knob carried through a function, live -- decibels to a gain, say.
+		 *
+		 * The knob (or whatever is patched into it: a cable adds to its offset
+		 * the way it adds to any param) is a constant source; a gain and an
+		 * offset put its range [lo, hi] onto a WaveShaper's -1..1, and the
+		 * shaper's table is `fn` sampled across that range. What comes out is
+		 * fn(knob), as a signal, for connecting to whatever param needed it.
+		 * Past the range the shaper holds its end values, which is the card's
+		 * own limit anyway.
+		 */
+		const knobFn = (
+			key: string,
+			def: number,
+			lo: number,
+			hi: number,
+			fn: (v: number) => number
+		): AudioNode => {
+			const knobSrc = ctx.createConstantSource();
+			knobSrc.offset.value = p(key, def);
+			sources.push(knobSrc);
+			mod.set(key, knobSrc.offset);
+			const mid = (lo + hi) / 2;
+			const half = (hi - lo) / 2 || 1;
+			const toDomain = ctx.createGain();
+			toDomain.gain.value = 1 / half;
+			const shift = ctx.createConstantSource();
+			shift.offset.value = -mid / half;
+			sources.push(shift);
+			const shaper = ctx.createWaveShaper();
+			const N = 2048;
+			const curve = new Float32Array(N);
+			for (let i = 0; i < N; i++) curve[i] = fn(mid + half * ((i / (N - 1)) * 2 - 1));
+			shaper.curve = curve;
+			knobSrc.connect(toDomain);
+			toDomain.connect(shaper);
+			shift.connect(shaper);
+			return shaper;
+		};
 		/* Indexed straight off the catalogue's list, so the button that says SAW
        and the wave that plays cannot disagree -- they did, and three of the
        four labels named the wrong shape. */
@@ -2103,45 +2142,31 @@ class ModularSynth {
            than three cards, the same argument FILTER's eight types and OSC's
            waveforms rest on.
         
-           Not MAP, though the shapes look alike. MAP is a pure node: its whole
-           output is one number pulled once per note. This is a `WaveShaperNode`
-           doing a lookup per sample, which is what generates harmonics -- the
-           thing a distortion is *for* and the thing a per-note value cannot do.
-           Same curve, different mechanism, so two modules, exactly as MUL and
-           GAIN are two.
+           Not MAP, though the shapes look alike. MAP carries a value from one
+           range to another; this bends a waveform, which is what generates
+           harmonics -- the thing a distortion is *for*. Different questions,
+           so two modules, exactly as MUL and GAIN are two.
         
            The tone filter and the makeup gain the old DRIVE welded on are gone:
            those are FILTER and GAIN, and a patch that wants them can see them.
            What is left is the curve. */
-				const shaper = ctx.createWaveShaper();
-				const drive = Math.max(0, p('shapeDrive', 25) / 100);
-				const n = 1024;
-				const curve = new Float32Array(n);
-				const kind = Math.round(p('shapeKind', 0));
-				const k = 1 + drive * 40;
-				for (let i = 0; i < n; i++) {
-					const x = (i / (n - 1)) * 2 - 1;
-					if (kind === 1) {
-						// HARD: flat above the threshold. The knee a limiter has.
-						const lim = 1 - drive * 0.9;
-						curve[i] = Math.max(-lim, Math.min(lim, x)) / (lim || 1);
-					} else if (kind === 2) {
-						/* FOLD: past the limit it turns back rather than flattening.
-						   A triangle through it becomes a different waveform at every
-						   setting, which is the sound nothing else here makes. */
-						const g = x * (1 + drive * 4);
-						curve[i] = Math.asin(Math.sin(g * Math.PI * 0.5)) / (Math.PI * 0.5);
-					} else {
-						// SOFT: tanh, the saturation curve. Normalised so the ends stay
-						// at the ends whatever the drive.
-						curve[i] = Math.tanh(x * k) / Math.tanh(k);
-					}
-				}
-				shaper.curve = curve;
-				/* 2x, because a lookup table makes harmonics above the sample rate
-           and they fold back down as tones that were never played. */
-				shaper.oversample = '2x';
-				return { in: shaper, out: shaper, mod };
+				/* In the live-DSP worklet, which computes the curve per sample from
+           DRIVE as it is (see live-dsp.worklet.ts). It was a WaveShaperNode
+           whose table was filled from DRIVE when the note was built, so a
+           cable into DRIVE was read once -- and every one of the three curves
+           depends on DRIVE in a way no gain in front of a fixed table can say. */
+				const shape = createLiveDsp(ctx, SHAPE_PROCESSOR, {
+					numberOfInputs: 1,
+					numberOfOutputs: 1,
+					outputChannelCount: [1],
+					channelCount: 1,
+					channelCountMode: 'explicit',
+					processorOptions: { kind: Math.round(p('shapeKind', 0)) }
+				});
+				if (!shape) return null;
+				knob(shape.param('drive'), 'shapeDrive', 25);
+				sources.push(shape.source);
+				return { in: shape.node, out: shape.node, mod };
 			}
 
 			case 'tocv': {
@@ -2457,14 +2482,14 @@ class ModularSynth {
 				knobAt(c.attack, 'compAttack', 5, 0.001, (v) => Math.max(0, Math.min(1, v)));
 				knobAt(c.release, 'compRelease', 120, 0.001, (v) => Math.max(0.01, Math.min(1, v)));
 				c.knee.value = 6;
+				/* MAKE is decibels and the gain is linear, and the conversion between
+           them is exponential -- which no scaling node in front of the param
+           can do, so it used to be read once and marked unpatchable. `knobFn`
+           carries the knob (or the cable) through the conversion as a signal,
+           so a patched "6" means six decibels, live. */
 				const makeup = ctx.createGain();
-				/* Not a modulation target. The knob is decibels and the param is a
-           linear gain, and the conversion between them is exponential -- so a
-           cable would have to carry dB and arrive multiplied, which no scaling
-           node can do. Registering it anyway would make "6" mean six times
-           rather than six decibels, which is the units bug this file has
-           already been through twice. Drive a VCA instead. */
-				makeup.gain.value = Math.pow(10, p('compGain', 0) / 20);
+				makeup.gain.value = 0;
+				knobFn('compGain', 0, -12, 24, (db) => Math.pow(10, db / 20)).connect(makeup.gain);
 				c.connect(makeup);
 				return { in: c, out: makeup, mod };
 			}

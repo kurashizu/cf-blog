@@ -180,3 +180,72 @@ describe("MAP's ranges follow a signal patched into them", () => {
 		expect(e.envelope[8]).toBeGreaterThan(e.envelope[2]);
 	});
 });
+
+/**
+ * A knob on an audio path, swept by an envelope through a MAP.
+ *
+ * ENV gives 0..1 over a second; MAP carries that onto the knob's own range.
+ * `module` sits between OSC and OUT, and `key` is the knob being swept.
+ * `sweep: false` holds the knob at `lo` instead, as the control.
+ */
+function swept(module: string, key: string, lo: number, hi: number, sweep: boolean, extra = {}) {
+	return {
+		advanced: true,
+		rackGraph: {
+			nodes: [
+				{ id: 'entry', type: 'in' },
+				{ id: 'output', type: 'out' },
+				{ id: 'osc', type: 'osc' },
+				{ id: 'fx', type: module },
+				{ id: 'env', type: 'env' },
+				{ id: 'map', type: 'map' }
+			],
+			cables: [
+				wire('entry', 'then', 'output', 'exec'),
+				wire('osc', 'out', 'fx', 'in'),
+				wire('fx', 'out', 'output', 'in'),
+				...(sweep ? [wire('env', 'out', 'map', 'a'), wire('map', 'out', 'fx', key)] : [])
+			]
+		},
+		graphParams: {
+			[`fx.${key}`]: lo,
+			'env.envA': 1,
+			'env.envD': 0.01,
+			'env.envS': 100,
+			'map.shape': 1, // EXP: x*x, still 0 at 0 and 1 at 1
+			'map.inLo': 0,
+			'map.inHi': 1,
+			'map.outLo': lo,
+			'map.outHi': hi,
+			...extra
+		}
+	};
+}
+
+/** Loudness of the last slices against the first ones, the note held throughout. */
+const growth = (e: Envelope) => (e.envelope[15] + e.envelope[16]) / (e.envelope[1] + e.envelope[2]);
+
+describe('knobs on the audio path follow a signal', () => {
+	it("SHAPE's DRIVE, swept 0..100 on SOFT, squares the sine up as it goes", async () => {
+		/* tanh(kx)/tanh(k) turns a sine into a square as k grows, and a full
+		   square's RMS is 1.41x the sine's. OSC arrives below full scale, so it
+		   never gets all the way there -- measured 1.16x. Read once, DRIVE sat
+		   at 0 for the whole note and nothing grew (1.00x, the held control). */
+		const sweep = await render(swept('shape', 'shapeDrive', 0, 100, true, { 'fx.shapeKind': 0 }));
+		const held = await render(swept('shape', 'shapeDrive', 0, 100, false, { 'fx.shapeKind': 0 }));
+		expect(sweep.ok && held.ok).toBe(true);
+		expect(growth(sweep)).toBeGreaterThan(1.1);
+		expect(Math.abs(growth(held) - 1)).toBeLessThan(0.05);
+	});
+
+	it("COMP's MAKE, swept -12..+24 dB, raises the level by decibels", async () => {
+		/* A cable into MAKE carries decibels through the same conversion the
+		   typed number does. 36 dB of travel on an EXP sweep is far more than
+		   the compressor can take back. */
+		const sweep = await render(swept('comp', 'compGain', -12, 24, true));
+		const held = await render(swept('comp', 'compGain', -12, 24, false));
+		expect(sweep.ok && held.ok).toBe(true);
+		expect(growth(sweep)).toBeGreaterThan(4);
+		expect(Math.abs(growth(held) - 1)).toBeLessThan(0.1);
+	});
+});

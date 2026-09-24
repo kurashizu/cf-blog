@@ -764,16 +764,15 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		outputs: [AUDIO_OUT],
 		/* The engine's own names and units, which are milliseconds on the card
 		   and seconds on the node -- `knobAt` does that conversion, so a cable
-		   means what the typed number means. MAKE is decibels and deliberately
-		   not modulatable: the conversion to a linear gain is exponential, so a
-		   cable would have to arrive multiplied and no scaling node can do that.
-		   Drive a GAIN instead. */
+		   means what the typed number means. MAKE is decibels, carried through
+		   the conversion to a linear gain as a signal, so a cable means decibels
+		   too. */
 		params: [
 			{ key: 'compThresh', label: 'THRS', min: -60, max: 0, step: 0.5, def: -18, unit: 'dB', field: true },
 			{ key: 'compRatio', label: 'RTIO', min: 1, max: 20, step: 0.1, def: 4, field: true },
 			{ key: 'compAttack', label: 'ATK', min: 0, max: 200, step: 0.1, def: 5, unit: 'ms', field: true },
 			{ key: 'compRelease', label: 'REL', min: 10, max: 1000, step: 1, def: 120, unit: 'ms', field: true },
-			{ key: 'compGain', label: 'MAKE', min: -12, max: 24, step: 0.1, def: 0, unit: 'dB', field: true, fixed: true }
+			{ key: 'compGain', label: 'MAKE', min: -12, max: 24, step: 0.1, def: 0, unit: 'dB', field: true }
 		]
 	},
 	{
@@ -1375,7 +1374,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 				def: 0,
 				choices: ['SOFT', 'HARD', 'FOLD']
 			},
-			{ key: 'shapeDrive', label: 'DRV', min: 0.1, max: 100, step: 0.1, def: 25, unit: '%', scale: 'log', fixed: true }
+			{ key: 'shapeDrive', label: 'DRV', min: 0.1, max: 100, step: 0.1, def: 25, unit: '%', scale: 'log' }
 		]
 	},
 	{

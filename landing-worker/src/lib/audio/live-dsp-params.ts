@@ -67,7 +67,16 @@ export interface MapOptions {
 	table: Float32Array;
 }
 
+export const SHAPE_PROCESSOR = 'krsz-shape';
+
+/**
+ * SHAPE: how hard the signal is driven into the curve, as the card's 0..100.
+ * Which curve (SOFT, HARD, FOLD) is a choice, passed as `{ kind }`.
+ */
+export const SHAPE_PARAMS: LiveParamDescriptor[] = [a('drive', 25)];
+
 export const LIVE_PARAMS: Record<string, LiveParamDescriptor[]> = {
 	[ENV_PROCESSOR]: ENV_PARAMS,
-	[MAP_PROCESSOR]: MAP_PARAMS
+	[MAP_PROCESSOR]: MAP_PARAMS,
+	[SHAPE_PROCESSOR]: SHAPE_PARAMS
 };

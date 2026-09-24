@@ -620,6 +620,9 @@ describe('every parameter the engine reads is declared', () => {
 		   declaring it on the card reports it dead. */
 		const read = new Set([
 			...[...SOURCE.matchAll(/\bp\('([a-zA-Z][a-zA-Z0-9]*)'/g)].map((m) => m[1]),
+			/* `knobFn('key', def, lo, hi, fn)` takes the key first: a knob carried
+			   through a function (COMP's MAKE, decibels to a gain). */
+			...[...SOURCE.matchAll(/\bknobFn\(\s*'([a-zA-Z][a-zA-Z0-9]*)'/g)].map((m) => m[1]),
 			...[...SOURCE.matchAll(/\bknob(?:At|Pct)?\([^,]+,\s*'([a-zA-Z][a-zA-Z0-9]*)'/g)].map(
 				(m) => m[1]
 			),
