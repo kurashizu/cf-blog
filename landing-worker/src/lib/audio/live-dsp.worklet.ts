@@ -313,7 +313,16 @@ const P_DONE = 4;
  *
  * Levels, decay rates and partial frequencies are worked out once per render
  * block (128 samples, under 3 ms) from the parameters as they stand; the
- * per-sample work is a phase step, one multiply per envelope and a sine.
+ * per-sample work is one rotation per partial and one multiply per envelope.
+ *
+ * Each partial is a phasor -- the cosine and sine of its phase, turned by its
+ * frequency's step every sample -- rather than a phase fed to `Math.sin`.
+ * Sixteen sines a sample is most of what this processor costs, and a piano's
+ * ten-second decays keep all of them running: a chord of eight notes with
+ * four strings each measured 70% of a core. The rotation is a third of
+ * that. The step is recomputed per block, so a moving PITCH still bends
+ * every partial, and the phasor is renormalised per block so rounding cannot
+ * grow or shrink it over a long note.
  *
  * Each partial's envelope is kept relative to its own level (0..1), so moving
  * DAMP or STIFF mid-note rescales what is ringing rather than restarting it.
@@ -327,7 +336,10 @@ class StringsProcessor extends StoppableProcessor {
 	private tube: boolean;
 	private oddOnly: boolean;
 	private struck = false;
-	private phase = new Float64Array(17);
+	private re = new Float64Array(17);
+	private im = new Float64Array(17);
+	private stepRe = new Float64Array(17);
+	private stepIm = new Float64Array(17);
 	private env = new Float64Array(17);
 	private stage = new Uint8Array(17);
 	private freq = new Float64Array(17);
@@ -349,6 +361,8 @@ class StringsProcessor extends StoppableProcessor {
 			const f = f0 * n * Math.sqrt(1 + stiff * 0.004 * n * n);
 			const skip = (this.oddOnly && n % 2 === 0) || f > 18000;
 			this.freq[n] = skip ? 0 : f;
+			this.stepRe[n] = Math.cos(TWO_PI * f * dt);
+			this.stepIm[n] = Math.sin(TWO_PI * f * dt);
 			const amp = 1 / Math.pow(n, 1.9 - stiff * 0.7);
 			/* A blown tube loses its upper partials to the bore, so TUBE's damping
 			   is on the held level, where it is audible for the whole note. */
@@ -367,6 +381,13 @@ class StringsProcessor extends StoppableProcessor {
 		const input = inputs[0]?.[0];
 		const dt = 1 / sampleRate;
 		this.plan(p, 0, dt);
+		for (let n = 1; n <= 16; n++) {
+			const m = Math.hypot(this.re[n], this.im[n]);
+			if (m > 0) {
+				this.re[n] /= m;
+				this.im[n] /= m;
+			}
+		}
 		for (let i = 0; i < out.length; i++) {
 			if (currentTime + i * dt >= this.stopAt) {
 				out[i] = 0;
@@ -378,17 +399,18 @@ class StringsProcessor extends StoppableProcessor {
 				for (let n = 1; n <= 16; n++) {
 					this.stage[n] = P_RISE;
 					this.env[n] = 0;
-					this.phase[n] = 0;
+					this.re[n] = 1;
+					this.im[n] = 0;
 				}
 			}
 			const mix = Math.max(0, Math.min(1, at(p.mix, i) / 100));
 			let wet = 0;
 			if (this.struck) {
 				for (let n = 1; n <= 16; n++) {
-					const f = this.freq[n];
-					if (!f) continue;
-					let e = this.env[n];
+					if (!this.freq[n]) continue;
 					const st = this.stage[n];
+					if (st === P_DONE) continue;
+					let e = this.env[n];
 					if (st === P_RISE) {
 						e += this.riseStep[n];
 						if (e >= 1) {
@@ -405,10 +427,13 @@ class StringsProcessor extends StoppableProcessor {
 						}
 					}
 					this.env[n] = e;
-					let ph = this.phase[n] + f * dt;
-					ph -= Math.floor(ph);
-					this.phase[n] = ph;
-					if (e > 0) wet += e * this.level[n] * Math.sin(TWO_PI * ph);
+					const re = this.re[n];
+					const im = this.im[n];
+					const cr = this.stepRe[n];
+					const ci = this.stepIm[n];
+					this.re[n] = re * cr - im * ci;
+					this.im[n] = im * cr + re * ci;
+					if (e > 0) wet += e * this.level[n] * this.im[n];
 				}
 			}
 			const x = input ? input[i] : 0;
