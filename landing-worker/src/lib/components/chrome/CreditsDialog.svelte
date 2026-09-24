@@ -271,7 +271,7 @@
 			>
 		</BoxHeader>
 
-		<div class="p-3 sm:p-4 space-y-3 max-h-[80vh] overflow-y-auto custom-scrollbar">
+		<div class="p-3 sm:p-4 space-y-3 max-h-[min(600px,80vh)] overflow-y-auto custom-scrollbar">
 			<p class="text-xs text-white/50 leading-relaxed">
 				{$t('chrome.credits.intro')}
 			</p>

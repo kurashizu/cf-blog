@@ -83,7 +83,7 @@
 		<div class="fixed inset-0 z-40" onclick={() => (open = false)}></div>
 
 		<div
-			class="absolute left-0 top-full mt-1 z-50 max-h-[42vh] overflow-y-auto custom-scrollbar bg-[#121417] border rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono origin-top"
+			class="absolute left-0 top-full mt-1 z-50 max-h-[min(320px,60vh)] overflow-y-auto custom-scrollbar bg-[#121417] border rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono origin-top"
 			style="border-color: {color}80; min-width: {width}"
 			transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 		>

@@ -92,7 +92,7 @@
 		<div
 			use:portal
 			style="left: {anchor.left}px; top: {anchor.top}px"
-			class="origin-top fixed z-[130] min-w-[110px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
+			class="origin-top fixed z-[130] min-w-[110px] max-h-[min(320px,60vh)] overflow-y-auto custom-scrollbar bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
 			transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 		>
 			<div

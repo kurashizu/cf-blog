@@ -47,7 +47,7 @@
 		</BoxHeader>
 
 		<div
-			class="p-3 sm:p-4 space-y-4 text-xs sm:text-sm max-h-[75vh] overflow-y-auto custom-scrollbar"
+			class="p-3 sm:p-4 space-y-4 text-xs sm:text-sm max-h-[min(600px,80vh)] overflow-y-auto custom-scrollbar"
 		>
 			<p class="text-white/45 text-[11px]">{$t('chrome.privacy.scope')}</p>
 

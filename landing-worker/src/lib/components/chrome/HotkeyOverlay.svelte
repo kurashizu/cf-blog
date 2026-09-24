@@ -140,7 +140,7 @@
 			>
 		</BoxHeader>
 
-		<div class="p-3 sm:p-4 space-y-3 max-h-[80vh] overflow-y-auto custom-scrollbar">
+		<div class="p-3 sm:p-4 space-y-3 max-h-[min(600px,80vh)] overflow-y-auto custom-scrollbar">
 			{#each GROUPS as group (group.title)}
 				<div class="border rounded-xs bg-black/25 p-2.5" style="border-color: {group.color}44">
 					<div

@@ -166,7 +166,7 @@
 	<!-- Only the CUSTOM list scrolls; the others must not clip their third panel. -->
 	<div
 		class="absolute left-full top-0 -mt-px ml-0.5 z-50 min-w-[210px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono {scroll
-			? 'max-h-[60vh] overflow-y-auto custom-scrollbar'
+			? 'max-h-[min(320px,60vh)] overflow-y-auto custom-scrollbar'
 			: 'overflow-visible'}"
 		transition:scale={{ duration: 120, start: 0.97, opacity: 0, easing: cubicOut }}
 	>

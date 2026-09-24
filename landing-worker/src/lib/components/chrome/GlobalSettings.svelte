@@ -324,7 +324,7 @@
 			>
 		</BoxHeader>
 
-		<div class="p-3 sm:p-4 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+		<div class="p-3 sm:p-4 space-y-4 max-h-[min(600px,80vh)] overflow-y-auto custom-scrollbar">
 			<!-- Sound -->
 			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2.5">
 				<div class="text-xs sm:text-sm font-black text-[#98c379] border-b border-white/10 pb-1">
