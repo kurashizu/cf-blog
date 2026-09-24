@@ -175,6 +175,8 @@ interface ActiveVoice {
 	/** Every module gate this note opened, closed by `releaseVoice` when the
 	    key comes up -- see `holdGate`. */
 	gates?: AudioParam[];
+	/** When those gates rose -- later than `startTime` for a key played live (see `deferredGates`). */
+	gatesRise?: number;
 	/** The ON-CHOKE counterpart of `advRelContext`: set only when this voice's
 	    graph has something wired to ON-CHOKE. Fired by `chokeVoice` and
 	    `stopVoice`, never by `releaseVoice` -- being cut off from outside is
@@ -302,6 +304,22 @@ class ModularSynth {
 	 * length it already knows, and schedules its own gates as before.
 	 */
 	private noteGates: { list: AudioParam[]; openEnded: boolean } | null = null;
+	/**
+	 * Gates raised by the note being built in real time, held back until the
+	 * whole voice exists.
+	 *
+	 * A voice is built a node and a cable at a time on the main thread, and the
+	 * audio thread renders between those calls -- and Chrome runs a worklet
+	 * whose output is not connected yet anyway. A gate raised at the note's own
+	 * time let a module run before the cable carrying it existed. An envelope
+	 * that loses a few milliseconds sounds the same; a 3 ms hammer pulse played
+	 * into nothing struck no string, and about one note in fifteen of a
+	 * waveguide piano was silent. A fixed lead cut that down and a GC pause
+	 * mid-build still beat it, so the gates wait for the build instead: raised
+	 * together once it is done, past where the audio thread can already be. Null outside a real-time build -- offline renders and sequenced
+	 * notes are scheduled ahead and raise their gates as before.
+	 */
+	private deferredGates: { gate: AudioParam; t: number; heldSec: number; strike: boolean }[] | null = null;
 
 	/** The context the engine should build into right now. */
 	private audioCtx(): AudioContext | null {
@@ -2381,9 +2399,7 @@ class ModularSynth {
 				knobAt(burst.param('decay'), 'exLength', 8, 0.001, (v) => Math.max(0.001, v));
 				burst.param('sustain').value = 0;
 				burst.param('release').value = 0.002;
-				const gate = burst.param('gate');
-				gate.setValueAtTime(1, t);
-				gate.setValueAtTime(0, t + 0.0001);
+				this.strikeGate(burst.param('gate'), t);
 				sources.push(burst.source);
 				const g = ctx.createGain();
 				g.gain.value = 0;
@@ -5022,6 +5038,7 @@ class ModularSynth {
 		const trackRow = this.tracks[trackId];
 		// A build that threw last time must not hand its collector to this one.
 		this.noteGates = null;
+		this.deferredGates = null;
 		// Muting silences live playback, but must not silence an offline render.
 		if (!trackRow || (!this.renderCtx && soundEngine.isMuted())) return;
 		/* A note played by hand while a render is running has nowhere to go.
@@ -5788,6 +5805,7 @@ class ModularSynth {
 
 		const isContinuousHold = durationSec === 0;
 		const voiceGates: AudioParam[] = [];
+		if (!this.renderCtx) this.deferredGates = [];
 
 		if (!isContinuousHold) {
 			const holdSec = durationSec !== undefined ? Math.max(0.02, durationSec) : 60 / this.bpm / 8;
@@ -6187,6 +6205,7 @@ class ModularSynth {
 
 		// The voice map lets held notes be released and stolen live, and lets
 		// onended reap a finished voice's nodes in either context.
+		const gatesRise = this.raiseDeferredGates(ctx, t);
 		{
 			this.activeVoices.set(voiceKey, {
 				osc1,
@@ -6213,7 +6232,8 @@ class ModularSynth {
 				advChokeContext: advChokeContext ? { ...advChokeContext, busInput } : undefined,
 				advGraphOut,
 				advGraphOuts,
-				gates: voiceGates
+				gates: voiceGates,
+				gatesRise
 			});
 			/* A timed note's key comes up at a moment known now: its end. REL used
 			   to fire only from `releaseVoice`, which a sequenced or rendered note
@@ -6285,10 +6305,43 @@ class ModularSynth {
 	 * `releaseVoice` closes it at the moment the key actually comes up.
 	 */
 	private holdGate(gate: AudioParam, t: number, heldSec: number) {
-		gate.setValueAtTime(1, t);
 		const note = this.noteGates;
-		if (!note?.openEnded) gate.setValueAtTime(0, t + heldSec);
 		note?.list.push(gate);
+		if (this.deferredGates) {
+			this.deferredGates.push({ gate, t, heldSec: note?.openEnded ? Infinity : heldSec, strike: false });
+			return;
+		}
+		gate.setValueAtTime(1, t);
+		if (!note?.openEnded) gate.setValueAtTime(0, t + heldSec);
+	}
+
+	/** A strike: the gate up and straight down again (EXCITE's burst), deferred like `holdGate`. */
+	private strikeGate(gate: AudioParam, t: number) {
+		if (this.deferredGates) {
+			this.deferredGates.push({ gate, t, heldSec: 0.0001, strike: true });
+			return;
+		}
+		gate.setValueAtTime(1, t);
+		gate.setValueAtTime(0, t + 0.0001);
+	}
+
+	/** Raise every gate a real-time build held back, now that the voice exists. Returns when they rise. */
+	private raiseDeferredGates(ctx: BaseAudioContext, t: number): number {
+		const pending = this.deferredGates;
+		this.deferredGates = null;
+		if (!pending?.length) return t;
+		/* Past the audio thread as well as the clock: it renders a device buffer
+		   at a time, so it can already be `baseLatency` ahead of `currentTime`
+		   when this runs, and a gate risen in the quantum it is on would still
+		   beat the cables it needs, which join at the next one. Two quanta past
+		   that alone missed about one note in 150 on a 10 ms device. */
+		const ahead = (ctx as AudioContext).baseLatency ?? 0;
+		const go = Math.max(t, ctx.currentTime + ahead + (2 * 128) / ctx.sampleRate);
+		for (const { gate, heldSec } of pending) {
+			gate.setValueAtTime(1, go);
+			if (Number.isFinite(heldSec)) gate.setValueAtTime(0, go + heldSec);
+		}
+		return go;
 	}
 
 	public releaseTrackVoice(voiceKey: string) {
@@ -6350,9 +6403,13 @@ class ModularSynth {
 		   release and a held TUBE starts to fall now rather than at a guessed
 		   length (see `holdGate`). A timed note released early is cut short the
 		   same way; one released after its gates already closed changes nothing. */
+		/* Never before the gates rose: a live key raises them a few ms after
+		   its build (`deferredGates`), and a tap shorter than that would cancel
+		   the rise along with everything after it, and never sound. */
+		const closeAt = Math.max(now, (voice.gatesRise ?? voice.startTime) + 0.002);
 		for (const g of voice.gates ?? []) {
-			g.cancelScheduledValues(now);
-			g.setValueAtTime(0, now);
+			g.cancelScheduledValues(closeAt);
+			g.setValueAtTime(0, closeAt);
 		}
 		try {
 			gain.gain.cancelScheduledValues(now);
@@ -6556,7 +6613,35 @@ class ModularSynth {
 	 * it, and let it clean itself up independently of the voice that carried
 	 * the snapshot here.
 	 */
+	/**
+	 * An event-fired build knows its own time, so a real-time note's collectors
+	 * must not reach into it -- and it can run in the middle of one: stealing a
+	 * voice to make room for a new key fires that voice's ON-CHOKE while the new
+	 * key is being built. Clearing the collectors there dropped the gates the new
+	 * key had queued, and it never sounded. Set aside, and put back.
+	 */
 	private fireVoiceInterrupt(
+		voice: ActiveVoice,
+		ctx: BaseAudioContext,
+		now: number,
+		contextKey: 'advRelContext' | 'advChokeContext',
+		entryType: string,
+		entryPort: string,
+		sourcesKey: 'relSources' | 'chokeSources'
+	) {
+		const deferred = this.deferredGates;
+		const collecting = this.noteGates;
+		this.deferredGates = null;
+		this.noteGates = null;
+		try {
+			this.fireVoiceInterruptNow(voice, ctx, now, contextKey, entryType, entryPort, sourcesKey);
+		} finally {
+			this.deferredGates = deferred;
+			this.noteGates = collecting;
+		}
+	}
+
+	private fireVoiceInterruptNow(
 		voice: ActiveVoice,
 		ctx: BaseAudioContext,
 		now: number,
