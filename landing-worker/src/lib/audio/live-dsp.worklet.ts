@@ -18,6 +18,10 @@ import {
 	MAP_PROCESSOR,
 	SHAPE_PARAMS,
 	SHAPE_PROCESSOR,
+	STRINGS_PARAMS,
+	STRINGS_PROCESSOR,
+	MODES_PARAMS,
+	MODES_PROCESSOR,
 	type MapOptions
 } from './live-dsp-params';
 
@@ -277,3 +281,272 @@ class ShapeProcessor extends StoppableProcessor {
 }
 
 registerProcessor(SHAPE_PROCESSOR, ShapeProcessor);
+
+/* ── STRING / TUBE / MODES ──────────────────────────────────────────────── */
+
+/* A partial that has fallen this far below its own level is silence. */
+const TAIL = 0.00001;
+const TWO_PI = Math.PI * 2;
+
+const P_IDLE = 0;
+const P_RISE = 1;
+const P_HOLD = 2;
+const P_FALL = 3;
+const P_DONE = 4;
+
+/**
+ * A struck or plucked string, or a blown tube, as a bank of decaying partials.
+ *
+ * The same additive model the engine built from native nodes -- sixteen sines,
+ * each with its own level and its own exponential decay, higher ones dying
+ * first, stiffness stretching them sharp -- but with every setting read as it
+ * goes. Native, each partial's decay was an automation curve written at the
+ * note, so DECAY, DAMP and STIFF were read once, and PITCH set sixteen
+ * oscillator frequencies once: a vibrato patched into a STRING was dropped.
+ *
+ * Levels, decay rates and partial frequencies are worked out once per render
+ * block (128 samples, under 3 ms) from the parameters as they stand; the
+ * per-sample work is a phase step, one multiply per envelope and a sine.
+ *
+ * Each partial's envelope is kept relative to its own level (0..1), so moving
+ * DAMP or STIFF mid-note rescales what is ringing rather than restarting it.
+ * STRING rises in 3 ms and decays from there; TUBE rises over a time that
+ * shortens up the series, holds while the gate is up, and only then falls.
+ */
+class StringsProcessor extends StoppableProcessor {
+	static get parameterDescriptors() {
+		return STRINGS_PARAMS;
+	}
+	private tube: boolean;
+	private oddOnly: boolean;
+	private struck = false;
+	private phase = new Float64Array(17);
+	private env = new Float64Array(17);
+	private stage = new Uint8Array(17);
+	private freq = new Float64Array(17);
+	private level = new Float64Array(17);
+	private fallMul = new Float64Array(17);
+	private riseStep = new Float64Array(17);
+	constructor(options?: { processorOptions?: { tube?: boolean; oddOnly?: boolean } }) {
+		super(options);
+		this.tube = !!options?.processorOptions?.tube;
+		this.oddOnly = !!options?.processorOptions?.oddOnly;
+	}
+	/** Recompute every partial's frequency, level and step sizes from sample `i`'s params. */
+	private plan(p: Params, i: number, dt: number): void {
+		const f0 = Math.max(0, at(p.pitch, i));
+		const decay = Math.max(0.05, at(p.decay, i));
+		const damp = Math.max(0, at(p.damping, i) / 100);
+		const stiff = this.tube ? 0 : Math.max(0, at(p.stiffness, i) / 100);
+		for (let n = 1; n <= 16; n++) {
+			const f = f0 * n * Math.sqrt(1 + stiff * 0.004 * n * n);
+			const skip = (this.oddOnly && n % 2 === 0) || f > 18000;
+			this.freq[n] = skip ? 0 : f;
+			const amp = 1 / Math.pow(n, 1.9 - stiff * 0.7);
+			/* A blown tube loses its upper partials to the bore, so TUBE's damping
+			   is on the held level, where it is audible for the whole note. */
+			this.level[n] = skip ? 0 : this.tube ? amp / Math.pow(n, damp * 1.6) : amp;
+			const dn = decay / Math.pow(n, 0.55 + damp * 1.4 + stiff * 0.5);
+			const fall = this.tube ? Math.max(0.02, dn) : dn;
+			const lvl = Math.max(TAIL * 2, this.level[n]);
+			this.fallMul[n] = Math.pow(TAIL / lvl, dt / fall);
+			const rise = this.tube ? Math.max(0.01, 0.04 / (1 + (n - 1) * 0.4)) : 0.003;
+			this.riseStep[n] = dt / rise;
+		}
+	}
+	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const out = outputs[0]?.[0];
+		if (!out) return !this.finished();
+		const input = inputs[0]?.[0];
+		const dt = 1 / sampleRate;
+		this.plan(p, 0, dt);
+		for (let i = 0; i < out.length; i++) {
+			if (currentTime + i * dt >= this.stopAt) {
+				out[i] = 0;
+				continue;
+			}
+			const gate = at(p.gate, i) >= 0.5;
+			if (!this.struck && gate) {
+				this.struck = true;
+				for (let n = 1; n <= 16; n++) {
+					this.stage[n] = P_RISE;
+					this.env[n] = 0;
+					this.phase[n] = 0;
+				}
+			}
+			const mix = Math.max(0, Math.min(1, at(p.mix, i) / 100));
+			let wet = 0;
+			if (this.struck) {
+				for (let n = 1; n <= 16; n++) {
+					const f = this.freq[n];
+					if (!f) continue;
+					let e = this.env[n];
+					const st = this.stage[n];
+					if (st === P_RISE) {
+						e += this.riseStep[n];
+						if (e >= 1) {
+							e = 1;
+							this.stage[n] = this.tube ? P_HOLD : P_FALL;
+						}
+					} else if (st === P_HOLD) {
+						if (!gate) this.stage[n] = P_FALL;
+					} else if (st === P_FALL) {
+						e *= this.fallMul[n];
+						if (e * this.level[n] <= TAIL) {
+							e = 0;
+							this.stage[n] = P_DONE;
+						}
+					}
+					this.env[n] = e;
+					let ph = this.phase[n] + f * dt;
+					ph -= Math.floor(ph);
+					this.phase[n] = ph;
+					if (e > 0) wet += e * this.level[n] * Math.sin(TWO_PI * ph);
+				}
+			}
+			const x = input ? input[i] : 0;
+			out[i] = x * (1 - mix) + wet * mix * 0.85;
+		}
+		return !this.finished();
+	}
+}
+
+registerProcessor(STRINGS_PROCESSOR, StringsProcessor);
+
+/** A bandpass biquad in direct form I, RBJ's constant-0-dB-peak form (Web Audio's own). */
+class Bandpass {
+	private b0 = 0;
+	private b2 = 0;
+	private a1 = 0;
+	private a2 = 0;
+	private x1 = 0;
+	private x2 = 0;
+	private y1 = 0;
+	private y2 = 0;
+	set(f: number, q: number) {
+		const w0 = (TWO_PI * f) / sampleRate;
+		const alpha = Math.sin(w0) / (2 * q);
+		const a0 = 1 + alpha;
+		this.b0 = alpha / a0;
+		this.b2 = -alpha / a0;
+		this.a1 = (-2 * Math.cos(w0)) / a0;
+		this.a2 = (1 - alpha) / a0;
+	}
+	step(x: number): number {
+		const y = this.b0 * x + this.b2 * this.x2 - this.a1 * this.y1 - this.a2 * this.y2;
+		this.x2 = this.x1;
+		this.x1 = x;
+		this.y2 = this.y1;
+		this.y1 = y;
+		return y;
+	}
+}
+
+/**
+ * A modal bank: three struck modes, and three bandpasses at the same
+ * frequencies colouring whatever is fed in.
+ *
+ * The modes are sines that start loud and decay, because a resonant filter
+ * needs sustained input to ring up and a 10 ms strike never gets it there.
+ * The bandpasses keep the module useful on a pad. Both follow the root (BASE,
+ * or the note, or a PITCH cable), the ratios and Q per render block, where
+ * natively all of it was fixed at the note.
+ */
+class ModesProcessor extends StoppableProcessor {
+	static get parameterDescriptors() {
+		return MODES_PARAMS;
+	}
+	private pitchWired: boolean;
+	private struck = false;
+	private phase = new Float64Array(3);
+	private env = new Float64Array(3);
+	private stage = new Uint8Array(3);
+	private freq = new Float64Array(3);
+	private fallMul = new Float64Array(3);
+	private riseStep = new Float64Array(3);
+	private bands = [new Bandpass(), new Bandpass(), new Bandpass()];
+	private bandGain = 0;
+	constructor(options?: { processorOptions?: { pitchWired?: boolean } }) {
+		super(options);
+		this.pitchWired = !!options?.processorOptions?.pitchWired;
+	}
+	private plan(p: Params, dt: number, mix: number): void {
+		const pitch = at(p.pitch, 0);
+		const base = at(p.base, 0);
+		/* BASE pins the body to an absolute pitch, which an untuned drum
+		   wants; the note (or a PITCH cable) is what a tuned bar follows. Only
+		   a cable overrides BASE. */
+		const root = this.pitchWired ? pitch : base > 0 ? base : pitch;
+		const q = Math.max(1, at(p.q, 0));
+		const ratios = [at(p.r1, 0), at(p.r2, 0), at(p.r3, 0)];
+		for (let k = 0; k < 3; k++) {
+			const r = ratios[k];
+			const f = Math.min(18000, Math.max(20, root * r));
+			this.freq[k] = f;
+			// q/12, scaled down as the mode climbs: higher modes of a struck body die first.
+			const decay = Math.max(0.02, q / 12 / Math.pow(Math.max(r, 1e-3), 0.6));
+			const amp = 1 / (k + 1);
+			this.fallMul[k] = Math.pow(TAIL / amp, dt / decay);
+			// A low mode needs a slower rise, or its first step is a broadband click.
+			this.riseStep[k] = dt / Math.min(0.008, Math.max(0.0004, 1.2 / f));
+			this.bands[k].set(f, q);
+		}
+		this.bandGain = (mix / 3) * Math.min(1.2, Math.sqrt(q) * 0.25);
+	}
+	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const out = outputs[0]?.[0];
+		if (!out) return !this.finished();
+		const input = inputs[0]?.[0];
+		const dt = 1 / sampleRate;
+		const mix0 = Math.max(0, Math.min(1, at(p.mix, 0) / 100));
+		this.plan(p, dt, mix0);
+		for (let i = 0; i < out.length; i++) {
+			if (currentTime + i * dt >= this.stopAt) {
+				out[i] = 0;
+				continue;
+			}
+			if (!this.struck && at(p.gate, i) >= 0.5) {
+				this.struck = true;
+				for (let k = 0; k < 3; k++) {
+					this.stage[k] = P_RISE;
+					this.env[k] = 0;
+					this.phase[k] = 0;
+				}
+			}
+			const mix = Math.max(0, Math.min(1, at(p.mix, i) / 100));
+			let struck = 0;
+			if (this.struck) {
+				for (let k = 0; k < 3; k++) {
+					let e = this.env[k];
+					if (this.stage[k] === P_RISE) {
+						e += this.riseStep[k];
+						if (e >= 1) {
+							e = 1;
+							this.stage[k] = P_FALL;
+						}
+					} else if (this.stage[k] === P_FALL) {
+						e *= this.fallMul[k];
+						if (e / (k + 1) <= TAIL) {
+							e = 0;
+							this.stage[k] = P_DONE;
+						}
+					}
+					this.env[k] = e;
+					let ph = this.phase[k] + this.freq[k] * dt;
+					ph -= Math.floor(ph);
+					this.phase[k] = ph;
+					if (e > 0) struck += (e / (k + 1)) * Math.sin(TWO_PI * ph);
+				}
+			}
+			const x = input ? input[i] : 0;
+			let coloured = 0;
+			for (let k = 0; k < 3; k++) coloured += this.bands[k].step(x);
+			/* The dry strike is scaled by (1 - mix) twice, so a turned-up MIX is a
+			   beater on a drum rather than two sounds side by side. */
+			out[i] = x * (1 - mix) * (1 - mix) + struck * mix + coloured * this.bandGain;
+		}
+		return !this.finished();
+	}
+}
+
+registerProcessor(MODES_PROCESSOR, ModesProcessor);

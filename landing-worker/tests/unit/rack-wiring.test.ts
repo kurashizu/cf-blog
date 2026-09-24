@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { modularSynth } from '../../src/lib/synth';
 import { FakeCtx, FakeParam, reaches, type FakeNode } from './stubs/audio-context';
 import { MODULE_SPECS } from '../../src/lib/stores/synth-modules';
-import { readFileSync } from 'node:fs';
 
 /**
  * What `buildRackGraph` actually wires.
@@ -367,21 +366,41 @@ describe('a knob boots at the number printed on the card', () => {
 		   `(1 - mix)` (squared, for MODES), which is zero: the strike transient
 		   is discarded and turning MIX to its own printed default changes the
 		   sound. */
-		const engineFallbacks: Record<string, number> = {
-			strBlend: 70,
-			tubeMix: 70,
-			modeMix: 70
+		/* Asked of the engine itself rather than scraped from its source: each
+		   module is built with the knob untouched -- absent, as the forwarding
+		   pass leaves it -- and the parameter the knob is bound to is read. */
+		const cases: [module: string, key: string, want: number][] = [
+			['string', 'strBlend', 70],
+			['tube', 'tubeMix', 70],
+			['modes', 'modeMix', 70]
+		];
+		const S = modularSynth as unknown as {
+			noiseBuffer: unknown;
+			buildGraphNode(...a: unknown[]): { mod: Map<string, unknown> } | null;
 		};
-		const src = readFileSync('src/lib/synth.ts', 'utf8');
-		for (const [key, want] of Object.entries(engineFallbacks)) {
+		for (const [module, key, want] of cases) {
 			const spec = MODULE_SPECS.flatMap((m) => m.params ?? []).find((p) => p.key === key);
 			expect(spec, key).toBeDefined();
 			expect(spec!.def, key).toBe(want);
+			const ctx = new FakeCtx();
+			S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+			const made = S.buildGraphNode(
+				ctx,
+				module,
+				(_k: string, d: number) => d,
+				220,
+				0,
+				0.5,
+				[],
+				'n1',
+				{},
+				(_n: string, _p: string, f: number) => f,
+				{ velocity: 0.8, noteIndex: 48, tuning: 440 }
+			);
+			const param = made?.mod.get(key);
+			expect(param, `${key} is not bound to a parameter`).toBeInstanceOf(FakeParam);
 			/* And the engine agrees with the card. */
-			const re = new RegExp(`p\\.${key}\\s*(?::|,)[^)]*?(\\d+)\\)`);
-			const m = re.exec(src);
-			expect(m, `no fallback found for ${key}`).not.toBeNull();
-			expect(Number(m![1]), `${key} engine fallback`).toBe(want);
+			expect((param as FakeParam).value, `${key} engine fallback`).toBe(want);
 		}
 	});
 });

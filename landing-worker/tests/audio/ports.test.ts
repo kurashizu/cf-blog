@@ -2866,41 +2866,32 @@ describe('MODES FREQ: the resonator with no way to be tuned', () => {
 		expect(await heard(addRig(200))).toBeCloseTo(0.0001, 4);
 	}, 60000);
 
-	it('takes no signal, and the reason is the bank rather than a missing entry', async () => {
-		/* The honest half, and it was nearly written as a bug.
+	it('takes a signal, and tunes the bank exactly as a value does', async () => {
+		/* This was the honest half of the resonators' story: MODES, STRING and
+		   TUBE registered nothing for PITCH, because a modal bank was three
+		   biquads and three oscillators whose frequencies were assigned once when
+		   the voice was built. A DC of 800 into MODES' FREQ read BASE's own
+		   unwired pair, and the test said that if audio-rate modal tuning were
+		   ever built it would go red and this comment would be the spec.
 
-		   MODES has no `mod.set('pitch', ...)` -- neither does STRING, nor TUBE
-		   -- so a TO-SIG into its FREQ does nothing whatever, which is the exact
-		   shape of the defect this whole file exists to catch. It is not that
-		   defect. A modal bank is three biquads whose frequencies are *assigned
-		   once* when the voice is built; there is no running AudioParam for a
-		   signal to sum onto, and the module's own spec says so on its knobs
-		   ("a cable would have nowhere to land"). The same is true of STRING's
-		   partials. Registering the port would make the cable legal on the canvas
-		   and still silent, which is worse than refusing it.
-
-		   So what is pinned here is that it is *consistently* value-only across
-		   the resonator family, and that a signal leaves BASE standing rather
-		   than zeroing it -- which is the bad outcome: `cvIn` returns the stored
-		   knob for a signal-driven port, MODES' BASE is a real number, and the
-		   body stays where it was. A note that still rings at its default is a
-		   patch that sounds wrong; a note that falls to 0 Hz is one that has
-		   stopped.
-
-		   Measured: a DC of 800 into MODES' FREQ with BASE at 200 reads 0.0105 at
-		   200 and 0.0001 at 800 -- BASE's own unwired pair, to four decimals. The
-		   same DC into STRING reads 0.0004 and 0.0007 against a CONST of 800's
-		   0.0002 and 0.0176, so STRING drops it the same way.
-
-		   If audio-rate modal tuning is ever built, this test goes red and the
-		   comment above is the specification for what should replace it. */
+		   It was built: the resonators run in the live-DSP worklet, and pitch is
+		   a parameter the bank re-tunes from every render block. So the signal
+		   route now has to land exactly where the value route does -- the same
+		   800 through TO-SIG as through a CONST, heard at 800 and at 200. */
 		const sigRig = (listen: number) =>
 			rig({ ...listenAt(listen, 25), 'm.modeHz': 200, ...dcAt(800) }, dcNodes, dcInto('m'));
-		expect(await heard(sigRig(200)), 'BASE still holds the body').toBeCloseTo(0.0105, 4);
-		expect(await heard(sigRig(800)), 'the signal did not arrive').toBeCloseTo(0.0001, 4);
-		// The catalogue half: no resonator claims a signal can reach its root.
+		const bySignal800 = await heard(sigRig(800));
+		const bySignal200 = await heard(sigRig(200));
+		const byValue800 = await heard(constRig(800, 800));
+		const byValue200 = await heard(constRig(800, 200));
+		expect(bySignal800, 'the signal did not move the body to 800').toBeGreaterThan(bySignal200);
+		expect(Math.abs(bySignal800 - byValue800)).toBeLessThan(0.1 * byValue800);
+		expect(Math.abs(bySignal200 - byValue200)).toBeLessThan(0.0005);
+		/* The catalogue half: nothing on a resonator is marked read-once any
+		   more, except TUBE's odd-only switch, which is a selector. */
 		for (const id of ['string', 'tube', 'modes'])
-			expect(MODULE_SPECS.find((s) => s.id === id)?.params.find((p) => p.key === 'modeHz')?.fixed ?? true).toBe(true);
+			for (const p of MODULE_SPECS.find((s) => s.id === id)?.params ?? [])
+				expect(!!p.fixed, `${id}.${p.key}`).toBe(p.key === 'tubeOdd');
 	}, 60000);
 });
 

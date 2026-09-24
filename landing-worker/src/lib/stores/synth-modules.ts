@@ -1220,15 +1220,15 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN, { id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'decayTime', label: 'DCAY', min: 0.05, max: 12, step: 0.01, def: 2, unit: 's', field: true, fixed: true },
-			{ key: 'damping', label: 'DAMP', min: 0, max: 100, step: 1, def: 40, unit: '%', field: true, fixed: true },
-			{ key: 'stiffness', label: 'STIF', min: 0, max: 100, step: 1, def: 10, unit: '%', field: true, fixed: true },
+			{ key: 'decayTime', label: 'DCAY', min: 0.05, max: 12, step: 0.01, def: 2, unit: 's', field: true },
+			{ key: 'damping', label: 'DAMP', min: 0, max: 100, step: 1, def: 40, unit: '%', field: true },
+			{ key: 'stiffness', label: 'STIF', min: 0, max: 100, step: 1, def: 10, unit: '%', field: true },
 			/* 70, and the engine agrees. The two used to disagree -- the card said
 			   70 and the engine fell back to 100 -- and since an untouched knob is
 			   absent from the patch it was the engine's number that played: the
 			   dry leg went to zero and the strike transient was discarded, so
 			   turning MIX to its own printed default changed the sound. */
-			{ key: 'strBlend', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true, fixed: true }
+			{ key: 'strBlend', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true }
 		]
 	},
 	{
@@ -1246,10 +1246,10 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN, { id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'tubeDecay', label: 'DCAY', min: 0.05, max: 12, step: 0.01, def: 1.5, unit: 's', field: true, fixed: true },
-			{ key: 'tubeDamp', label: 'DAMP', min: 0, max: 100, step: 1, def: 50, unit: '%', field: true, fixed: true },
+			{ key: 'tubeDecay', label: 'DCAY', min: 0.05, max: 12, step: 0.01, def: 1.5, unit: 's', field: true },
+			{ key: 'tubeDamp', label: 'DAMP', min: 0, max: 100, step: 1, def: 50, unit: '%', field: true },
 			{ key: 'tubeOdd', label: 'ODD', min: 0, max: 100, step: 1, def: 100, unit: '%', field: true, fixed: true },
-			{ key: 'tubeMix', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true, fixed: true }
+			{ key: 'tubeMix', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true }
 		]
 	},
 	{
@@ -1278,10 +1278,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN, { id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			/* Both read as plain numbers when the bank is built, not bound to the
-			   filters' AudioParams -- three modes are three biquads whose
-			   frequencies are assigned once, so a cable would have nowhere to land.
-			   `fixed` is what stops the canvas offering them as destinations. */
+			/* Live: the bank runs in the worklet and re-tunes its modes and
+			   bandpasses from BASE, the ratios and Q every render block. */
 			/* 200 is the *shown* default and not the engine's, and that is the one
 			   place in this catalogue where the two are allowed to differ.
 
@@ -1298,12 +1296,12 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   turn both into one note. Aligning the card to 0 is worse -- it would
 			   print a frequency that is not one. So the difference stays, said out
 			   loud here rather than left for the next reader to find as drift. */
-			{ key: 'modeHz', label: 'BASE', min: 20, max: 8000, step: 1, def: 200, unit: 'Hz', scale: 'log', fixed: true },
-			{ key: 'mode1', label: 'R1', min: 1, max: 8, step: 0.01, def: 1, field: true, fixed: true },
-			{ key: 'mode2', label: 'R2', min: 1, max: 8, step: 0.01, def: 2.4, field: true, fixed: true },
-			{ key: 'mode3', label: 'R3', min: 1, max: 8, step: 0.01, def: 4.1, field: true, fixed: true },
-			{ key: 'modeQ', label: 'Q', min: 1, max: 60, step: 0.1, def: 14, scale: 'log', fixed: true },
-			{ key: 'modeMix', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true, fixed: true }
+			{ key: 'modeHz', label: 'BASE', min: 20, max: 8000, step: 1, def: 200, unit: 'Hz', scale: 'log' },
+			{ key: 'mode1', label: 'R1', min: 1, max: 8, step: 0.01, def: 1, field: true },
+			{ key: 'mode2', label: 'R2', min: 1, max: 8, step: 0.01, def: 2.4, field: true },
+			{ key: 'mode3', label: 'R3', min: 1, max: 8, step: 0.01, def: 4.1, field: true },
+			{ key: 'modeQ', label: 'Q', min: 1, max: 60, step: 0.1, def: 14, scale: 'log' },
+			{ key: 'modeMix', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true }
 		]
 	},
 	{

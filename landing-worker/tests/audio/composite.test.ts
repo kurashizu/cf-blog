@@ -224,7 +224,7 @@ describe('every mod inlet, driven as a value and as a signal', () => {
 	   because for several inlets they correctly do not.
 
 	   Which inlets take a signal at all was measured, not assumed, and the
-	   answer is not "all of them". Six mod inlets are value-only by construction
+	   answer is not "all of them". A few mod inlets are value-only by construction
 	   and are listed in the group below with the reason each one is. */
 
 	/** The shared value source and its signal-making twin. */
@@ -298,6 +298,31 @@ describe('every mod inlet, driven as a value and as a signal', () => {
 		   is registered onto both saws now. What still does not follow is the
 		   duty delay, which is computed at build time; see the engine comment. */
 		{
+			/* A false condition stops the branch, so the driven reading is exact
+			   silence and the undriven one is full level. */
+			name: 'when.cond',
+			read: (r) => r.peak,
+			build: (into) =>
+				graphOf(
+					[...SRC, { id: 'wh', type: 'when' }, { id: 'o', type: 'osc' }],
+					[
+						{ from: 'entry', fromPort: 'then', to: 'wh', toPort: 'exec' },
+						{ from: 'wh', fromPort: 'then', to: 'output', toPort: 'exec' },
+						...into('wh', 'cond'),
+						{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					{ ...constAt('cv', 6, 0) }
+				)
+		}
+	];
+
+	/* STRING's and TUBE's PITCH were rows of the group below until the
+	   resonators moved into the live-DSP worklet: their partials were sixteen
+	   oscillators tuned once at the note, so a signal had nowhere to land.
+	   Pitch is a worklet parameter now, and a signal carrying a number tunes
+	   the bank exactly as a CONST carrying it does. */
+	const liveRows: Row[] = [
+		{
 			name: 'string.pitch',
 			read: slice2,
 			build: (into) =>
@@ -355,24 +380,22 @@ describe('every mod inlet, driven as a value and as a signal', () => {
 					}
 				)
 		},
-		{
-			/* A false condition stops the branch, so the driven reading is exact
-			   silence and the undriven one is full level. */
-			name: 'when.cond',
-			read: (r) => r.peak,
-			build: (into) =>
-				graphOf(
-					[...SRC, { id: 'wh', type: 'when' }, { id: 'o', type: 'osc' }],
-					[
-						{ from: 'entry', fromPort: 'then', to: 'wh', toPort: 'exec' },
-						{ from: 'wh', fromPort: 'then', to: 'output', toPort: 'exec' },
-						...into('wh', 'cond'),
-						{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
-					],
-					{ ...constAt('cv', 6, 0) }
-				)
-		}
 	];
+
+	it.each(liveRows.map((r) => [r.name, r] as const))(
+		'%s takes a value and a signal alike',
+		async (_name, row) => {
+			const unwired = row.read(await render(row.build(() => []), 8, 1));
+			const byValue = row.read(await render(row.build(asValue), 8, 1));
+			const bySignal = row.read(await render(row.build(asSignal), 8, 1));
+			expect(byValue, `${_name}: the value route is dead`).not.toBeCloseTo(unwired, 3);
+			expect(bySignal, `${_name}: the signal route is dead`).not.toBeCloseTo(unwired, 3);
+			expect(Math.abs(bySignal - byValue), `${_name}: value and signal disagree`).toBeLessThan(
+				0.05 * Math.max(byValue, 1e-6)
+			);
+		},
+		60000
+	);
 
 	it.each(rows.map((r) => [r.name, r] as const))(
 		'%s takes a value and ignores a signal',

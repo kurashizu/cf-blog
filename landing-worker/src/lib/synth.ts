@@ -28,8 +28,14 @@ import {
 import { graphOf, type GraphCable, type RackGraph } from './stores/graph-model';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
-import { createLiveDsp, ensureLiveDsp } from './audio/live-dsp';
-import { ENV_PROCESSOR, MAP_PROCESSOR, SHAPE_PROCESSOR } from './audio/live-dsp-params';
+import { createLiveDsp, ensureLiveDsp, type LiveDsp } from './audio/live-dsp';
+import {
+	ENV_PROCESSOR,
+	MAP_PROCESSOR,
+	SHAPE_PROCESSOR,
+	STRINGS_PROCESSOR,
+	MODES_PROCESSOR
+} from './audio/live-dsp-params';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
 import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
@@ -3719,21 +3725,30 @@ class ModularSynth {
 					asParams[k] = p(k, NaN);
 				for (const k of Object.keys(asParams)) if (Number.isNaN(asParams[k])) delete asParams[k];
 				/* PITCH decides what these are tuned to, like every other pitched
-           module: wired, it follows the cable; unwired, it holds its HZ knob.
-           Passing baseFreq straight through made a STRING track the keyboard
-           whatever the canvas said. */
-				const rootHz = cvIn(probeKey, 'pitch', NaN);
+           module: wired, it follows the cable; unwired, the note. Passing
+           baseFreq straight through made a STRING track the keyboard whatever
+           the canvas said.
+
+           Read through `p`, which says three things: NaN when nothing is
+           patched, the number when a value is, and 0 when a moving signal is
+           -- that signal is connected to the processor's pitch parameter by
+           the mod loop and adds to the 0, so a vibrato reaches every partial.
+           It used to be read once with `cvIn`, which returned the fallback for
+           a signal, so the vibrato was dropped and the note played instead. */
+				const pitchIn = p('pitch', NaN);
+				const pitchWired = !Number.isNaN(pitchIn);
 				const made = this.buildRackModule(
 					ctx,
 					type,
 					asParams,
-					Number.isFinite(rootHz) && rootHz > 0 ? rootHz : baseFreq,
+					pitchWired ? pitchIn : baseFreq,
 					t,
 					heldSec,
-					Number.isFinite(rootHz) && rootHz > 0
+					pitchWired
 				);
 				if (!made) return null;
 				for (const src of made.sources ?? []) sources.push(src);
+				for (const [key, param] of Object.entries(made.params ?? {})) mod.set(key, param);
 				return { in: made.in, out: made.out, mod };
 			}
 		}
@@ -3764,283 +3779,113 @@ class ModularSynth {
        note. MODES needs the difference: its BASE knob pins the body to an
        absolute pitch, and only a patch saying otherwise should override it. */
 		pitchWired = false
-	): { in: AudioNode; out: AudioNode; sources?: AudioScheduledSourceNode[] } | null {
-		/* Values are assigned, not scheduled. setValueAtTime(v, t) leaves the param
-       at its default until t, and a voice is built slightly ahead of when it
-       sounds -- so for those milliseconds a feedback loop ran at the default
-       gain of 1 with a delay of 0, which is an instantaneous unity loop. It
-       screamed, and did so while the wanted values looked perfectly correct in
-       every log. None of these are automated; they are fixed for the life of
-       the voice. */
-		const pct = (v: number | undefined, d: number) => (v ?? d) / 100;
+	): {
+		in: AudioNode;
+		out: AudioNode;
+		sources?: AudioScheduledSourceNode[];
+		/** Each card key's live parameter, for a caller that lets cables reach them. */
+		params?: Record<string, AudioParam>;
+	} | null {
+		/* Built in the live-DSP worklet, so every setting is a parameter read as
+       the note plays (see live-dsp.worklet.ts for the models themselves).
+       Native, each partial was an oscillator with an automation curve written
+       at the note: DECAY, DAMP, STIFF, Q and the ratios were read once, and
+       PITCH set the frequencies once, so a vibrato patched into a STRING was
+       dropped.
+
+       Karplus-Strong -- a delay line one period long, fed back through a
+       damping filter -- was the first model tried, and a DelayNode in a
+       feedback loop is only stable up to about g = 0.90 here, which buys
+       0.45 s of ring. Additive has no loop and no such limit, which is why
+       these are banks of decaying partials.
+
+       The gate is the note, as ENV's is: the partials are struck when it
+       rises, and a TUBE holds until it falls. `params` maps each card key to
+       its parameter, and each is set from `p` here -- a caller whose cable
+       carries a signal passes 0 for that key and connects the signal to the
+       parameter, which then adds to it. */
+		const setAll = (
+			node: LiveDsp,
+			map: [cardKey: string, param: string, def: number][]
+		): Record<string, AudioParam> => {
+			const params: Record<string, AudioParam> = {};
+			for (const [cardKey, name, def] of map) {
+				const param = node.param(name);
+				param.value = p[cardKey] ?? def;
+				params[cardKey] = param;
+			}
+			return params;
+		};
+		const gateNote = (node: LiveDsp) => {
+			const gate = node.param('gate');
+			gate.setValueAtTime(1, _t);
+			gate.setValueAtTime(0, _t + heldSec);
+		};
+		const options: AudioWorkletNodeOptions = {
+			numberOfInputs: 1,
+			numberOfOutputs: 1,
+			outputChannelCount: [1],
+			channelCount: 1,
+			channelCountMode: 'explicit'
+		};
 
 		switch (id) {
 			case 'string':
 			case 'tube': {
-				/* A struck or plucked string as a bank of decaying partials.
-				 *
-				 * The textbook way is Karplus-Strong -- a delay line one period long,
-				 * fed back through a damping filter. It was built that way first and
-				 * measured unusable: a DelayNode inside a feedback loop is stable only
-				 * up to about g = 0.90 here, which buys 0.45s of ring, and by g = 0.95
-				 * it runs away. There is no setting that gives a guitar.
-				 *
-				 * Additive has no such limit because there is no loop. Each partial is
-				 * a sine with its own exponential decay, and the higher ones die first
-				 * -- which is what damping physically is, and what makes a plucked note
-				 * grow warmer as it fades. Stiffness stretches the partials sharp of
-				 * the harmonic series, the thing that makes a piano sound like a piano
-				 * rather than an organ.
-				 *
-				 * A tube is the same bank with only odd partials: a cylinder closed at
-				 * one end has no even harmonics, which is a clarinet.
-				 */
 				const isTube = id === 'tube';
-				/* Every fallback here is the number the card prints, because an
-           untouched knob is absent from the patch and so the fallback is what
-           plays while the field shows something else. Three of the four had
-           drifted apart: TUBE's DCAY printed 1.5 and fell back to 1.2, its DAMP
-           printed 50 and fell back to 40, and STRING's DAMP printed 40 and fell
-           back to 30. The same defect STRING's MIX already carries a comment
-           about -- turning a knob to the number already written on it changed
-           the sound, which is the one thing a default must never do. */
-				const decay = Math.max(0.05, (isTube ? p.tubeDecay : p.decayTime) ?? (isTube ? 1.5 : 2));
-				const damping = pct(isTube ? p.tubeDamp : p.damping, isTube ? 50 : 40);
-				const stiff = isTube ? 0 : pct(p.stiffness, 10);
-				const mix = pct(isTube ? p.tubeMix : p.strBlend, 70);
-				/* A switch, not a percentage: it chose between two outcomes and was
-           drawn as a dial with 101 positions.
-        
-           ADV declares it as the two-position selector it always was, and the
-           shipped presets were migrated to match. The threshold rather than an
-           equality test is deliberate: a patch file saved before that migration
-           holds 100, and reading it as "not odd" would turn every clarinet in
-           it into an open pipe. 1 and 100 both mean odd; 0 does not. */
+				/* TUBE's odd-only switch is a two-position selector, and read as one:
+           a patch saved when it was a dial holds 100, so 1 and 100 both mean
+           odd and 0 does not. */
 				const oddOnly = isTube && (p.tubeOdd ?? 1) >= 0.5;
-
-				const input = ctx.createGain();
-				const output = ctx.createGain();
-				const dry = ctx.createGain();
-				dry.gain.value = 1 - mix;
-				input.connect(dry);
-				dry.connect(output);
-
-				const wet = ctx.createGain();
-				// Partials add, so scale by the count to keep the voice in range.
-				/* 0.3 was headroom for summing many partials, but the partials already
-           scale by 1/n, and this was a fixed 10.5 dB cut nobody could undo.
-           Measured through PAN FLUTE: 0.316 into the tube, 0.058 out, which is
-           most of why the breath patches sat 19 dB under the struck ones.
-        
-           MIX is a real knob now. It was read here all along and declared
-           nowhere, so in ADV it was always undefined, always 1, and the dry
-           gain was always 0 -- which made the AUDIO IN socket decorative: a
-           patch heard the same partials whether a strike was wired in or not. */
-				wet.gain.value = mix * 0.85;
-				wet.connect(output);
-
-				const sources: AudioScheduledSourceNode[] = [];
-				for (let n = 1; n <= 16; n++) {
-					if (oddOnly && n % 2 === 0) continue;
-					// Inharmonicity: partials of a stiff string run sharp, more so higher up.
-					const fn = baseFreq * n * Math.sqrt(1 + stiff * 0.004 * n * n);
-					if (fn > 18000) break;
-					const osc = ctx.createOscillator();
-					osc.type = 'sine';
-					osc.frequency.value = fn;
-					const g = ctx.createGain();
-					/* Partial levels and decays.
-					 *
-					 * 1/n^2 alone gives a hollow, guitar-like tone whatever the decay is
-					 * set to: a piano has far more upper partial energy than that, and
-					 * its low ones ring for many seconds while the top of the spectrum is
-					 * gone in under one. Stiffness stands in for how piano-like the
-					 * string is, so it also controls how much of that spread there is --
-					 * a stiff string keeps its upper partials and spreads its decays,
-					 * which is the difference between a struck piano wire and a plucked
-					 * nylon one. */
-					const amp = 1 / Math.pow(n, 1.9 - stiff * 0.7);
-					const dn = decay / Math.pow(n, 0.55 + damping * 1.4 + stiff * 0.5);
-					if (isTube) {
-						/* DAMP is a spectral tilt while the note sounds, not a decay rate.
-						
-						   It used to reach the sound only through `dn`, and `dn` only
-						   through the fall *after* the key is released -- so on a note
-						   held as long as it sounds, neither DAMP nor DCAY changed
-						   anything. Measured across both full ranges, every render read
-						   0.289 to four decimals: two knobs the card offers that could
-						   not move the sound.
-						
-						   Worse for DAMP specifically: `dn` divides by `n^(...)`, and the
-						   fundamental has n = 1, so the exponent cancels and damping was
-						   mathematically absent from the partial carrying most of the
-						   level however it was set.
-						
-						   A blown tube loses its upper partials to the bore, so damping
-						   belongs on the *held* amplitude where it is audible for the
-						   whole note. At 0 the spectrum is untouched; at 100 the eighth
-						   partial is about a tenth of its open level. STRING is left
-						   alone -- it is struck, its partials decay from the attack, and
-						   its DAMP already measurably shortens them. */
-						const tubeAmp = amp / Math.pow(n, damping * 1.6);
-						/* A tube is blown, not struck: the excitation continues, so the
-               partials hold for as long as the key does and only then fall
-               away. Letting them decay from the attack the way a string's do
-               put a 14 dB bump on the first tenth of a second -- audible as a
-               chiff on every note, and nothing like a clarinet. */
-						const att = Math.max(0.01, 0.04 / (1 + (n - 1) * 0.4));
-						g.gain.setValueAtTime(0, _t);
-						g.gain.linearRampToValueAtTime(tubeAmp, _t + att);
-						g.gain.setValueAtTime(tubeAmp, _t + Math.max(att, heldSec));
-						/* And DCAY is the release, uncapped.
-						
-						   The old `min(dn, 0.35)` pinned every setting above about a
-						   third of a second to the same 0.35, so the top of the knob's
-						   twelve-second range was a single value repeated -- the other
-						   half of why DCAY did nothing. A tube that keeps ringing after
-						   the breath stops is a wind instrument in a room, which is a
-						   sound worth being able to say. */
-						const fall = Math.max(0.02, dn);
-						g.gain.exponentialRampToValueAtTime(0.00001, _t + Math.max(att, heldSec) + fall);
-						// To zero, for the same reason as the string's.
-						g.gain.linearRampToValueAtTime(0, _t + Math.max(att, heldSec) + fall + 0.06);
-					} else {
-						g.gain.setValueAtTime(0, _t);
-						g.gain.linearRampToValueAtTime(amp, _t + 0.003);
-						/* Exponential to nearly nothing, then linearly to actual zero: an
-               exponential ramp cannot reach 0, so ending on one leaves a step
-               from -100 dB to silence when the node stops. Small, but it is a
-               click, and on a long piano note it is the last thing heard. */
-						g.gain.exponentialRampToValueAtTime(0.00001, _t + 0.003 + dn);
-						g.gain.linearRampToValueAtTime(0, _t + 0.003 + dn + 0.12);
-					}
-					osc.connect(g);
-					g.connect(wet);
-					sources.push(osc);
-				}
-
-				/* The partials are the sound, so the excitation only gates them: a key
-           that is never struck should not ring. Feeding `input` through a gain
-           of zero keeps the module a normal link in the chain. */
-				const gate = ctx.createGain();
-				gate.gain.value = 0;
-				input.connect(gate);
-				gate.connect(output);
-
-				return { in: input, out: output, sources };
+				const node = createLiveDsp(ctx, STRINGS_PROCESSOR, {
+					...options,
+					processorOptions: { tube: isTube, oddOnly }
+				});
+				if (!node) return null;
+				/* Every default is the number the card prints: an untouched knob is
+           absent from the patch, so the default is what plays while the
+           field shows it. */
+				const params = setAll(
+					node,
+					isTube
+						? [
+								['tubeDecay', 'decay', 1.5],
+								['tubeDamp', 'damping', 50],
+								['tubeMix', 'mix', 70]
+							]
+						: [
+								['decayTime', 'decay', 2],
+								['damping', 'damping', 40],
+								['stiffness', 'stiffness', 10],
+								['strBlend', 'mix', 70]
+							]
+				);
+				node.param('pitch').value = baseFreq;
+				params.pitch = node.param('pitch');
+				gateNote(node);
+				return { in: node.node, out: node.node, sources: [node.source], params };
 			}
 
 			case 'modes': {
-				/* Three tuned resonances at once. A drum head or a bell rings at several
-           frequencies that are not a harmonic series, which is exactly what one
-           filter cannot produce and why the kit's toms and cymbals stayed
-           synthetic.
-
-           Struck, not filtered. Three bandpasses fed a strike measured 0.008
-           peak against 0.137 for the strike alone -- a resonant filter needs
-           sustained input to ring up, and a 10 ms burst never gets it there.
-           A struck mode is a sine that starts loud and decays, so that is what
-           this builds, the same way STRING does. The filters stay in parallel
-           with them: fed something continuous, they still colour it, which is
-           what makes the module useful on a pad as well as on a drum. */
-				const input = ctx.createGain();
-				const output = ctx.createGain();
-				const mix = pct(p.modeMix, 70);
-				const dry = ctx.createGain();
-				/* Squared, so the dry strike falls away faster than the body rises as
-           MIX is turned up: at 68 that is 0.10 of raw strike under a body at
-           0.68, which reads as a beater on a drum rather than as two sounds. */
-				dry.gain.value = (1 - mix) * (1 - mix);
-				input.connect(dry);
-				dry.connect(output);
-
-				// The card's own numbers. R3 printed 4.1 and fell back to 4.6, so an
-				// untouched MODES rang a third mode the card said it did not have.
-				const ratios = [p.mode1 ?? 1, p.mode2 ?? 2.4, p.mode3 ?? 4.1];
-				const q = Math.max(1, p.modeQ ?? 14);
-				/* Q is the ring: a mode at Q 40 rings for about a second, one at Q 2
-           for a few tens of milliseconds. Roughly q/40 seconds, scaled down as
-           the mode climbs because higher partials of a struck body die first. */
-				const modeSources: AudioScheduledSourceNode[] = [];
-				const struck = ctx.createGain();
-				/* Not halved. The dry strike passes at (1 - mix) squared, so halving
-           the body on top of that let the broadband strike decide the timbre. */
-				struck.gain.value = mix;
-				struck.connect(output);
-
-				/* What the ratios are relative to: the cable if there is one, BASE if
-           there is not.
-        
-           This used to read `modeHz > 0 ? modeHz : baseFreq`, and `modeHz`'s
-           knob stops at 20 -- so the fallback was unreachable from the UI and
-           BASE always won. A modal bank could only ever be pinned to an
-           absolute pitch, which is what an untuned drum wants and exactly wrong
-           for a marimba bar that follows the key. Measured: a FREQ cable at 800
-           read 0.0488 at 800 Hz while the same number in the knob read 0.2893.
-           The cable was inert.
-        
-           `baseFreq` is already the resolved cable where one exists -- the
-           caller passes `rootHz` through when it is finite and positive -- so
-           preferring it is the same precedence every other module uses: a cable
-           beats the field. Unwired, `rootHz` is NaN, the caller passes the
-           played note, and BASE still pins it. */
-				const root = pitchWired ? baseFreq : (p.modeHz ?? 0) > 0 ? (p.modeHz as number) : baseFreq;
-				ratios.forEach((r, i) => {
-					const f = Math.min(18000, Math.max(20, root * r));
-
-					// The struck half: a decaying sine per mode.
-					const osc = ctx.createOscillator();
-					osc.type = 'sine';
-					osc.frequency.value = f;
-					const g = ctx.createGain();
-					/* Q is the ring time. Measured against the -40 dB point rather than
-             the nominal time constant, which is what anyone actually hears:
-             q/40 gave 0.25 s at Q 30 where the number promised 0.75, so a
-             crash asked for 1.3 s came out a quarter of that. q/12 puts the
-             audible tail where the knob says it is. */
-					const decay = Math.max(0.02, q / 12 / Math.pow(r, 0.6));
-					const amp = 1 / (i + 1);
-					/* The attack is a fraction of the partial's own period, not a fixed
-             2 ms. On a 55 Hz kick, 2 ms is a tenth of a cycle -- a step, which
-             is broadband, and it put a 1414 Hz centroid on a drum whose three
-             partials sit at 55, 94 and 143 Hz. A low mode needs a slower rise
-             for the same reason a subwoofer does; a cymbal's partials are short
-             enough that the cap never binds. */
-					const rise = Math.min(0.008, Math.max(0.0004, 1.2 / f));
-					g.gain.setValueAtTime(0, _t);
-					g.gain.linearRampToValueAtTime(amp, _t + rise);
-					g.gain.exponentialRampToValueAtTime(0.00001, _t + rise + decay);
-					// To true zero: an exponential cannot reach it, and the step is a click.
-					g.gain.linearRampToValueAtTime(0, _t + rise + decay + 0.03);
-					osc.connect(g);
-					g.connect(struck);
-					modeSources.push(osc);
-
-					// The filtered half, for input that keeps arriving.
-					const bp = ctx.createBiquadFilter();
-					bp.type = 'bandpass';
-					bp.frequency.value = f;
-					bp.Q.value = q;
-					/* Quiet against the struck sines. sqrt(q) was compensating for how
-             little a narrow bandpass passes of a sustained tone, but a strike
-             is 8 ms of broadband noise: at q 7 that came to 0.88 per band, so
-             three filters handed almost the whole strike straight to the output
-             and MODES alone measured a 1144 Hz centroid on a drum whose
-             partials sit at 55, 94 and 143 Hz.
-          
-             The struck half IS the drum. This half exists so the module still
-             colours something continuous fed into it -- a pad, a held note --
-             and at that job it does not need to be loud. */
-					const fg = ctx.createGain();
-					fg.gain.value = (mix / ratios.length) * Math.min(1.2, Math.sqrt(q) * 0.25);
-					input.connect(bp);
-					bp.connect(fg);
-					fg.connect(output);
+				/* A modal bank -- partials that are not a harmonic series, which is
+           what a drum or a bell is and what one filter cannot produce. */
+				const node = createLiveDsp(ctx, MODES_PROCESSOR, {
+					...options,
+					processorOptions: { pitchWired }
 				});
-
-				/* The strike gates the modes rather than passing through them: a key
-           that is never struck should not ring. Same shape STRING uses. */
-				return { in: input, out: output, sources: modeSources };
+				if (!node) return null;
+				const params = setAll(node, [
+					['modeHz', 'base', 0],
+					['mode1', 'r1', 1],
+					['mode2', 'r2', 2.4],
+					['mode3', 'r3', 4.1],
+					['modeQ', 'q', 14],
+					['modeMix', 'mix', 70]
+				]);
+				node.param('pitch').value = baseFreq;
+				params.pitch = node.param('pitch');
+				gateNote(node);
+				return { in: node.node, out: node.node, sources: [node.source], params };
 			}
 
 			default:

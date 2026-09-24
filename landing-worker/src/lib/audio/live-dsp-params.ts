@@ -75,8 +75,46 @@ export const SHAPE_PROCESSOR = 'krsz-shape';
  */
 export const SHAPE_PARAMS: LiveParamDescriptor[] = [a('drive', 25)];
 
+export const STRINGS_PROCESSOR = 'krsz-strings';
+
+/**
+ * STRING and TUBE: a bank of decaying partials over `pitch` (Hz). Decay in
+ * seconds; damping, stiffness and mix as the card's 0..100. The gate is the
+ * note, as ENV's is. Which of the two, and TUBE's odd-only switch, are
+ * options (`{ tube, oddOnly }`), fixed per note.
+ */
+export const STRINGS_PARAMS: LiveParamDescriptor[] = [
+	a('pitch', 220),
+	a('decay', 2),
+	a('damping', 40),
+	a('stiffness', 10),
+	a('mix', 70),
+	a('gate', 0)
+];
+
+export const MODES_PROCESSOR = 'krsz-modes';
+
+/**
+ * MODES: three struck modes and three bandpasses at `root` times each ratio.
+ * `base` is the card's BASE (0 = follow `pitch`); `pitch` is the played note
+ * or the cable. Whether a cable decides the pitch is an option
+ * (`{ pitchWired }`), because BASE only yields to a patch saying otherwise.
+ */
+export const MODES_PARAMS: LiveParamDescriptor[] = [
+	a('pitch', 220),
+	a('base', 0),
+	a('r1', 1),
+	a('r2', 2.4),
+	a('r3', 4.1),
+	a('q', 14),
+	a('mix', 70),
+	a('gate', 0)
+];
+
 export const LIVE_PARAMS: Record<string, LiveParamDescriptor[]> = {
 	[ENV_PROCESSOR]: ENV_PARAMS,
 	[MAP_PROCESSOR]: MAP_PARAMS,
-	[SHAPE_PROCESSOR]: SHAPE_PARAMS
+	[SHAPE_PROCESSOR]: SHAPE_PARAMS,
+	[STRINGS_PROCESSOR]: STRINGS_PARAMS,
+	[MODES_PROCESSOR]: MODES_PARAMS
 };

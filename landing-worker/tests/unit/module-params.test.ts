@@ -629,7 +629,13 @@ describe('every parameter the engine reads is declared', () => {
 			...[...SOURCE.matchAll(/\bknobMix\([^,]+,[^,]+,\s*'([a-zA-Z][a-zA-Z0-9]*)'/g)].map(
 				(m) => m[1]
 			),
-			...[...SOURCE.matchAll(/\bp\.([a-zA-Z][a-zA-Z0-9]*)/g)].map((m) => m[1])
+			...[...SOURCE.matchAll(/\bp\.([a-zA-Z][a-zA-Z0-9]*)/g)].map((m) => m[1]),
+			/* The resonators name their knobs in `[cardKey, param, default]`
+			   tuples, each handed to `setAll`, which reads `p[cardKey]` and binds
+			   it to the worklet parameter. */
+			...[...SOURCE.matchAll(/\['([a-zA-Z][a-zA-Z0-9]*)',\s*'[a-zA-Z0-9]+',\s*-?[\d.]+\]/g)].map(
+				(m) => m[1]
+			)
 		]);
 		const pureRead = new Set(
 			[...NODE_GRAPH.matchAll(/\bp\('([a-zA-Z][a-zA-Z0-9]*)'/g)].map((m) => m[1])
