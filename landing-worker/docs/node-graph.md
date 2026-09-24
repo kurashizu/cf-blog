@@ -288,9 +288,10 @@ Rules:
 | `cv`             | diamond, amber    | an untyped value                |
 | `pitch`          | step, green       | a note on a scale, in semitones |
 | `hz`             | triangle, blue    | a frequency                     |
-| `unit`           | diamond, red      | an amount, 0..1                 |
+| `unit`           | teardrop, red     | an amount, 0..1                 |
 | `index`          | hexagon, purple   | a count                         |
-| `time`           | square, cyan      | a length of time                |
+| `time`           | capsule, orange   | a length of time                |
+| `bool`           | tick, pink        | true or false                   |
 
 Types do not mix: exec joins exec, audio joins audio, a value drives a value.
 
@@ -484,9 +485,15 @@ beside a round white one is two colours of one thing, and shape without colour
 asks you to compare outlines at 12px. All sockets are filled — an outlined one
 read as disabled rather than as a different kind.
 
-The full table is in the `PORT_STYLE` comment in `PatchCanvas.svelte`, and it
-must stay exhaustive: `Record<PortRole, …>` means adding a role without a style
-is a type error rather than a silent fallback.
+The table lives in `components/synth/patch/port-style.ts`, and it must stay
+exhaustive: `Record<PortRole, …>` means adding a role without a style is a type
+error rather than a silent fallback. `tests/unit/port-style.test.ts` holds the
+rest -- no two roles drawn alike, no two value roles sharing a shape or a
+colour, no value role in a sound colour.
+
+A socket's hit area is a plain 16px square around its glyph. The glyph carries
+the shape; a `clip-path` clips hit testing too, so a socket that was its own
+glyph could only be caught on the glyph -- half of PITCH's step.
 
 ### A visualiser is the module, not a badge on it
 

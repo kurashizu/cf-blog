@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PORT_STYLE } from './port-style';
 	/**
 	 * The patch bay: modules on a canvas, cables between ports.
 	 *
@@ -211,6 +212,9 @@
 	const BORDER = 2;
 	const HEADER_H = 20;
 	const PORT_R = 6;
+	/* Half the side of a socket's hit area: 16px, a third wider than the 12px
+	   glyph, centred on the same point so a cable still meets the glyph. */
+	const PORT_HIT = 8;
 
 	/* A card is as tall as its own controls, so the ports have to be spread over
 	   a height that varies per module. Computing it rather than measuring the
@@ -969,58 +973,6 @@
 		}
 	}
 
-	/* How a socket of each role is drawn.
-	
-	   Shape and colour both, because either alone is ambiguous: a round amber
-	   dot beside a round white one is two colours of the same thing, and shape
-	   without colour asks you to compare outlines at 12px. Together they say
-	   what a socket carries before you drag anything at it.
-	
-	     exec    chevron, white    execution: what this note runs
-	     signal  round, white      ordinary sound
-	     mono    square, white     definitely one channel
-	     stereo  round, cyan       definitely two, on one cable -- doubled ring
-	     left    half-round, cyan  one side of a split pair
-	     right   half-round, cyan
-	     cv      diamond, amber    a control value
-	     pitch   step, green      a note on a scale
-	     hz      triangle, blue    a frequency
-	     unit    diamond, red      an amount, 0..1
-	     index   hexagon, purple   a count
-	     time    square, cyan      a length of time
-	     bool    circle, yellow    true or false
-	
-	   Every socket is filled. Shape and colour carry the meaning between them,
-	   and an outlined one read as disabled next to the solid ones rather than as
-	   a different kind of thing. */
-	const PORT_STYLE: Record<PortRole, { cls: string; color: string }> = {
-		exec: { cls: 'clip-chevron', color: '#ffffff' },
-		signal: { cls: 'rounded-full', color: '#ffffff' },
-		mono: { cls: 'rounded-[2px]', color: '#ffffff' },
-		stereo: { cls: 'rounded-full port-stereo', color: '#56b6c2' },
-		left: { cls: 'rounded-l-full', color: '#56b6c2' },
-		right: { cls: 'rounded-r-full', color: '#56b6c2' },
-		cv: { cls: 'rotate-45', color: '#e5c07b' },
-		/* One shape per kind of value, not one diamond for all of them.
-		
-		   A patch reads by shape before it reads by label, and every data pin
-		   looking alike meant a frequency and a count were the same socket until
-		   you leaned in. These are told apart at a glance and the colours follow
-		   the meaning: pitch and time are the two a musician thinks in. */
-		/* A pitch and a frequency are different types, so they are different
-		   sockets: a note on a scale is a step, a frequency is a continuous
-		   quantity pointing somewhere. Converting between them is a node, and
-		   the two shapes are what make the missing converter obvious. */
-		pitch: { cls: 'clip-step', color: '#98c379' },
-		hz: { cls: 'clip-triangle', color: '#61afef' },
-		unit: { cls: 'clip-drop', color: '#e06c75' },
-		index: { cls: 'clip-hex', color: '#c678dd' },
-		time: { cls: 'rounded-[1px] rotate-45', color: '#56b6c2' },
-		/* Yellow, and round like a lamp: a truth is on or off rather than a
-		   quantity, and the shape says so before the colour does. */
-		bool: { cls: 'rounded-full', color: '#e5c07b' }
-	};
-
 	function portStyle(p: { kind: PortKind; role?: PortRole }) {
 		return PORT_STYLE[roleOf(p)];
 	}
@@ -1554,24 +1506,31 @@
 										n.type === 'nodept' ? 'audio' : 'mod'
 									)}
 								title={labelOf(n.id) || spec.label}
-								class="absolute w-3 h-3 border cursor-crosshair pointer-events-auto transition-all {n.type ===
-								'nodept'
-									? 'rounded-full'
-									: 'rotate-45'} {pullFrom && !canLand(spec.inputs[0])
-									? 'opacity-25'
-									: ''} {pullFrom && canLand(spec.inputs[0])
-									? 'scale-125 shadow-[0_0_6px_currentColor]'
-									: ''}"
-								style="left: {REROUTE_W / 2 - 6 - BORDER}px; top: {REROUTE_H / 2 -
-									6 -
-									BORDER}px; color: {spec.color}; background: {spec.color}; border-color: {spec.color}"
-							></button>
+								class="absolute flex items-center justify-center cursor-crosshair pointer-events-auto"
+								style="left: {REROUTE_W / 2 - PORT_HIT - BORDER}px; top: {REROUTE_H / 2 -
+									PORT_HIT -
+									BORDER}px; width: {PORT_HIT * 2}px; height: {PORT_HIT * 2}px"
+							>
+								<!-- Drawn as what it carries, like every other socket: a
+								     sound reroute is a signal circle, a value one a cv diamond. -->
+								<span
+									class="block w-3 h-3 pointer-events-none transition-all {portStyle(spec.inputs[0])
+										.shape} {pullFrom && !canLand(spec.inputs[0]) ? 'opacity-25' : ''} {pullFrom &&
+									canLand(spec.inputs[0])
+										? 'scale-125 shadow-[0_0_6px_currentColor]'
+										: ''}"
+									style="color: {portStyle(spec.inputs[0]).color}; background: {portStyle(
+										spec.inputs[0]
+									).color}"
+								></span>
+							</button>
 							<!-- The name, outside the frame so it never crowds the socket. -->
 							{#if labelOf(n.id)}
 								<span
 									class="absolute text-[8px] font-mono font-bold leading-none whitespace-nowrap pointer-events-none"
-									style="left: {REROUTE_W + 4}px; top: {REROUTE_H / 2 - 4 - BORDER}px; color: {spec.color}"
-									>{labelOf(n.id)}</span
+									style="left: {REROUTE_W + 4}px; top: {REROUTE_H / 2 -
+										4 -
+										BORDER}px; color: {spec.color}">{labelOf(n.id)}</span
 								>
 							{/if}
 						</div>
@@ -1625,8 +1584,7 @@
 									onpointerdown={(e) => e.stopPropagation()}
 									placeholder={$t('synthPatch.notePlaceholder')}
 									class="block bg-transparent px-1 py-0.5 font-mono text-[11px] leading-snug outline-none resize-none overflow-hidden"
-									style="color: {spec.color}; width: {NOTE_MAX_W}px"
-								></textarea>
+									style="color: {spec.color}; width: {NOTE_MAX_W}px"></textarea>
 							{:else}
 								<!-- `whitespace-pre`, not `pre-wrap`. The box around this has a
 								     max-width but the text itself has no width of its own, so it
@@ -1701,21 +1659,29 @@
 							     is audio, a diamond is control. -->
 								{#each spec.inputs as p, i (p.id)}
 									{@const y = portOffset(n, spec, spec.inputs.length, i)}
+									<!-- The hit area is a plain square; the glyph inside it carries
+									     the shape. A clip-path clips hit testing too, so a socket
+									     that was its own glyph could only be caught on the glyph --
+									     half of PITCH's step, a sliver of BOOL's tick. -->
 									<button
 										onpointerdown={(e) => {
 											if (e.button !== 2) e.stopPropagation();
 										}}
 										onpointerup={(e) => endCable(e, n.id, p.id, p.kind)}
 										title={p.label}
-										class="absolute w-3 h-3 border cursor-crosshair pointer-events-auto transition-opacity {portStyle(
-											p
-										).cls} {pullFrom && !canLand(p) ? 'opacity-25' : ''} {pullFrom && canLand(p)
-											? 'scale-125 shadow-[0_0_6px_currentColor]'
-											: ''}"
-										style="left: {-PORT_R}px; top: {y -
-											PORT_R}px; position: absolute; color: {portStyle(p)
-											.color}; background: {portStyle(p).color}; border-color: {portStyle(p).color}"
-									></button>
+										class="absolute flex items-center justify-center cursor-crosshair pointer-events-auto"
+										style="left: {-PORT_HIT}px; top: {y - PORT_HIT}px; width: {PORT_HIT *
+											2}px; height: {PORT_HIT * 2}px"
+									>
+										<span
+											class="block w-3 h-3 pointer-events-none transition-opacity {portStyle(p)
+												.shape} {pullFrom && !canLand(p) ? 'opacity-25' : ''} {pullFrom &&
+											canLand(p)
+												? 'scale-125 shadow-[0_0_6px_currentColor]'
+												: ''}"
+											style="color: {portStyle(p).color}; background: {portStyle(p).color}"
+										></span>
+									</button>
 									<span
 										class="absolute text-[7px] font-mono font-bold leading-none pointer-events-none whitespace-nowrap"
 										style="left: {PORT_R + 8}px; top: {y - 3.5}px; color: {portStyle(p).color}99"
@@ -1727,13 +1693,15 @@
 									<button
 										onpointerdown={(e) => startCable(e, n.id, p.id, p.kind)}
 										title={p.label}
-										class="absolute w-3 h-3 border cursor-crosshair pointer-events-auto transition-opacity {portStyle(
-											p
-										).cls}"
-										style="left: {nodeWidth(spec) - PORT_R}px; top: {y -
-											PORT_R}px; position: absolute; color: {portStyle(p)
-											.color}; background: {portStyle(p).color}; border-color: {portStyle(p).color}"
-									></button>
+										class="absolute flex items-center justify-center cursor-crosshair pointer-events-auto"
+										style="left: {nodeWidth(spec) - PORT_HIT}px; top: {y -
+											PORT_HIT}px; width: {PORT_HIT * 2}px; height: {PORT_HIT * 2}px"
+									>
+										<span
+											class="block w-3 h-3 pointer-events-none {portStyle(p).shape}"
+											style="color: {portStyle(p).color}; background: {portStyle(p).color}"
+										></span>
+									</button>
 									<span
 										class="absolute text-[7px] font-mono font-bold leading-none pointer-events-none whitespace-nowrap text-right"
 										style="right: {PORT_R + 8}px; top: {y - 3.5}px; color: {portStyle(p).color}99"
@@ -2042,13 +2010,18 @@
 		clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
 	}
 
-	/* An amount, drawn as one: full at the top, nothing at the point. */
-	:global(.clip-drop) {
-		clip-path: polygon(50% 0%, 100% 40%, 50% 100%, 0% 40%);
-	}
-
 	/* A count -- discrete, so a shape with sides you could number. */
 	:global(.clip-hex) {
 		clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+	}
+
+	/* A length of time: a bar, as a duration is drawn on any timeline. */
+	:global(.clip-capsule) {
+		clip-path: inset(24% 0% round 999px);
+	}
+
+	/* True or false: a tick. */
+	:global(.clip-tick) {
+		clip-path: polygon(0% 52%, 20% 32%, 40% 52%, 80% 10%, 100% 30%, 40% 92%);
 	}
 </style>
