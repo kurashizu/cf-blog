@@ -111,9 +111,18 @@
 				     squeezed until the last one sat outside the panel. Racks 1-3 never
 				     had this because they are in a column that scrolls vertically.
 				     Below this floor the parent's `overflow-auto` gives a horizontal
-				     scrollbar, which is the honest answer to "too narrow". -->
+				     scrollbar, which is the honest answer to "too narrow".
+
+				     The floor belongs to rack 4, so rack 4 carries it. It used to be
+				     a 1400px minimum on the whole row, because with 24 equal columns
+				     the only way to give rack 4's six enough was to widen all of
+				     them -- and on a 1600px window that pushed the row 174px past its
+				     panel, so rack 7's right edge (the newest part of LOUD's trace,
+				     its meter, its readout) sat behind a horizontal scrollbar. Read
+				     as the meter lagging by seconds. Rack 4's column has its own
+				     340px minimum now and the rest share what is left 5:5:8. -->
 				<div
-					class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[repeat(24,minmax(0,1fr))] xl:min-w-[1400px] gap-1.5 text-xs"
+					class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(340px,6fr)_minmax(0,5fr)_minmax(0,5fr)_minmax(0,8fr)] xl:min-w-[1100px] gap-1.5 text-xs"
 				>
 					<Module4Envelopes />
 					<Module5Lfo />

@@ -16,7 +16,7 @@
 </script>
 
 <div
-	class="xl:col-span-8 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] xl:min-h-[128px] shrink-0"
+	class="xl:col-span-1 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] xl:min-h-[128px] shrink-0"
 >
 	<div
 		class="flex items-center justify-between font-black text-white text-xs border-b border-white/10 pb-0.5 shrink-0"
