@@ -1,5 +1,5 @@
 name = "cf-blog"
-main = ".open-next/worker.js"
+main = "worker.ts"
 compatibility_date = "2026-04-30"
 compatibility_flags = ["nodejs_compat"]
 
@@ -15,6 +15,13 @@ database_id = "f763e00a-1c8b-42d4-ad4f-65d0136cabd2"
 [[r2_buckets]]
 binding = "PUBLIC_BUCKET"
 bucket_name = "public-files"
+
+# Rendered pages, the global tier of the page cache in worker.ts. Private on
+# purpose; a lifecycle rule expires objects after 9 days, past the 1-day TTL
+# plus the 7 days a stale copy may still be served.
+[[r2_buckets]]
+binding = "PAGE_CACHE"
+bucket_name = "cf-blog-page-cache"
 
 [[kv_namespaces]]
 binding = "SESSION_KV"

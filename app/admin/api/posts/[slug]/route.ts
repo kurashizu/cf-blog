@@ -7,6 +7,7 @@ import {
   validatePostInput,
   type PostInput,
 } from '@/lib/post-input';
+import { bumpPageCacheVersion } from "@/lib/page-cache-version";
 
 export const dynamic = 'force-dynamic';
 
@@ -98,6 +99,7 @@ export async function PUT(
     if (newSlug !== oldSlug) {
       await repo.delete(oldSlug);
     }
+    await bumpPageCacheVersion();
 
     return NextResponse.json({ success: true, post: { ...postData, content: content || existingPost.content } });
   } catch (error) {
@@ -124,6 +126,7 @@ export async function DELETE(
     }
 
     await repo.delete(slug);
+    await bumpPageCacheVersion();
 
     return NextResponse.json({ success: true });
   } catch (error) {

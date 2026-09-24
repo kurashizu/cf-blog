@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createArticlesRepo } from '@/lib/articles';
 import { buildFrontmatter } from '@/lib/frontmatter';
 import { isValidSlug, validatePostInput, type PostInput } from '@/lib/post-input';
+import { bumpPageCacheVersion } from "@/lib/page-cache-version";
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
 
     const repo = createArticlesRepo();
     await repo.save(slug, fullContent);
+    await bumpPageCacheVersion();
 
     return NextResponse.json({ success: true });
   } catch (error) {

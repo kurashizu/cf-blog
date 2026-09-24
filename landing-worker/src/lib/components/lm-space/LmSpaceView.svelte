@@ -1088,22 +1088,27 @@
 	}
 	:global(.lmspace #race .rhd) {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
 		align-items: baseline;
-		gap: 6px;
+		column-gap: 6px;
 		padding-bottom: 5px;
 		margin-bottom: 4px;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 	}
+	/* Each half of the header stays whole: a CJK date and count broke mid-word
+   ("2026年9 / 月") in a 200px panel. Whole, the count wraps under the date. */
 	:global(.lmspace #race .q) {
 		font-size: 1rem;
 		font-weight: 900;
 		color: var(--purple);
 		letter-spacing: 0.04em;
+		white-space: nowrap;
 	}
 	:global(.lmspace #race .m) {
 		font-size: 1rem;
 		color: rgba(255, 255, 255, 0.4);
+		white-space: nowrap;
 	}
 	:global(.lmspace .rrow) {
 		display: flex;

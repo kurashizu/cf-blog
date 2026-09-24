@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /vm/
+Disallow: /model/
+Disallow: /net
+Disallow: /dns-query

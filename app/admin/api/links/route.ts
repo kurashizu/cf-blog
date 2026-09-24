@@ -5,6 +5,7 @@ import {
     parseAboutLinkInput,
     type AboutLinkInput,
 } from "@/lib/about-links";
+import { bumpPageCacheVersion } from "@/lib/page-cache-version";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
                 { status: 409 },
             );
         }
+        await bumpPageCacheVersion();
 
         return NextResponse.json({ link }, { status: 201 });
     } catch (error) {

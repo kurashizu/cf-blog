@@ -262,6 +262,20 @@ The homepage hero has two data widgets, both transparent (no card chrome):
 
 Contributions powered by `cf-blog-cache` cron → R2, rendered server-side via `getContributions()`. Languages read from D1 `github_repos` table (all non-fork repos, not just top 6) via `getTopLanguages()` from `lib/languages.ts`.
 
+## Page Cache (cf-blog)
+
+The Worker entry is `worker.ts`, which wraps `.open-next/worker.js` with a whole-page cache (`lib/edge-page-cache.ts`). Public pages stay `force-dynamic` in Next; the wrapper serves them from the Cache API (per colo) or the private R2 bucket `cf-blog-page-cache` (global), rendering only on a miss. Expired copies are served while a re-render runs after the response.
+
+| Pages | TTL |
+|---|---|
+| `/`, `/news`, `/news/[id]` | 30 min (cron-written data) |
+| `/blog`, `/blog/[slug]`, `/about` | 1 day |
+| `/sitemap.xml` | 1 h |
+
+Not cached: `/search`, `/api/*`, `/admin/*`, RSC requests. Scanner paths (`*.php`, `/.env`, `/wp-*`, …) get a plain 404 without starting Next.
+
+**Invalidation:** cache keys include a content version stored in `SESSION_KV` (`page-cache-version`). Any admin write that changes public content must call `bumpPageCacheVersion()` (`lib/page-cache-version.ts`) after it succeeds — posts, about links and news edits already do. Responses carry `x-edge-cache: HIT | HIT-GLOBAL | STALE | MISS`.
+
 ## Upload API (cf-blog)
 
 `app/api/upload/route.ts` — Upload and list API for the R2 `public-files` bucket. Bound to custom domain `BUCKET_URL` from `shared/site-config.ts` (currently `https://bucket.krsz.in`).

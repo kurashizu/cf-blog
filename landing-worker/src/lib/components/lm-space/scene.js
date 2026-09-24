@@ -123,6 +123,9 @@ export async function mountLmSpace(root, payload) {
 			else o.material?.dispose?.();
 		});
 		atlasTex.dispose();
+		// the backdrop lives in its own scene, outside the traverse above
+		sky.geometry.dispose();
+		skyMat.dispose();
 		skyTex.dispose();
 		tipEl.remove();
 	}
@@ -181,7 +184,22 @@ export async function mountLmSpace(root, payload) {
 	}
 	const [pLo, pHi] = robustExtent((m) => (m.p == null ? NaN : lg(m.p)));
 	const [sLo, sHi] = robustExtent((m) => (m.sp == null ? NaN : lg(m.sp)));
-	const [iLo, iHi] = robustExtent((m) => (m.i == null ? NaN : m.i));
+	/* Intelligence is exempt: it is a bounded linear score with no outliers, and
+   its top 2% is the frontier -- clamped, the dozen best models all drew at the
+   same height as the 98th-percentile one. */
+	const [iLo, iHi] = ext((m) => (m.i == null ? NaN : m.i));
+	/* The labelled levels on the intelligence rule: a round step sized to the
+   data's own span, about three per axis, so the scale follows the index as
+   scores rise instead of stopping at whatever ceiling was current. */
+	const I_LEVELS = (() => {
+		const raw = (iHi - iLo) / 3;
+		const p = 10 ** Math.floor(Math.log10(raw));
+		const f = raw / p;
+		const step = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+		const out = [];
+		for (let v = Math.ceil(iLo / step) * step; v <= iHi; v += step) out.push(+v.toFixed(6));
+		return out;
+	})();
 	const dNum = (m) => (m.d ? Date.parse(m.d) : NaN);
 	const [dLo, dHi] = robustExtent(dNum);
 
@@ -415,16 +433,18 @@ export async function mountLmSpace(root, payload) {
 	 * standings panel already reports rank as a list, so the spiral's "further
 	 * round the curve" reading would just fight the panel that already says the
 	 * same thing in text. */
+	/** Half-width of RACE's date axis: a replay reads left to right, so it is
+	 *  given more width than height rather than the space box's square. */
+	const RX = S * 1.5;
 	const posRace = (m, idx) =>
 		new THREE.Vector3(
-			(norm(dNum(m), dLo, dHi) - 0.5) * 2 * S,
+			(norm(dNum(m), dLo, dHi) - 0.5) * 2 * RX,
 			(norm(m.i, iLo, iHi) - 0.5) * 2 * S,
 			(laneOf.get(m.c) / Math.max(CREATORS.length - 1, 1) - 0.5) * 2 * S
 		);
 
 	/* ---------- scene ---------- */
 	const scene = new THREE.Scene();
-	scene.background = new THREE.Color(0x0a0b0d);
 	// No exponential fog: it would grey out the sky sphere along with the data.
 
 	/* Two cameras share one transform. Perspective is right for flying through the
@@ -476,6 +496,8 @@ export async function mountLmSpace(root, payload) {
 		antialias: true,
 		powerPreference: 'high-performance'
 	});
+	// Two passes per frame (backdrop, then data), so clearing is done by hand.
+	renderer.autoClear = false;
 	renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 	renderer.setSize(stageW, stageH);
 	$('app').appendChild(renderer.domElement);
@@ -514,8 +536,16 @@ export async function mountLmSpace(root, payload) {
 	});
 	const sky = new THREE.Mesh(new THREE.SphereGeometry(1400, 48, 32), skyMat);
 	sky.rotation.y = 0.6;
-	sky.renderOrder = -1;
-	scene.add(sky);
+	/* The backdrop is drawn in a pass of its own, always through a perspective
+	 * camera that looks the same way as the live one. Under the orthographic
+	 * camera the sphere filled the frame with whatever small patch of it the
+	 * frustum's width covered, so the panorama came out magnified and blurred --
+	 * worst in RACE, which is orthographic throughout. A backdrop has no data
+	 * position to preserve, so it keeps the perspective framing in every mode. */
+	const skyScene = new THREE.Scene();
+	skyScene.background = new THREE.Color(0x0a0b0d);
+	skyScene.add(sky);
+	const skyCam = new THREE.PerspectiveCamera(62, stageW / stageH, 1, 3000);
 
 	/* ---------- star dust ---------- *
 	 * A thin field of motes filling the space between the bodies. It is what gives
@@ -1006,10 +1036,8 @@ export async function mountLmSpace(root, payload) {
 
 		// Level rings: a hoop at each labelled score, so a height can be read off
 		// anywhere in the scene, including inside an annexe.
-		for (const v of [10, 20, 30, 40, 50, 60]) {
-			if (v < iLo || v > iHi) continue;
+		for (const v of I_LEVELS) {
 			const y = (norm(v, iLo, iHi) - 0.5) * 2 * S;
-			const major = v % 20 === 0;
 			// The rule stands at the origin, but its level marks have to reach every
 			// quadrant, so they are drawn as a rectangle spanning the whole occupied
 			// region rather than as a circle around the shaft.
@@ -1031,19 +1059,13 @@ export async function mountLmSpace(root, payload) {
 			dash(x1, z0, x1, z1);
 			dash(x1, z1, x0, z1);
 			dash(x0, z1, x0, z0);
-			// Only the major levels get a ring, and faintly: a dashed rectangle at every
-			// step crossed through the clusters and read as noise.
-			if (!major) continue;
+			// Faint on purpose: a brighter or denser set of rectangles crossed through
+			// the clusters and read as noise.
 			const hoop = lineSet(pts, AX.y, 0.1);
 			spineGroup.add(hoop);
 			// The spine now carries the only intelligence scale, so its numbers are
 			// styled as a real rule rather than as faint annotations.
-			const t = tag(
-				String(v),
-				new THREE.Vector3(cx, y, cz),
-				major ? 'rgba(86,182,194,1)' : 'rgba(86,182,194,.7)',
-				'tag spinenum'
-			);
+			const t = tag(String(v), new THREE.Vector3(cx, y, cz), 'rgba(86,182,194,1)', 'tag spinenum');
 			spineGroup.add(t);
 		}
 
@@ -1156,10 +1178,8 @@ export async function mountLmSpace(root, payload) {
 		// of the spiral, so a height can still be read off out where the latest
 		// models sit and not only near the centre.
 		const ringR = SPIRAL_R + 14;
-		for (const v of [10, 20, 30, 40, 50, 60]) {
-			if (v < iLo || v > iHi) continue;
+		for (const v of I_LEVELS) {
 			const y = (norm(v, iLo, iHi) - 0.5) * 2 * S;
-			const major = v % 20 === 0;
 			const pts = [];
 			const SEGS = 96;
 			for (let k = 0; k < SEGS; k += 2) {
@@ -1168,15 +1188,9 @@ export async function mountLmSpace(root, payload) {
 				pts.push(new THREE.Vector3(Math.cos(a0) * ringR, y, Math.sin(a0) * ringR));
 				pts.push(new THREE.Vector3(Math.cos(a1) * ringR, y, Math.sin(a1) * ringR));
 			}
-			if (!major) continue;
 			timeSpineGroup.add(lineSet(pts, AX.y, 0.1));
 			timeSpineGroup.add(
-				tag(
-					String(v),
-					new THREE.Vector3(cx, y, cz),
-					major ? 'rgba(86,182,194,1)' : 'rgba(86,182,194,.7)',
-					'tag spinenum'
-				)
+				tag(String(v), new THREE.Vector3(cx, y, cz), 'rgba(86,182,194,1)', 'tag spinenum')
 			);
 		}
 
@@ -3039,12 +3053,12 @@ export async function mountLmSpace(root, payload) {
 		if (view === 'space') {
 			// Quadrant A: three real axes, so the frontier is a surface. The convex
 			// hull of the frontier points is closed on every side, though, and a
-			// Pareto front only has one meaningful face -- the one looking toward the
-			// dominated region. Keeping every face of the hull drew the far side too
-			// and the whole thing read as a solid wedge rather than a sheet, so only
-			// triangles whose normal points away from the "better" corner (cheaper,
-			// smarter, faster) survive: those are the ones actually bounding the
-			// frontier, and dropping the rest leaves an open shell instead of a solid.
+			// Pareto front only has one meaningful side -- the one looking toward the
+			// "better" corner (cheaper, smarter, faster). Keeping every face of the
+			// hull drew the sides and the back too and the whole thing read as a solid
+			// wedge rather than a sheet, so only triangles whose normal points toward
+			// that corner survive: those are the ones actually bounding the frontier,
+			// and dropping the rest leaves an open shell instead of a solid.
 			const A = vis();
 			const frontA = paretoFront(A, [
 				['p', false],
@@ -3055,31 +3069,36 @@ export async function mountLmSpace(root, payload) {
 				try {
 					const geo = new ConvexGeometry(frontA.map(([, i]) => cur[i].clone()));
 					const pos = geo.attributes.position;
-					const centroid = new THREE.Vector3();
-					for (let k = 0; k < pos.count; k++)
-						centroid.add(new THREE.Vector3().fromBufferAttribute(pos, k));
-					centroid.divideScalar(pos.count);
-					const keep = [];
 					const a = new THREE.Vector3(),
 						b = new THREE.Vector3(),
 						c = new THREE.Vector3();
 					const ab = new THREE.Vector3(),
 						ac = new THREE.Vector3(),
-						normal = new THREE.Vector3(),
-						toCenter = new THREE.Vector3();
+						normal = new THREE.Vector3();
+					// Every face of a convex hull faces away from its own centroid, so that
+					// test kept all of them and drew the closed wedge. The frontier is the
+					// part of the hull that looks toward the better corner: a face belongs
+					// to it when its outward normal points no further toward pricier (+X),
+					// dumber (-Y) or slower (-Z) on any axis. The sides and the back, which
+					// face the dominated region, are dropped.
+					const EPS = 1e-6;
+					const orthant = [],
+						halfSpace = [];
 					for (let k = 0; k < pos.count; k += 3) {
 						a.fromBufferAttribute(pos, k);
 						b.fromBufferAttribute(pos, k + 1);
 						c.fromBufferAttribute(pos, k + 2);
 						ab.subVectors(b, a);
 						ac.subVectors(c, a);
-						normal.crossVectors(ab, ac);
-						toCenter.subVectors(centroid, a);
-						// A face pointing toward the hull's own centroid is an inner/back
-						// face from the frontier's point of view; only the outward ones --
-						// facing away from the bulk of the data -- are the frontier itself.
-						if (normal.dot(toCenter) < 0) keep.push(a.clone(), b.clone(), c.clone());
+						normal.crossVectors(ab, ac).normalize();
+						const tri = [a.clone(), b.clone(), c.clone()];
+						if (normal.x <= EPS && normal.y >= -EPS && normal.z >= -EPS) orthant.push(...tri);
+						if (-normal.x + normal.y + normal.z > 0) halfSpace.push(...tri);
 					}
+					// A frontier squashed flat along one axis can leave no face strictly
+					// inside the orthant; fall back to the faces that at least lean toward
+					// the better corner rather than drawing nothing.
+					const keep = orthant.length ? orthant : halfSpace;
 					if (keep.length) {
 						// Wireframe only, no fill: a translucent mesh still read as a solid
 						// from some angles even with only the outward faces kept, and the
@@ -3128,6 +3147,7 @@ export async function mountLmSpace(root, payload) {
 			// Without this the line reached toward release dates with no body drawn
 			// for them yet, which is what read as stuck on an old shape after
 			// scrubbing or switching into RACE.
+			if (raceOn) return; // RACE draws its own record line, every frame, on its rolling axis
 			const T = vis()
 				.filter(([, i]) => !raceOn || raceScale[i] >= 0.999)
 				.sort((a, b) => dNum(a[0]) - dNum(b[0]));
@@ -3153,10 +3173,16 @@ export async function mountLmSpace(root, payload) {
 	$('pareto-toggle').onclick = () => {
 		paretoOn = !paretoOn;
 		$('pareto-toggle').classList.toggle('on', paretoOn);
-		paretoGroup.visible = paretoOn;
-		paretoBGroup.visible = paretoOn;
-		buildParetoViz();
-		updateParetoTubes();
+		// Mid-morph the bodies are between two layouts, and a frontier built now
+		// would stay on that in-between shape. Leave it hidden; runFrame builds it
+		// once they settle.
+		const settled = morph >= 1;
+		paretoGroup.visible = paretoOn && settled;
+		paretoBGroup.visible = paretoOn && settled;
+		if (settled || !paretoOn) {
+			buildParetoViz();
+			updateParetoTubes();
+		}
 	};
 
 	/* ---------- views ---------- */
@@ -3540,6 +3566,244 @@ export async function mountLmSpace(root, payload) {
 		(laneOf.get(MODELS[i].c) / Math.max(CREATORS.length - 1, 1) - 0.5) * 2 * S;
 	const raceStart = (i) => norm(dNum(MODELS[i]), dLo, dHi); // 0..1 across the window
 
+	/* RACE draws on a chart of its own. It used to borrow the space box, whose
+	 * edges carried price ticks that mean nothing on a date axis, and with the
+	 * spiral's labels hidden the replay had no scale at all. Release date runs
+	 * along the bottom with a gridline at each new year, intelligence up the side
+	 * at the same levels the spine uses, and both are titled. Rebuilt on every
+	 * start so the labels follow the current locale. */
+	const RACE_Z = S + 2; // chart plane, just in front of the nearest lane
+	const raceChart = new THREE.Group();
+	raceChart.visible = false;
+	scene.add(raceChart);
+	function buildRaceChart() {
+		raceChart.traverse((o) => {
+			o.geometry?.dispose?.();
+			o.material?.dispose?.();
+		});
+		raceChart.clear();
+		const P = (x, y) => new THREE.Vector3(x, y, RACE_Z);
+		raceChart.add(lineSet([P(-RX, -S), P(RX, -S), P(-RX, -S), P(-RX, S)], '#ffffff', 0.4));
+		raceChart.add(lineSet([P(RX, -S), P(RX, S), P(-RX, S), P(RX, S)], '#ffffff', 0.1));
+		raceChart.add(tag(tr('lmspace.axis.releasedLabel'), P(RX + 16, -S), AX.x, 'tag tmonth raceax'));
+		raceChart.add(
+			tag(tr('lmspace.axis.intelligence') + ' ↑', P(-RX + 22, S - 6), AX.y, 'tag tmonth raceax')
+		);
+		// Pools the per-frame axis reuses: tick labels, gridlines, the record line.
+		raceTicksX = Array.from({ length: 16 }, () => {
+			const t = tag('', P(0, -S - 8), AX.x, 'tag spinenum raceax');
+			raceChart.add(t);
+			return t;
+		});
+		raceTicksY = Array.from({ length: 10 }, () => {
+			const t = tag('', P(-RX - 9, 0), AX.y, 'tag spinenum raceax');
+			raceChart.add(t);
+			return t;
+		});
+		raceGrid = new THREE.LineSegments(
+			new THREE.BufferGeometry(),
+			new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.07 })
+		);
+		raceGrid.geometry.setAttribute(
+			'position',
+			new THREE.BufferAttribute(new Float32Array(26 * 2 * 3), 3)
+		);
+		raceGrid.frustumCulled = false;
+		raceChart.add(raceGrid);
+		// Three passes of the same staircase, the outer two faint and nudged up and
+		// down, because LineBasicMaterial draws one pixel wide on most GPUs.
+		raceRecord = [0, 0.7, -0.7].map((dy, k) => {
+			const l = new THREE.Line(
+				new THREE.BufferGeometry(),
+				new THREE.LineBasicMaterial({
+					color: 0x98c379,
+					transparent: true,
+					opacity: k ? 0.35 : 0.95
+				})
+			);
+			l.geometry.setAttribute(
+				'position',
+				new THREE.BufferAttribute(new Float32Array(N * 2 * 3 + 6), 3)
+			);
+			l.position.y = dy;
+			l.frustumCulled = false;
+			l.renderOrder = 2;
+			raceChart.add(l);
+			return l;
+		});
+		raceRecTag = tag(tr('lmspace.race.newRecord'), P(0, 0), '#98c379', 'tag tmonth raceax');
+		raceRecTag.element.style.opacity = '0';
+		raceChart.add(raceRecTag);
+		raceRecHolder = -1;
+		raceRecAge = 9;
+	}
+
+	/* ---------- the rolling time axis ---------------------------------------- *
+	 * The right edge is always the date being replayed, and time before it is
+	 * log-compressed: the last few weeks get as much room as the year before
+	 * them, so each arrival lands in open space and the history it joins slides
+	 * left and squeezes up behind it. A fixed date axis spent most of the replay
+	 * on an empty chart filling in from the left. Intelligence rescales too,
+	 * easing its top up as records are set rather than reserving room for scores
+	 * nobody has reached yet.
+	 */
+	const DAY = 864e5;
+	const RACE_TAU = 45 * DAY; // the compression knee
+	let raceTop = iHi;
+	let raceTicksX = [],
+		raceTicksY = [],
+		raceGrid = null,
+		raceRecord = [],
+		raceRecTag = null;
+	let raceRecHolder = -1,
+		raceRecAge = 9;
+	const raceOrder = MODELS.map((m, i) => i)
+		.filter((i) => Number.isFinite(dNum(MODELS[i])))
+		.sort((a, b) => dNum(MODELS[a]) - dNum(MODELS[b]));
+	const raceNow = () => dLo + (dHi - dLo) * raceT;
+	function raceX(t, now) {
+		const span = Math.max(now - dLo, 90 * DAY);
+		const k = Math.log1p(Math.max(now - t, 0) / RACE_TAU) / Math.log1p(span / RACE_TAU);
+		return RX - 2 * RX * Math.min(k, 1);
+	}
+	const raceY = (v) =>
+		(THREE.MathUtils.clamp((v - iLo) / Math.max(raceTop - iLo, 1e-6), 0, 1.04) - 0.5) * 2 * S;
+	function niceStep(raw) {
+		const p = 10 ** Math.floor(Math.log10(raw)),
+			f = raw / p;
+		return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+	}
+	function updateRaceAxes(now, dt) {
+		const P = (x, y) => new THREE.Vector3(x, y, RACE_Z);
+		const grid = raceGrid.geometry.attributes.position;
+		let g = 0;
+		const line = (x0, y0, x1, y1) => {
+			if (g < grid.count - 1) {
+				grid.setXYZ(g++, x0, y0, RACE_Z);
+				grid.setXYZ(g++, x1, y1, RACE_Z);
+			}
+		};
+		// Month starts, newest first; January (the year) takes precedence, then any
+		// month that still has room -- the log compression decides which survive.
+		const cands = [];
+		const c = new Date(now);
+		c.setUTCDate(1);
+		c.setUTCHours(0, 0, 0, 0);
+		for (let n = 0; n < 60 && c.getTime() >= dLo - 31 * DAY; n++) {
+			const t = c.getTime(),
+				x = raceX(t, now);
+			if (x > -RX && x < RX - 4) cands.push({ t, x, jan: c.getUTCMonth() === 0 });
+			c.setUTCMonth(c.getUTCMonth() - 1);
+		}
+		const placed = [];
+		const GAP = 24;
+		for (const pass of [true, false]) {
+			for (const cd of cands) {
+				if (cd.jan !== pass || placed.length >= raceTicksX.length) continue;
+				if (placed.some((p) => Math.abs(p.x - cd.x) < GAP)) continue;
+				placed.push(cd);
+			}
+		}
+		raceTicksX.forEach((tg, k) => {
+			const cd = placed[k];
+			tg.visible = !!cd;
+			if (!cd) return;
+			const d = new Date(cd.t);
+			tg.element.textContent = cd.jan
+				? String(d.getUTCFullYear())
+				: d.toLocaleDateString(get(locale), { month: 'short', timeZone: 'UTC' });
+			tg.position.copy(P(cd.x, -S - 8));
+			line(cd.x, -S, cd.x, S);
+		});
+		// Intelligence levels at a round step for the range currently shown.
+		const step = niceStep((raceTop - iLo) / 3);
+		let k = 0;
+		for (
+			let v = Math.ceil(iLo / step) * step;
+			v <= raceTop && k < raceTicksY.length;
+			v += step, k++
+		) {
+			const y = raceY(v);
+			raceTicksY[k].visible = true;
+			raceTicksY[k].element.textContent = String(+v.toFixed(6));
+			raceTicksY[k].position.copy(P(-RX - 9, y));
+			line(-RX, y, RX, y);
+		}
+		for (; k < raceTicksY.length; k++) raceTicksY[k].visible = false;
+		grid.needsUpdate = true;
+		raceGrid.geometry.setDrawRange(0, g);
+
+		// The record line: the Pareto frontier of release date against intelligence
+		// -- every model on it was smarter than anything released before it. Drawn
+		// as a staircase so it holds each record until the next one breaks it.
+		let best = -Infinity,
+			holder = -1;
+		const pts = [];
+		for (const i of raceOrder) {
+			if (isOff(MODELS[i]) || raceStart(i) > raceT || MODELS[i].i == null) continue;
+			if (MODELS[i].i > best) {
+				best = MODELS[i].i;
+				const x = to[i].x,
+					y = to[i].y;
+				if (pts.length) pts.push([x, pts[pts.length - 1][1]]);
+				pts.push([x, y]);
+				holder = i;
+			}
+		}
+		if (pts.length) pts.push([RX, pts[pts.length - 1][1]]);
+		for (const l of raceRecord) {
+			const a = l.geometry.attributes.position;
+			pts.forEach(([x, y], n) => a.setXYZ(n, x, y, RACE_Z));
+			a.needsUpdate = true;
+			l.geometry.setDrawRange(0, pts.length);
+		}
+		// A new record is called out on the body that set it, briefly.
+		if (holder !== raceRecHolder) {
+			if (raceRecHolder !== -1) raceRecAge = 0;
+			raceRecHolder = holder;
+		}
+		raceRecAge += dt;
+		if (holder !== -1) {
+			// Records land on the right edge, often at the top: keep the callout inside the chart.
+			raceRecTag.position.set(
+				Math.min(to[holder].x, RX - 18),
+				Math.min(to[holder].y + 12, S - 4),
+				RACE_Z
+			);
+			const o =
+				raceRecAge < 0.2
+					? raceRecAge / 0.2
+					: raceRecAge < 1.6
+						? 1
+						: Math.max(0, 1 - (raceRecAge - 1.6) / 0.4);
+			raceRecTag.element.style.opacity = String(o);
+		}
+	}
+
+	/** Frame the chart in whatever part of the stage the standings panel leaves
+	 *  free: wide enough for the date axis beside the panel, tall enough for the
+	 *  year labels under it. Re-run on resize, since the panel is a fixed pixel
+	 *  width and the stage is not. */
+	function frameRace() {
+		const a = stageW / stageH;
+		const panel = raceEl.offsetWidth ? (raceEl.offsetLeft + raceEl.offsetWidth + 10) / stageW : 0;
+		// hi stops short of the right edge: the top-right HUD controls and the
+		// leaders' name labels both need that strip, and the leaders sit top-right.
+		const lo = Math.min(panel + 0.03, 0.4),
+			hi = 0.84;
+		const left = RX + 16,
+			right = RX + 36; // world units taken by the axis labels on either side
+		const W = Math.max((left + right) / (hi - lo), S * 2.5 * a);
+		orthoZoom = W / a;
+		sizeOrtho();
+		// x such that the chart's left labels land at `lo` across the stage
+		const cx = -left - (lo - 0.5) * W;
+		camera.position.set(cx, S * 0.06, 300);
+		yawPitch.yaw = 0;
+		yawPitch.pitch = 0;
+		vel.set(0, 0, 0);
+	}
+
 	function startRace() {
 		if (missionOn) stopMission();
 		// The race runs along the release-date axis, so it needs a timeline layout
@@ -3547,8 +3811,11 @@ export async function mountLmSpace(root, payload) {
 		// scrubbable replay needs a straight track to read progress along, and
 		// setView('time') would leave the spiral's spine up and the box down.
 		setView('time');
-		frame.visible = true;
+		frame.visible = false;
 		timeSpineGroup.visible = false;
+		buildRaceChart();
+		raceChart.visible = true;
+		raceTop = iLo + 10;
 		morph = 1;
 		for (let i = 0; i < N; i++) {
 			to[i].copy(posRace(MODELS[i], i));
@@ -3570,16 +3837,12 @@ export async function mountLmSpace(root, payload) {
 		// perfectly vertical with no perspective to bend either. Free look and
 		// WASD are also switched off for as long as raceOn holds, above.
 		setProjection('ortho');
-		orthoZoom = S * 2.3;
-		sizeOrtho();
-		camera.position.set(0, 0, 300);
-		yawPitch.yaw = 0;
-		yawPitch.pitch = 0;
-		vel.set(0, 0, 0);
 		renderRacePanel();
+		frameRace();
 	}
 	function stopRace() {
 		raceOn = false;
+		raceChart.visible = false;
 		streamPts.visible = false;
 		raceBob.fill(0);
 		raceScale.fill(1);
@@ -3709,11 +3972,21 @@ export async function mountLmSpace(root, payload) {
 			}
 		}
 		const now = performance.now() / 1000;
+		const date = raceNow();
+		// Ease the top of the intelligence axis toward the best score shipped so far.
+		let liveMax = iLo + 10;
+		for (let i = 0; i < N; i++)
+			if (raceStart(i) <= raceT && !isOff(MODELS[i]) && MODELS[i].i > liveMax)
+				liveMax = MODELS[i].i;
+		raceTop += (liveMax * 1.06 - raceTop) * (1 - Math.exp(-dt * 2.5));
 		let s = 0;
 		for (let i = 0; i < N; i++) {
 			const m = MODELS[i];
 			const born = raceStart(i);
 			const live = born <= raceT && !isOff(m);
+			const t = dNum(m);
+			to[i].set(Number.isFinite(t) ? raceX(t, date) : RX, raceY(m.i ?? iLo), raceLaneZ(i));
+			from[i].copy(to[i]);
 
 			// An unreleased model is scaled away rather than parked under the floor:
 			// sinking it merely moved the orb somewhere the camera can still fly to,
@@ -3733,9 +4006,9 @@ export async function mountLmSpace(root, payload) {
 			// time axis, spaced by its measured throughput. A fast model lays down a
 			// dense, quick trail and a slow one a sparse, crawling one, so the speed
 			// figure is legible as motion rather than decoration.
-			const y = (norm(m.i, iLo, iHi) - 0.5) * 2 * S + raceBob[i];
+			const y = to[i].y + raceBob[i];
 			const z = raceLaneZ(i);
-			const x0 = (born - 0.5) * 2 * S;
+			const x0 = to[i].x;
 			const rate = 0.1 + (Math.min(m.sp, 1200) / 1200) * 0.85; // trail speed
 			const reach = 10 + (Math.min(m.sp, 1200) / 1200) * 30; // trail length
 			for (let k = 0; k < STREAM_PER; k++, s++) {
@@ -3756,6 +4029,7 @@ export async function mountLmSpace(root, payload) {
 		streamGeo.attributes.position.needsUpdate = true;
 		streamGeo.attributes.color.needsUpdate = true;
 		streamGeo.attributes.aAlpha.needsUpdate = true;
+		updateRaceAxes(date, dt);
 		if (Math.floor(now * 4) !== lastPanel) {
 			lastPanel = Math.floor(now * 4);
 			renderRacePanel();
@@ -4068,6 +4342,11 @@ export async function mountLmSpace(root, payload) {
 			to[i].copy(view === 'space' ? posSpace(MODELS[i], i) : posTime(MODELS[i], i));
 		}
 		morph = 0;
+		// The frontier was last built around the clusters. Hidden through the morph
+		// like setView does, so runFrame rebuilds it once the bodies are back on
+		// their axes instead of leaving it standing where the clusters were.
+		paretoGroup.visible = false;
+		paretoBGroup.visible = false;
 	}
 	$('g-start').onclick = () => (gravityOn ? stopGravity() : startGravity());
 
@@ -4631,7 +4910,10 @@ export async function mountLmSpace(root, payload) {
 		if (!measureStage()) return;
 		persp.aspect = stageW / stageH;
 		persp.updateProjectionMatrix();
+		skyCam.aspect = stageW / stageH;
+		skyCam.updateProjectionMatrix();
 		sizeOrtho();
+		if (raceOn) frameRace();
 		renderer.setSize(stageW, stageH);
 		labelRenderer.setSize(stageW, stageH);
 		// Drives the shader's pixel-size LOD, so it has to track the stage too.
@@ -4653,40 +4935,10 @@ export async function mountLmSpace(root, payload) {
 	const clock = new THREE.Clock();
 	let rafId = 0;
 	let running = true;
-	/* Recording rig, gated behind a URL flag so it never ships to a real visitor.
-   A real clock ties frame content to wall-clock render speed, which is
-   unusable for a scripted flythrough: a dropped frame under a screenshot
-   capture would skip motion rather than just take longer. Freezing the clock
-   and stepping it by a fixed amount per capture makes the output identical
-   however slow the machine taking the screenshot actually is.
-   frameLoop stays requestAnimationFrame's own callback, taking the rAF
-   timestamp it's always taken and ignoring it exactly as before; the forced
-   step is a second, separate entry point, never the same function called two
-   ways, so a real frame can never be mistaken for a scripted one. */
-	let frozen = false;
-	const director = /[?&]director=1\b/.test(location.search)
-		? {
-				freeze() {
-					frozen = true;
-				},
-				step(dt) {
-					runFrame(dt ?? 1 / 60);
-				},
-				camera,
-				yawPitch,
-				vel,
-				setMode(id) {
-					const el = $(id);
-					if (el) el.click();
-				}
-			}
-		: null;
-	if (director) window.__lmDirector = director;
-
 	function frameLoop() {
 		if (!running) return;
-		if (!frozen) rafId = requestAnimationFrame(frameLoop);
-		if (!frozen) runFrame(Math.min(clock.getDelta(), 0.05));
+		rafId = requestAnimationFrame(frameLoop);
+		runFrame(Math.min(clock.getDelta(), 0.05));
 	}
 
 	function runFrame(dt) {
@@ -4736,18 +4988,7 @@ export async function mountLmSpace(root, payload) {
 		// glow breathes on a slower cycle still, so the nebulae seem to be lit rather
 		// than painted.
 		updateDust(driftClock);
-		sky.position.copy(camera.position);
-		// Under orthographic projection there is no perspective divide, so scaling
-		// the sphere changes nothing on screen -- the frustum simply maps a narrower
-		// slice of the panorama across the viewport and the texture looks magnified.
-		// Repeating the map instead puts the same amount of sky back in frame.
-		const rep = projMode === 'ortho' ? THREE.MathUtils.clamp(orthoZoom / 190, 1, 6) : 1;
-		if (Math.abs(skyTex.repeat.x - rep) > 0.01) {
-			// Horizontally only: the vertical axis runs pole to pole, and repeating it
-			// would stack a second sky on top of the first.
-			skyTex.repeat.set(rep, 1);
-			skyTex.needsUpdate = true;
-		}
+		skyCam.quaternion.copy(camera.quaternion);
 		sky.rotation.y += dt * 0.0132;
 		sky.rotation.z = 0.16 + Math.sin(driftClock * 0.021) * 0.05;
 		const breathe = 0.5 + 0.5 * Math.sin(driftClock * 0.15);
@@ -4817,6 +5058,9 @@ export async function mountLmSpace(root, payload) {
 		declutterLabels();
 		if (card.style.display === 'block') placeCard();
 
+		renderer.clear();
+		renderer.render(skyScene, skyCam);
+		renderer.clearDepth();
 		renderer.render(scene, camera);
 		labelRenderer.render(scene, camera);
 	}
