@@ -1,3 +1,4 @@
+import { LIVE_PARAMS } from '../../../src/lib/audio/live-dsp-params';
 /**
  * A recording Web Audio context.
  *
@@ -183,6 +184,30 @@ class Merger extends FakeNode {
 	}
 }
 
+/**
+ * A live-DSP worklet node: its parameters are real FakeParams built from the
+ * same descriptor list the processor declares, so a knob bound to one and a
+ * cable patched into one are recorded like any other param. What the
+ * processor would compute is not modelled -- that is the browser's job, and
+ * the audio tests hear it.
+ */
+export class FakeWorklet extends FakeNode {
+	parameters = new Map<string, FakeParam>();
+	/** Every message the engine posted, e.g. `{ stop: t }`. */
+	messages: unknown[] = [];
+	port = { postMessage: (m: unknown) => void this.messages.push(m) };
+	constructor(
+		public processor: string,
+		public options: { processorOptions?: Record<string, unknown> },
+		ctx: FakeCtx
+	) {
+		super('worklet', ctx);
+		this.numberOfInputs = 0;
+		for (const d of LIVE_PARAMS[processor] ?? [])
+			this.parameters.set(d.name, new FakeParam(this, d.name, d.defaultValue));
+	}
+}
+
 export class FakeCtx {
 	/** Every node made, in creation order. */
 	nodes: FakeNode[] = [];
@@ -225,6 +250,12 @@ export class FakeCtx {
 	}
 	createChannelSplitter(n = 2) {
 		return new Splitter('splitter', this, n);
+	}
+	createAudioWorkletNode(
+		name: string,
+		options: { processorOptions?: Record<string, unknown> } = {}
+	) {
+		return new FakeWorklet(name, options, this);
 	}
 	createChannelMerger(n = 2) {
 		return new Merger('merger', this, n);

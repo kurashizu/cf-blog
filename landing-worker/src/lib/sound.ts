@@ -1,3 +1,4 @@
+import { ensureLiveDsp } from './audio/live-dsp';
 import { writable } from 'svelte/store';
 /**
  * KRSZ™ Sound Engine — Web Audio API Synthesizer
@@ -87,8 +88,13 @@ class SoundEngine {
 
 	/**
 	 * Safe lazy initialization of AudioContext on first user interaction.
+	 *
+	 * `resume: false` creates the context without asking it to start, for a
+	 * page that needs it to exist before the first click -- the synth loads
+	 * its worklet into it on mount, so the first note played already has it.
+	 * Asking a context to start with no gesture only earns a console warning.
 	 */
-	public init(): AudioContext | null {
+	public init(resume = true): AudioContext | null {
 		if (typeof window === 'undefined') return null;
 
 		if (!this.ctx) {
@@ -112,6 +118,7 @@ class SoundEngine {
 				this.analyser.connect(this.ctx.destination);
 				this.generateNoiseBuffer();
 				const ctx = this.ctx;
+				void ensureLiveDsp(ctx).catch((e) => console.warn('[sound] live DSP failed to load:', e));
 				const sync = () => audioContextRunning.set(ctx.state === 'running');
 				ctx.onstatechange = sync;
 				sync();
@@ -121,7 +128,7 @@ class SoundEngine {
 			}
 		}
 
-		if (this.ctx && this.ctx.state === 'suspended') {
+		if (resume && this.ctx && this.ctx.state === 'suspended') {
 			this.ctx.resume().catch(() => {});
 		}
 

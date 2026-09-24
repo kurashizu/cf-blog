@@ -947,10 +947,9 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   linear 0..100, which the knob rule says is a number rather than an
 			   angle. The temptation was to call it "found by ear" and keep a dial,
 			   but a sustain is read as a percentage of the peak -- 60, 0, 100 --
-			   and those are values you write. `fixed` because there is no
-			   AudioParam to reach: the level is baked into the scheduled ramp when
-			   the note is built, so a cable could only be read at note-on. */
-			{ key: 'envS', label: 'S', min: 0, max: 100, step: 0.1, def: 60, unit: '%', field: true, fixed: true },
+			   and those are values you write. Live like the other three: the
+			   envelope runs in the worklet and reads each of them per sample. */
+			{ key: 'envS', label: 'S', min: 0, max: 100, step: 0.1, def: 60, unit: '%', field: true },
 			{ key: 'envR', label: 'R', min: 0, max: 20, step: 0.0001, def: 0.2, unit: 's', field: true },
 			/* Linear or exponential, because they are different shapes and the ear
 			   only agrees with one of them per destination: a linear fall to

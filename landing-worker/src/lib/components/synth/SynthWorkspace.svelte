@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { soundEngine } from '../../sound';
 	import { initMidi } from '../../stores/synth-midi';
 	import { tryLoadSharedPatch } from '../../stores/synth-patch';
 	import { stop as stopSequencer } from '../../stores/synth-transport';
@@ -19,6 +20,10 @@
 	import ConfirmDialog from './ConfirmDialog.svelte';
 
 	onMount(() => {
+		/* The context exists before the first click so the live-DSP worklet is
+		   loaded into it by the time a key is pressed; `init` starts that load.
+		   Not resumed -- that still waits for a gesture. */
+		soundEngine.init(false);
 		tryLoadSharedPatch();
 		const stopMidi = initMidi();
 		// modularSynth's playback scheduler is two setIntervals (a 40ms audio

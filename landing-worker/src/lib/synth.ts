@@ -28,6 +28,8 @@ import {
 import { graphOf, type GraphCable, type RackGraph } from './stores/graph-model';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
+import { createLiveDsp, ensureLiveDsp } from './audio/live-dsp';
+import { ENV_PROCESSOR } from './audio/live-dsp-params';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
 import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
@@ -2242,54 +2244,39 @@ class ModularSynth {
            two, one on the level and one on the cutoff, at different speeds. An
            envelope welded into every source would be one per source and never
            the shape you wanted on the parameter you wanted it on. */
-				const dc = ctx.createConstantSource();
-				dc.offset.value = 1;
-				const g = ctx.createGain();
-				/* A floor of a tenth of a millisecond rather than one millisecond.
-        
-           `linearRampToValueAtTime` needs two distinct times or it does
-           nothing, so a floor there must be. But a click *is* a zero-length
-           attack, and percussion lives in the first millisecond -- clamping
-           there made every drum in the catalogue share one attack and took the
-           snap out of all of them. 0.0001 s is short enough to be a click and
-           long enough for the ramp to exist. */
-				const FLOOR = 0.0001;
-				const a = Math.max(FLOOR, p('envA', 0.005));
-				const d = Math.max(FLOOR, p('envD', 0.2));
-				const sus = Math.min(1, Math.max(0, p('envS', 60) / 100));
-				const r = Math.max(FLOOR, p('envR', 0.2));
-				/* Linear or exponential, because they are not the same shape and the
-           ear only agrees with one of them.
-        
-           A linear fall to silence sounds like it stops abruptly at the end; a
-           decaying exponential is what a struck string does and what a level
-           should follow. A linear *rise* is right for an attack, though, and
-           for anything driving a frequency -- so this is a choice rather than a
-           fixed answer.
-        
-           `exponentialRampToValueAtTime` cannot reach or pass through zero, so
-           the exponential path aims at a floor just under audibility and the
-           final release still lands on a real zero. Without that the node keeps
-           a residual offset for the life of the voice. */
-				const EXP_FLOOR = 0.0001;
-				const curved = Math.round(p('envCurve', 0)) === 1;
-				const rampTo = (v: number, when: number) => {
-					if (curved) g.gain.exponentialRampToValueAtTime(Math.max(EXP_FLOOR, v), when);
-					else g.gain.linearRampToValueAtTime(v, when);
-				};
-				const peak = t + a;
-				const settled = peak + d;
-				const release = t + Math.max(a + d, heldSec);
-				g.gain.setValueAtTime(curved ? EXP_FLOOR : 0, t);
-				rampTo(1, peak);
-				rampTo(Math.max(EXP_FLOOR, sus), settled);
-				g.gain.setValueAtTime(Math.max(EXP_FLOOR, sus), release);
-				rampTo(EXP_FLOOR, release + r);
-				// Exponential cannot land on zero, so the last step is a plain set.
-				if (curved) g.gain.setValueAtTime(0, release + r);
-				dc.connect(g);
-				sources.push(dc);
-				return { in: null, out: g, mod };
+				/* Built in the live-DSP worklet, so every knob is a live parameter.
+
+           It used to be a constant through a gain whose automation was written
+           once, at the note: attack, decay and release baked into a schedule
+           the moment it was built. A cable into ATTACK could only be read as
+           a number at note-on, and a moving signal there -- an LFO, another
+           envelope -- was read as nothing, which made the attack zero. The
+           processor steps the same shape per sample and reads each time as it
+           goes (see live-dsp.worklet.ts), so turning or patching one moves the
+           envelope while it plays.
+
+           The gate is the note: up at `t`, down when it is held until. The
+           processor starts the release once the gate is down *and* the decay
+           has finished, which is what `t + max(a + d, held)` meant here. The
+           floors (a tenth of a millisecond on each time, the exponential
+           floor under silence) live in the processor now, beside the ramps
+           they exist for. */
+				const env = createLiveDsp(ctx, ENV_PROCESSOR, {
+					numberOfInputs: 0,
+					numberOfOutputs: 1,
+					outputChannelCount: [1],
+					processorOptions: { curved: Math.round(p('envCurve', 0)) === 1 }
+				});
+				if (!env) return null;
+				knob(env.param('attack'), 'envA', 0.005);
+				knob(env.param('decay'), 'envD', 0.2);
+				knobPct(env.param('sustain'), 'envS', 60);
+				knob(env.param('release'), 'envR', 0.2);
+				const gate = env.param('gate');
+				gate.setValueAtTime(1, t);
+				gate.setValueAtTime(0, t + heldSec);
+				sources.push(env.source);
+				return { in: null, out: env.node, mod };
 			}
 
 			case 'excite': {
@@ -7323,6 +7310,8 @@ class ModularSynth {
 		const seconds = this.getPatternSeconds() + tailSeconds;
 		const frames = Math.ceil(seconds * sampleRate);
 		const offline = new OfflineAudioContext(2, frames, sampleRate);
+		// Voices build worklet nodes, and an offline context loads its own copy.
+		await ensureLiveDsp(offline);
 
 		const live = this.graphCache();
 		const liveVoiceKeys = new Set(this.activeVoices.keys());

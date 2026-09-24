@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ensureLiveDsp } from '$lib/audio/live-dsp';
 	/**
 	 * A bench for hearing whether a patch does what it says.
 	 *
@@ -80,6 +81,7 @@
 		const rate = 44100;
 		const frames = Math.ceil(seconds * rate);
 		const offline = new OfflineAudioContext(2, frames, rate);
+		await ensureLiveDsp(offline);
 		const S = modularSynth as unknown as {
 			renderCtx: unknown;
 			renderMaster: GainNode | null;
@@ -208,6 +210,7 @@
 		const rate = 44100;
 		const frames = Math.ceil(seconds * rate);
 		const offline = new OfflineAudioContext(2, frames, rate);
+		await ensureLiveDsp(offline);
 		const S = modularSynth as unknown as {
 			renderCtx: unknown;
 			renderMaster: GainNode | null;
@@ -308,6 +311,7 @@
 		const rate = 44100;
 		const frames = Math.ceil(seconds * rate);
 		const offline = new OfflineAudioContext(2, frames, rate);
+		await ensureLiveDsp(offline);
 		const S = modularSynth as unknown as {
 			renderCtx: unknown;
 			renderMaster: GainNode | null;
