@@ -249,3 +249,49 @@ describe('knobs on the audio path follow a signal', () => {
 		expect(Math.abs(growth(held) - 1)).toBeLessThan(0.1);
 	});
 });
+
+describe("EXCITE's LEN takes a signal", () => {
+	it('a signal of 150 strikes for 150 ms, as typing 150 does', async () => {
+		/* LEN was the length of an automation curve written at the note, and a
+		   moving source read as 0 -- clamped to a 1 ms tick. It is the decay of
+		   a live envelope now, so TO-SIG carrying 150 strikes as long as the
+		   field set to 150 does.
+
+		   Read as the energy of the first 100 ms: an exponential burst's energy
+		   grows with its length, so 150 ms reads about sqrt(150 / 8) = 4.3x the
+		   8 ms default, and the old 1 ms tick a tenth of that. */
+		const strike = (via: 'typed' | 'signal') => ({
+			advanced: true,
+			rackGraph: {
+				nodes: [
+					{ id: 'entry', type: 'in' },
+					{ id: 'output', type: 'out' },
+					{ id: 'ex', type: 'excite' },
+					{ id: 'cv', type: 'const' },
+					{ id: 'ts', type: 'tosig' }
+				],
+				cables: [
+					wire('entry', 'then', 'output', 'exec'),
+					wire('ex', 'out', 'output', 'in'),
+					...(via === 'signal'
+						? [wire('cv', 'out', 'ts', 'level'), wire('ts', 'out', 'ex', 'exLength')]
+						: [])
+				]
+			},
+			graphParams: {
+				'cv.kind': 6, // F32
+				'cv.value': 150,
+				...(via === 'typed' ? { 'ex.exLength': 150 } : {})
+			}
+		});
+		const typed = await render(strike('typed'));
+		const signal = await render(strike('signal'));
+		const byDefault = await render({
+			...strike('typed'),
+			graphParams: {}
+		});
+		expect(typed.ok && signal.ok && byDefault.ok).toBe(true);
+		expect(typed.envelope[0]).toBeGreaterThan(2.5 * byDefault.envelope[0]);
+		expect(Math.abs(signal.envelope[0] - typed.envelope[0])).toBeLessThan(0.2 * typed.envelope[0]);
+	});
+});

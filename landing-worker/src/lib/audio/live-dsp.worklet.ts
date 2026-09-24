@@ -97,9 +97,14 @@ class EnvProcessor extends StoppableProcessor {
 	private level = 0;
 	private releaseFrom = 0;
 	private curved: boolean;
-	constructor(options?: { processorOptions?: { curved?: boolean } }) {
+	private linearAttack: boolean;
+	constructor(options?: { processorOptions?: { curved?: boolean; linearAttack?: boolean } }) {
 		super(options);
 		this.curved = !!options?.processorOptions?.curved;
+		/* A strike (EXCITE's burst) rises in a straight line and falls on a
+		   curve: an exponential rise from the floor would spend most of a
+		   0.4 ms attack inaudible. */
+		this.linearAttack = !!options?.processorOptions?.linearAttack;
 	}
 	process(_inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
 		const out = outputs[0]?.[0];
@@ -121,7 +126,7 @@ class EnvProcessor extends StoppableProcessor {
 				this.level = this.curved ? EXP_FLOOR : 0;
 			}
 			if (this.stage === ATTACK) {
-				if (this.curved) this.level *= Math.pow(1 / EXP_FLOOR, dt / attack);
+				if (this.curved && !this.linearAttack) this.level *= Math.pow(1 / EXP_FLOOR, dt / attack);
 				else this.level += dt / attack;
 				if (this.level >= 1) {
 					this.level = 1;

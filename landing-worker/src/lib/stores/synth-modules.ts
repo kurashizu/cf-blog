@@ -1192,8 +1192,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'exLength', label: 'LEN', min: 0.5, max: 200, step: 0.1, def: 8, unit: 'ms', field: true, fixed: true },
-			{ key: 'hardness', label: 'HARD', min: 0, max: 100, step: 1, def: 50, unit: '%', field: true, fixed: true },
+			{ key: 'exLength', label: 'LEN', min: 0.5, max: 200, step: 0.1, def: 8, unit: 'ms', field: true },
+			{ key: 'hardness', label: 'HARD', min: 0, max: 100, step: 1, def: 50, unit: '%', field: true },
 			{ key: 'exTone', label: 'TONE', min: 200, max: 18000, step: 10, def: 3000, unit: 'Hz', scale: 'log' }
 		]
 	},

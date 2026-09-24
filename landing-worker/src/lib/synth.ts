@@ -2311,26 +2311,36 @@ class ModularSynth {
 				const tone = ctx.createBiquadFilter();
 				tone.type = 'lowpass';
 				knob(tone.frequency, 'exTone', 3000);
-				// A harder strike is a brighter, tighter contact.
-				tone.Q.value = 0.7 + (p('hardness', 50) / 100) * 3;
-
+				/* HARD sharpens the contact by resonating the tone filter: Q runs
+           0.7..3.7 across the knob. Linear, so a scaling gain carries a cable
+           in the knob's own units onto Q, over the 0.7 floor. */
+				knobAt(tone.Q, 'hardness', 50, 0.03);
+				tone.Q.value += 0.7;
+				/* The burst is ENV's processor struck once: a 0.4 ms straight rise,
+           then an exponential fall that reaches the floor after LEN. It was an
+           automation curve written at the note, so LEN was read once; as a
+           decay parameter it is live. The gate drops straight away, so once
+           the fall is done the release finishes it to silence. Every fallback
+           is the number the card prints -- an untouched LEN is absent from
+           the patch, and the default is what plays. */
+				const burst = createLiveDsp(ctx, ENV_PROCESSOR, {
+					numberOfInputs: 0,
+					numberOfOutputs: 1,
+					outputChannelCount: [1],
+					processorOptions: { curved: true, linearAttack: true }
+				});
+				if (!burst) return null;
+				burst.param('attack').value = 0.0004;
+				knobAt(burst.param('decay'), 'exLength', 8, 0.001, (v) => Math.max(0.001, v));
+				burst.param('sustain').value = 0;
+				burst.param('release').value = 0.002;
+				const gate = burst.param('gate');
+				gate.setValueAtTime(1, t);
+				gate.setValueAtTime(0, t + 0.0001);
+				sources.push(burst.source);
 				const g = ctx.createGain();
-				/* 8, which is what the card prints. The fallback said 6, so an EXCT
-           dragged out of the palette and left alone struck for six
-           milliseconds while its own LEN field read 8 -- and typing 8 into it,
-           the value already shown, lengthened the contact. Same shape as
-           STRING's MIX: an untouched knob is absent from the patch, so the
-           engine's number is the one that plays and the card's is the one that
-           is read. */
-				const len = Math.max(0.001, p('exLength', 8) / 1000);
-				/* A burst, not a tone: up in well under a millisecond and gone by LEN.
-           Ending on an exponential leaves a step to silence, so it finishes on
-           a short linear ramp to zero. */
-				g.gain.setValueAtTime(0, t);
-				g.gain.linearRampToValueAtTime(1, t + 0.0004);
-				g.gain.exponentialRampToValueAtTime(0.0001, t + len);
-				g.gain.linearRampToValueAtTime(0, t + len + 0.002);
-
+				g.gain.value = 0;
+				burst.node.connect(g.gain);
 				nz.connect(tone);
 				tone.connect(g);
 				sources.push(nz);
