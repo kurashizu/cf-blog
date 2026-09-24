@@ -255,6 +255,8 @@ export default {
 			'The strike, pluck or breath that starts the sound. Every acoustic instrument begins with one.',
 		'synthPatch.mod.string':
 			'A vibrating string: length from the key, damping and stiffness from the knobs. Piano, guitar, bass, bowed strings.',
+		'synthPatch.mod.wire':
+			'A string you strike: what arrives at IN runs round a loop one period long, losing highs on every trip. Hit it with EXCT for a piano, a harp or a guitar.',
 		'synthPatch.mod.tube':
 			'A resonating air column. Odd harmonics for a clarinet, all of them for a flute or brass.',
 		'synthPatch.mod.modes': 'Three tuned resonances at once, the way a drum head or a bell rings.',
@@ -806,6 +808,8 @@ export default {
 		'synthPatch.mod.excite': '起振：敲击、拨弦或吹气。所有原声乐器都从这里开始。',
 		'synthPatch.mod.string':
 			'振动的弦：长度取自琴键，阻尼和劲度由旋钮控制。钢琴、吉他、贝斯、弓弦乐器。',
+		'synthPatch.mod.wire':
+			'被敲击的弦：送进 IN 的声音在一个周期长的回路里来回传播，每一趟都损失一些高频。用 EXCT 敲它，就是钢琴、竖琴或吉他。',
 		'synthPatch.mod.tube': '共鸣气柱。奇次谐波做单簧管，全谐波做长笛或铜管。',
 		'synthPatch.mod.modes': '同时三个共振模态，就像鼓面或钟体的振动方式。',
 		'synthPatch.mod.body': '乐器共鸣体：音板、琴箱或鼓腔。让一根弦变成一把吉他的东西。',
@@ -1293,6 +1297,8 @@ export default {
 		'synthPatch.mod.excite': '起振：敲擊、撥弦或吹氣。所有原聲樂器都從這裡開始。',
 		'synthPatch.mod.string':
 			'振動的弦：長度取自琴鍵，阻尼和勁度由旋鈕控制。鋼琴、吉他、貝斯、弓弦樂器。',
+		'synthPatch.mod.wire':
+			'被敲擊的弦：送進 IN 的聲音在一個週期長的迴路裡來回傳播，每一趟都損失一些高頻。用 EXCT 敲它，就是鋼琴、豎琴或吉他。',
 		'synthPatch.mod.tube': '共鳴氣柱。奇次諧波做單簧管，全諧波做長笛或銅管。',
 		'synthPatch.mod.modes': '同時三個共振模態，就像鼓面或鐘體的振動方式。',
 		'synthPatch.mod.body': '樂器共鳴體：音板、琴箱或鼓腔。讓一根弦變成一把吉他的東西。',
@@ -1805,6 +1811,8 @@ export default {
 			'音の始まりとなる打撃・撥弦・息。すべてのアコースティック楽器はここから始まります。',
 		'synthPatch.mod.string':
 			'振動する弦：長さは鍵盤から、減衰と剛性はノブから。ピアノ、ギター、ベース、擦弦楽器。',
+		'synthPatch.mod.wire':
+			'叩かれる弦：IN に届いた音が 1 周期の長さのループを巡り、一周ごとに高域を失う。EXCT で叩けばピアノ、ハープ、ギター。',
 		'synthPatch.mod.tube': '共鳴する気柱。奇数倍音でクラリネット、全倍音でフルートや金管。',
 		'synthPatch.mod.modes': '3つの共振モードを同時に。太鼓の皮や鐘の鳴り方です。',
 		'synthPatch.mod.body': '楽器の胴：響板、ボディ、シェル。ただの弦をギターに変えるものです。',
@@ -2357,6 +2365,8 @@ export default {
 			'소리를 시작하는 타격, 뜯기, 숨. 모든 어쿠스틱 악기는 여기서 시작합니다.',
 		'synthPatch.mod.string':
 			'진동하는 현: 길이는 건반에서, 감쇠와 강성은 노브에서. 피아노, 기타, 베이스, 찰현악기.',
+		'synthPatch.mod.wire':
+			'두드리는 현: IN으로 들어온 소리가 한 주기 길이의 루프를 돌며 매번 고음을 잃는다. EXCT로 치면 피아노, 하프, 기타.',
 		'synthPatch.mod.tube': '공명하는 공기 기둥. 홀수 배음은 클라리넷, 전체 배음은 플루트나 금관.',
 		'synthPatch.mod.modes': '세 개의 공진 모드를 동시에. 북 가죽이나 종이 울리는 방식입니다.',
 		'synthPatch.mod.body': '악기의 몸통: 향판, 통, 셸. 맨 현을 기타로 바꾸는 것.',

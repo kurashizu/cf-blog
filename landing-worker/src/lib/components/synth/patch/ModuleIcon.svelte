@@ -31,6 +31,8 @@
 		comp: 'M1 3h5l3 5 3 5h3M1 13h14',
 		// RESONATE
 		string: 'M1 8q4-5 7 0t6 0M1 8h1M14 8h1',
+		// A taut string between two bridges, and the hammer above it.
+		wire: 'M1 11h14M2 9v4M14 9v4M9 3v6M6 3h6',
 		tube: 'M2 4h12M2 12h12M2 4v8M14 4v8M6 8h4',
 		modes: 'M3 13V5M8 13V2M13 13V7M3 5l5-3 5 5',
 		space: 'M8 8m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M8 8m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0',

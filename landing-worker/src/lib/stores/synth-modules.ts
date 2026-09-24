@@ -1232,6 +1232,24 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		]
 	},
 	{
+		/* A struck string, where STRING is a switched-on one: the sound at IN is
+		   what sets it ringing, so a hammer from EXCT is the note. No MIX -- the
+		   dry strike is a cable to a SUM, not a knob welded on here. */
+		id: 'wire',
+		label: 'WIRE',
+		group: 'RESONATE',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.wire',
+		inputs: [AUDIO_IN, { id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'wireDecay', label: 'DCAY', min: 0.05, max: 30, step: 0.01, def: 4, unit: 's', field: true },
+			{ key: 'wireDamp', label: 'DAMP', min: 0, max: 100, step: 1, def: 30, unit: '%', field: true },
+			{ key: 'wireStiff', label: 'STIF', min: 0, max: 100, step: 1, def: 10, unit: '%', field: true },
+			{ key: 'wirePos', label: 'POS', min: 0, max: 50, step: 1, def: 12, unit: '%', field: true }
+		]
+	},
+	{
 		/* The same bank with only odd partials: a cylinder closed at one end.
 		 *
 		 * A clarinet rather than a flute, and the reason it is a separate card

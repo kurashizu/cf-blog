@@ -35,7 +35,8 @@ import {
 	SHAPE_PROCESSOR,
 	STRINGS_PROCESSOR,
 	MODES_PROCESSOR,
-	SPACE_PROCESSOR
+	SPACE_PROCESSOR,
+	WIRE_PROCESSOR
 } from './audio/live-dsp-params';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
@@ -582,6 +583,9 @@ class ModularSynth {
 		switch (id) {
 			case 'string':
 				return p.decayTime ?? 2;
+			// DCAY is the fundamental's T60; the upper modes are gone well before.
+			case 'wire':
+				return p.wireDecay ?? 4;
 			/* The fundamental (n=1) carries most of a tube's level and its decay
            exponent is n-independent at n=1, so its partial rings for the
            full DCAY setting -- not the capped 0.35s this used to return,
@@ -2464,6 +2468,31 @@ class ModularSynth {
 				mod.set('pitch', fm);
 				mod.set('pw', pw);
 				return { in: null, out: sum, mod };
+			}
+
+			case 'wire': {
+				/* A struck string: IN is added into a delay line one period long that
+           feeds back through the string's losses (see live-dsp.worklet.ts).
+           PITCH follows the cable when one is patched and the note when not;
+           a moving signal lands on the parameter and adds to the 0 `p` gives
+           it, the same way STRING's does. */
+				const wire = createLiveDsp(ctx, WIRE_PROCESSOR, {
+					numberOfInputs: 1,
+					numberOfOutputs: 1,
+					outputChannelCount: [1],
+					channelCount: 1,
+					channelCountMode: 'explicit'
+				});
+				if (!wire) return null;
+				const pitchIn = p('pitch', NaN);
+				wire.param('pitch').value = Number.isNaN(pitchIn) ? baseFreq : pitchIn;
+				mod.set('pitch', wire.param('pitch'));
+				knob(wire.param('decay'), 'wireDecay', 4);
+				knob(wire.param('damping'), 'wireDamp', 30);
+				knob(wire.param('stiffness'), 'wireStiff', 10);
+				knob(wire.param('position'), 'wirePos', 12);
+				sources.push(wire.source);
+				return { in: wire.node, out: wire.node, mod };
 			}
 
 			case 'space': {

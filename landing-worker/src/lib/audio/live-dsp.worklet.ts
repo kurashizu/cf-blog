@@ -24,6 +24,8 @@ import {
 	MODES_PROCESSOR,
 	SPACE_PARAMS,
 	SPACE_PROCESSOR,
+	WIRE_PARAMS,
+	WIRE_PROCESSOR,
 	type MapOptions
 } from './live-dsp-params';
 
@@ -444,6 +446,202 @@ class StringsProcessor extends StoppableProcessor {
 }
 
 registerProcessor(STRINGS_PROCESSOR, StringsProcessor);
+
+/* ── WIRE ───────────────────────────────────────────────────────────────── */
+
+/** Four allpasses of dispersion: enough to stretch a piano's upper partials
+    audibly sharp, few enough that the loop stays cheap. */
+const WIRE_DISPERSION = 4;
+const WIRE_BUFFER = 8192;
+/**
+ * STIF as an inharmonicity B (partial n at n f0 sqrt(1 + B n^2)), and the
+ * allpass corner that produces it. A first-order allpass's dispersion depends
+ * on where its corner sits relative to the fundamental, not on its
+ * coefficient alone -- one coefficient gave B 0 at A0 and 0.014 at C6 -- so
+ * the corner is placed at x times the fundamental, x read off this table of
+ * [ln B, ln x], solved numerically for four stages. Holds within ~20% of the
+ * target up to C4; above C5 the corner would have to pass Nyquist's side of
+ * zero, so the stretch falls short there, where few partials fit anyway.
+ */
+const WIRE_STIFF: [number, number][] = [
+	[-10.4143, 3.1966],
+	[-9.7212, 2.9978],
+	[-9.028, 2.7868],
+	[-8.3349, 2.5568],
+	[-7.6417, 2.3121],
+	[-6.9486, 2.0501],
+	[-6.2554, 1.7672],
+	[-5.5623, 1.4689],
+	[-4.8691, 1.1693],
+	[-4.2687, 0.9276]
+];
+const wireCorner = (lnB: number): number => {
+	const t = WIRE_STIFF;
+	if (lnB <= t[0][0]) return Math.exp(t[0][1]);
+	for (let i = 1; i < t.length; i++)
+		if (lnB <= t[i][0]) {
+			const u = (lnB - t[i - 1][0]) / (t[i][0] - t[i - 1][0]);
+			return Math.exp(t[i - 1][1] + u * (t[i][1] - t[i - 1][1]));
+		}
+	return Math.exp(t[t.length - 1][1]);
+};
+
+/**
+ * A string as a travelling wave: whatever arrives at the input is added into
+ * a delay line one period long, which feeds back through the string's losses.
+ *
+ * STRING is a bank of sixteen decaying sines, struck by its gate. It cannot be
+ * hit -- its input is mixed past the partials, not into them -- and sixteen
+ * partials of A0 end at 440 Hz. This one is hit: a hammer's burst excites
+ * every mode the loop supports, as many as fit under Nyquist, and a harder,
+ * brighter burst leaves more energy in the upper ones.
+ *
+ * This model was tried before as a DelayNode in a feedback loop, and Web
+ * Audio adds at least one 128-sample block to any cycle, which capped the
+ * loop gain near 0.90 -- 0.45 s of ring. Run here a sample at a time, the loop
+ * is exactly as long as the pitch asks.
+ *
+ * The loop, per sample: delay line (cubic Lagrange read, so the period is
+ * fractional and PITCH can glide) -> one-pole lowpass (DAMP) -> four
+ * first-order allpasses (STIF) -> gain (DCAY) -> back in, plus
+ * the input through a comb at the strike point (POS: a hammer a fraction p
+ * along cannot excite the modes with a node there, so every 1/p-th partial is
+ * missing).
+ *
+ * Every setting means the same thing on every key:
+ * - DCAY is the string's own loss, the same for every partial: the
+ *   fundamental's T60 with DAMP at 0.
+ * - DAMP is a loss by absolute frequency on top of it: a partial at f loses
+ *   DAMP x 40 x (f / 1 kHz)^2 dB/s more, so 1 kHz rings the same whether it
+ *   is a C6 fundamental or an A0's 36th partial -- and a C8 fundamental, a
+ *   4 kHz partial, dies fast, as it does on a piano. Set per key rather than
+ *   as one coefficient: a fixed lowpass takes the same bite every trip round
+ *   the loop, and C8 goes round 4186 times a second.
+ * - STIF is an inharmonicity B, log-scaled from 3e-5 (1%) to 1.4e-2 (100%);
+ *   0 is a perfectly harmonic string.
+ *
+ * The loop gain never exceeds 1 at any frequency: the lowpass is 1 at DC and
+ * less above, the allpasses are 1, and the gain is below 1. Making DCAY the
+ * fundamental's T60 whatever DAMP said was tried, with a DC blocker in the
+ * loop so the gain could pass 1 -- and the blocker's phase lead put a mode
+ * near 50 Hz where the loop gain was still ~1, which grew to NaN in 3 s.
+ * - PITCH is exact: the delay is shortened by every stage's phase delay at
+ *   the fundamental, worked out per block.
+ */
+class WireProcessor extends StoppableProcessor {
+	static get parameterDescriptors() {
+		return WIRE_PARAMS;
+	}
+	private line = new Float32Array(WIRE_BUFFER);
+	private hist = new Float32Array(WIRE_BUFFER);
+	private w = 0;
+	private lp = 0;
+	private apX = new Float64Array(WIRE_DISPERSION);
+	private apY = new Float64Array(WIRE_DISPERSION);
+	private dcX = 0;
+	private dcY = 0;
+	// Worked out per block.
+	private delay = 100;
+	private gain = 0.99;
+	private a = 0;
+	private c = 0;
+	private strike = 0;
+	/** Phase delay, in samples, of the loop's filters at angular frequency w. */
+	private filterDelay(w: number, a: number, c: number): number {
+		const sin = Math.sin(w);
+		const cos = Math.cos(w);
+		// One-pole lowpass (1 - a) / (1 - a z^-1).
+		const lpPhase = -Math.atan2(a * sin, 1 - a * cos);
+		// Allpass (c + z^-1) / (1 + c z^-1), four of them.
+		const apPhase = Math.atan2(-sin, c + cos) - Math.atan2(-c * sin, 1 + c * cos);
+		return -(lpPhase + WIRE_DISPERSION * apPhase) / w;
+	}
+	private plan(p: Params): void {
+		const sr = sampleRate;
+		const f0 = Math.max(20, Math.min(sr / 6, at(p.pitch, 0)));
+		const period = sr / f0;
+		const w0 = (TWO_PI * f0) / sr;
+		const t60 = Math.max(0.01, at(p.decay, 0));
+		const damp = Math.max(0, Math.min(100, at(p.damping, 0))) / 100;
+		const stiff = Math.max(0, Math.min(100, at(p.stiffness, 0))) / 100;
+		const pos = Math.max(0, Math.min(50, at(p.position, 0))) / 100;
+		/* DAMP: per trip the lowpass takes 4.343 b w^2 dB at small w, and the
+		   loop makes f0 trips a second, so b follows from the loss wanted at
+		   1 kHz and the pitch. b = a / (1 - a)^2, solved for a. */
+		const w1k = (TWO_PI * 1000) / sr;
+		const b = (damp * 40) / (f0 * 4.343 * w1k * w1k);
+		this.a = b > 0 ? Math.min(0.999, (2 * b + 1 - Math.sqrt(4 * b + 1)) / (2 * b)) : 0;
+		this.c =
+			stiff > 0
+				? Math.max(
+						-0.985,
+						Math.min(0, -1 + wireCorner(Math.log(3e-5 * Math.pow(466.7, stiff))) * w0)
+					)
+				: 0;
+		this.delay = Math.max(
+			3,
+			Math.min(WIRE_BUFFER - 4, period - this.filterDelay(w0, this.a, this.c))
+		);
+		// DCAY: 60 dB in t60, a trip at a time.
+		this.gain = Math.min(0.99999, Math.pow(10, (-3 * (period / sr)) / t60));
+		this.strike = pos > 0 ? Math.max(1, Math.round(pos * period)) : 0;
+	}
+	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const out = outputs[0]?.[0];
+		if (!out) return !this.finished();
+		const input = inputs[0]?.[0];
+		const dt = 1 / sampleRate;
+		this.plan(p);
+		const line = this.line;
+		const hist = this.hist;
+		const mask = WIRE_BUFFER - 1;
+		const { delay, gain, a, c, strike } = this;
+		const whole = Math.floor(delay);
+		const f = delay - whole;
+		/* Cubic Lagrange over the four samples around the read point, for a
+		   delay of `whole + f`: taps at delays whole-1 .. whole+2, so the delay
+		   measured from the first tap is 1 + f. */
+		const d = 1 + f;
+		const h0 = (-(d - 1) * (d - 2) * (d - 3)) / 6;
+		const h1 = (d * (d - 2) * (d - 3)) / 2;
+		const h2 = (-d * (d - 1) * (d - 3)) / 2;
+		const h3 = (d * (d - 1) * (d - 2)) / 6;
+		for (let i = 0; i < out.length; i++) {
+			if (currentTime + i * dt >= this.stopAt) {
+				out[i] = 0;
+				continue;
+			}
+			const x = input ? input[i] : 0;
+			hist[this.w] = x;
+			const hit = strike ? x - hist[(this.w - strike) & mask] : x;
+			const r = this.w - whole;
+			const y =
+				h0 * line[(r + 1) & mask] +
+				h1 * line[r & mask] +
+				h2 * line[(r - 1) & mask] +
+				h3 * line[(r - 2) & mask];
+			this.lp = (1 - a) * y + a * this.lp;
+			let v = this.lp;
+			for (let k = 0; k < WIRE_DISPERSION; k++) {
+				const yk = c * v + this.apX[k] - c * this.apY[k];
+				this.apX[k] = v;
+				this.apY[k] = yk;
+				v = yk;
+			}
+			const next = gain * v + hit;
+			line[this.w] = next;
+			this.w = (this.w + 1) & mask;
+			// And one on the way out, for the strike's own offset.
+			const o = next - this.dcX + 0.995 * this.dcY;
+			this.dcX = next;
+			this.dcY = o;
+			out[i] = o;
+		}
+		return !this.finished();
+	}
+}
+
+registerProcessor(WIRE_PROCESSOR, WireProcessor);
 
 /** A bandpass biquad in direct form I, RBJ's constant-0-dB-peak form (Web Audio's own). */
 class Bandpass {

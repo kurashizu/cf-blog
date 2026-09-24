@@ -193,7 +193,7 @@ everything: an envelope's attack is baked into the automation curve the moment
 it is written, a resonator's partial decays likewise, a convolver's room is a
 buffer generated at build. Those modules run in the **live-DSP AudioWorklet**
 (`src/lib/audio/live-dsp.worklet.ts`) instead -- ENV, MAP, SHAPE, STRING, TUBE,
-MODES, EXCITE's burst and SPACE -- where every setting is an a-rate
+WIRE, MODES, EXCITE's burst and SPACE -- where every setting is an a-rate
 AudioParam the processor reads per sample (or per 128-sample render block,
 for what is expensive to re-plan). `knob()` binds to those params exactly as it
 binds to a native one.
@@ -206,6 +206,31 @@ binds to a native one.
   a voice stops a processor like any source; the processor then returns
   `false` and is collected. An effect with a tail (SPACE) is stopped that much
   later, as a native effect with no `stop` rang on.
+
+### STRING rings on its own; WIRE has to be struck
+
+Two strings, because they answer different questions. STRING is sixteen
+decaying sines, started by its gate: it sounds when the note does, whatever
+reaches IN (which is mixed past the partials, not into them), and sixteen
+partials of A0 end at 440 Hz. WIRE is a digital waveguide -- a delay line one
+period long, fed back through its losses -- and IN is what excites it: silent
+until EXCT or anything else strikes it, and then ringing on every mode under
+Nyquist, the harder and brighter the strike, the more of them.
+
+Its knobs mean the same thing on every key: DCAY is the string's own loss
+(the fundamental's T60 at DAMP 0), DAMP an extra loss by absolute frequency
+(DAMP x 40 x (f / 1 kHz)^2 dB/s, so a C8 fundamental dies as fast as any other
+4 kHz partial), STIF an inharmonicity B (log, 3e-5 to 1.4e-2), POS the strike
+point's comb. PITCH is exact on every key and every setting: the delay is
+shortened by the filters' phase delay at the fundamental, per block.
+
+A feedback loop is the one module that can run away, and the rule that keeps
+it from doing so is that its gain never exceeds 1 at any frequency. A version
+that let the gain pass 1 to hold DCAY honest under heavy DAMP, with a DC
+blocker in the loop to stop the DC mode running away, grew to NaN in 3 s at
+C8: the blocker's phase lead made a new mode near 50 Hz where the gain was
+still 1. A NaN on a voice reaches the master chain and silences every track,
+so `tests/audio/wire.test.ts` renders every extreme of the four knobs.
 
 `fixed: true` is left for what is not a value that moves: a selector read once
 (TUBE's ODD), a moment in the execution chain (WAIT's GAP, ACT, OUT's SEC --

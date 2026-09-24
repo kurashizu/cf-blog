@@ -111,6 +111,23 @@ export const MODES_PARAMS: LiveParamDescriptor[] = [
 	a('gate', 0)
 ];
 
+export const WIRE_PROCESSOR = 'krsz-wire';
+
+/**
+ * WIRE: a string as a travelling wave -- a delay line one period long, fed
+ * back through the losses. `pitch` in Hz; `decay` is the fundamental's T60
+ * in seconds; `damping`, `stiffness` and `position` as the card's percent.
+ * No gate: it rings from whatever arrives at its input, which is what makes
+ * it struck rather than switched on.
+ */
+export const WIRE_PARAMS: LiveParamDescriptor[] = [
+	a('pitch', 220),
+	a('decay', 4),
+	a('damping', 30),
+	a('stiffness', 10),
+	a('position', 12)
+];
+
 export const SPACE_PROCESSOR = 'krsz-space';
 
 /**
@@ -125,5 +142,6 @@ export const LIVE_PARAMS: Record<string, LiveParamDescriptor[]> = {
 	[MAP_PROCESSOR]: MAP_PARAMS,
 	[SHAPE_PROCESSOR]: SHAPE_PARAMS,
 	[STRINGS_PROCESSOR]: STRINGS_PARAMS,
-	[MODES_PROCESSOR]: MODES_PARAMS
+	[MODES_PROCESSOR]: MODES_PARAMS,
+	[WIRE_PROCESSOR]: WIRE_PARAMS
 };
