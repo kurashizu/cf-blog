@@ -119,6 +119,42 @@
 		releaseManualNote($activeTrackId, idx);
 	}
 
+	/* A glissando: held down, the pointer plays whichever key it is over.
+
+	   Each key used to own its own mousedown, so pressing one and sliding off
+	   released it and the next key never heard about the button being down --
+	   one note per click, however far the hand travelled. The strip owns the
+	   gesture now and captures the pointer, so a drag that leaves the strip
+	   still ends where it should; the key under the pointer is looked up on
+	   every move, and changing key hands the note on. Pointer events cover
+	   touch as well, so a finger slides the same way. */
+	let glideIdx: number | null = null;
+	function keyAt(x: number, y: number): number | null {
+		const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>(
+			'[data-key-idx]'
+		);
+		return el ? Number(el.dataset.keyIdx) : null;
+	}
+	function glideTo(idx: number | null) {
+		if (idx === glideIdx) return;
+		if (glideIdx !== null) releaseKey(glideIdx);
+		glideIdx = idx;
+		if (idx !== null) pressKey(idx);
+	}
+	function glideStart(e: PointerEvent) {
+		if (e.button !== 0) return;
+		e.preventDefault();
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		glideTo(keyAt(e.clientX, e.clientY));
+	}
+	function glideMove(e: PointerEvent) {
+		if (glideIdx === null) return;
+		glideTo(keyAt(e.clientX, e.clientY));
+	}
+	function glideEnd() {
+		glideTo(null);
+	}
+
 	// ── QWERTY-as-piano: two rows (Z = base octave, Q = base+1), Ableton-style ──
 	let qwertyOn = $state(false);
 	let qwertyOctave = $state(4);
@@ -430,7 +466,13 @@
 	</div>
 
 	<div
-		class="relative h-12 w-full flex bg-black/80 rounded-xs border border-white/15 p-0.5 overflow-hidden"
+		onpointerdown={glideStart}
+		onpointermove={glideMove}
+		onpointerup={glideEnd}
+		onpointercancel={glideEnd}
+		onlostpointercapture={glideEnd}
+		role="presentation"
+		class="relative h-12 w-full flex bg-black/80 rounded-xs border border-white/15 p-0.5 overflow-hidden touch-none select-none"
 	>
 		{#if whiteKeys.length > 0}
 			<div class="flex w-full h-full gap-0.5">
@@ -438,14 +480,7 @@
 					{@const isPlaying = isKeyPlaying(wk.idx)}
 					{@const color = keyColorFor(wk.idx)}
 					<button
-						onmousedown={() => pressKey(wk.idx)}
-						onmouseup={() => releaseKey(wk.idx)}
-						onmouseleave={() => releaseKey(wk.idx)}
-						ontouchstart={(e) => {
-							e.preventDefault();
-							pressKey(wk.idx);
-						}}
-						ontouchend={() => releaseKey(wk.idx)}
+						data-key-idx={wk.idx}
 						class="flex-1 h-full rounded-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer transition-all border {isPlaying
 							? 'shadow-[0_0_10px_currentColor]'
 							: percussion && $activeKey === wk.idx
@@ -498,24 +533,7 @@
 				{@const leftPos = (bk.whiteKeyIndexBefore + 1) * keyWidthPct - keyWidthPct * 0.32}
 				{@const bWidth = keyWidthPct * 0.64}
 				<button
-					onmousedown={(e) => {
-						e.stopPropagation();
-						pressKey(bk.idx);
-					}}
-					onmouseup={(e) => {
-						e.stopPropagation();
-						releaseKey(bk.idx);
-					}}
-					onmouseleave={() => releaseKey(bk.idx)}
-					ontouchstart={(e) => {
-						e.preventDefault();
-						e.stopPropagation();
-						pressKey(bk.idx);
-					}}
-					ontouchend={(e) => {
-						e.stopPropagation();
-						releaseKey(bk.idx);
-					}}
+					data-key-idx={bk.idx}
 					class="absolute top-0 h-[62%] rounded-b-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer z-10 transition-all border {isPlaying
 						? 'shadow-[0_0_10px_currentColor]'
 						: percussion && $activeKey === bk.idx
