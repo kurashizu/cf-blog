@@ -722,6 +722,7 @@ class SoundEngine {
 	private visualizerDataArray: Uint8Array | null = null;
 	private visualizerFreqArray: Uint8Array | null = null;
 	private visualizerTimeArray: Uint8Array | null = null;
+	private visualizerFloatTimeArray: Float32Array | null = null;
 
 	public getAnalyser(): AnalyserNode | null {
 		this.init();
@@ -773,6 +774,18 @@ class SoundEngine {
 			return this.visualizerFreqArray;
 		}
 		return null;
+	}
+
+	/* The waveform as floats. A level meter needs the real values: bytes step
+	   in 1/128, which puts a floor near -42 dB under anything quiet. */
+	public getFloatTimeDomainData(): Float32Array | null {
+		if (!this.analyser) return null;
+		if (this.visualizerFloatTimeArray?.length !== this.analyser.fftSize)
+			this.visualizerFloatTimeArray = new Float32Array(this.analyser.fftSize);
+		this.analyser.getFloatTimeDomainData(
+			this.visualizerFloatTimeArray as unknown as Float32Array<ArrayBuffer>
+		);
+		return this.visualizerFloatTimeArray;
 	}
 
 	public getByteTimeDomainData(): Uint8Array | null {
@@ -965,6 +978,7 @@ export const sound = {
 	getVisualizerData: () => soundEngine.getVisualizerData(),
 	getByteFrequencyData: () => soundEngine.getByteFrequencyData(),
 	getByteTimeDomainData: () => soundEngine.getByteTimeDomainData(),
+	getFloatTimeDomainData: () => soundEngine.getFloatTimeDomainData(),
 	getAnalyser: () => soundEngine.getAnalyser(),
 	toggleMute: () => soundEngine.toggleMute(),
 	setMuted: (muted: boolean) => soundEngine.setMuted(muted),

@@ -34,7 +34,12 @@
 		const fftCtx = fftCanvas?.getContext('2d');
 		const waveCtx = waveCanvas?.getContext('2d');
 
-		let loudnessHistory: number[] = new Array(360).fill(-100);
+		/* One entry per frame, newest last, drawn right-aligned so the newest is
+		   always at the right edge. It used to start pre-filled with 360 entries
+		   and be drawn from the left, so on a canvas wider than 360 backing
+		   pixels -- any retina panel -- the head of the trace sat mid-canvas
+		   and took seconds to reach the edge the eye reads as "now". */
+		let loudnessHistory: number[] = [];
 		let animId = 0;
 		const minLog = Math.log10(20);
 		const maxLog = Math.log10(20000);
@@ -75,8 +80,9 @@
 				fftCanvas?.isConnected || waveCanvas?.isConnected || loudnessCanvas?.isConnected;
 			if (!shown) return;
 			const isMuted = $soundState.muted;
-			const freqData = sound.getByteFrequencyData();
-			const timeData = sound.getByteTimeDomainData();
+			// Each read runs the analyser, so only the one on screen asks.
+			const freqData = activeOutVisualizer === 'fft' ? sound.getByteFrequencyData() : null;
+			const timeData = activeOutVisualizer === 'scope' ? sound.getByteTimeDomainData() : null;
 
 			// FFT log-frequency spectrum
 			if (activeOutVisualizer === 'fft' && fftCanvas && fftCtx) {
@@ -227,67 +233,106 @@
 				loudCtx.fillStyle = 'rgba(10, 12, 16, 0.95)';
 				loudCtx.fillRect(0, 0, w, h);
 
+				/* RMS over the newest ~21 ms, not the analyser's whole 85 ms
+				   buffer: averaging four frames' worth of audio into each frame
+				   smeared every attack across the next several, which read as the
+				   meter lagging the sound. Floats, for the floor bytes put under
+				   quiet signals. */
+				const floatData = isMuted ? null : sound.getFloatTimeDomainData();
 				let sum = 0;
-				if (timeData && !isMuted) {
-					for (let i = 0; i < timeData.length; i++) {
-						const val = (timeData[i] - 128) / 128;
-						sum += val * val;
-					}
+				let n = 0;
+				if (floatData) {
+					n = Math.min(1024, floatData.length);
+					for (let i = floatData.length - n; i < floatData.length; i++)
+						sum += floatData[i] * floatData[i];
 				}
-				const rms = Math.sqrt(sum / (timeData?.length || 1));
-				const db = isMuted ? -100 : rms > 0 ? 20 * Math.log10(rms) : -100;
+				const rms = n ? Math.sqrt(sum / n) : 0;
+				const db = rms > 0 ? 20 * Math.log10(rms) : -100;
 
+				/* One CSS pixel per frame, whatever the DPR: a backing-store pixel
+				   per frame scrolled half as fast on a retina screen. */
+				const step = window.devicePixelRatio || 1;
 				loudnessHistory.push(db);
-				if (loudnessHistory.length > w) loudnessHistory.shift();
+				const keep = Math.ceil(w / step) + 1;
+				if (loudnessHistory.length > keep) loudnessHistory.splice(0, loudnessHistory.length - keep);
+
+				/* The scale. It ran -60..+6 with lines at 0, -6 and -12, which put
+				   all three in the top fifth of the panel with their labels
+				   stacked on each other and nothing marking the four fifths below,
+				   where most of a mix actually sits. Now -48..+3, a line every
+				   12 dB spread evenly down the height, each label centred on its
+				   own line, and the current level spelled out in the corner --
+				   a trace says how it has been moving, the number says where it is. */
+				const dpr = window.devicePixelRatio || 1;
+				const MAX_DB = 3;
+				const MIN_DB = -48;
+				const pad = 2 * dpr;
+				const mapDbToY = (val: number) =>
+					pad + (h - 2 * pad) * (1 - Math.max(0, Math.min(1, (val - MIN_DB) / (MAX_DB - MIN_DB))));
+				const barW = 5 * dpr;
+				const traceRight = w - barW - 3 * dpr;
 
 				loudCtx.save();
-				loudCtx.setLineDash([2, 3]);
-				loudCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
 				loudCtx.lineWidth = 1;
-				const mapDbToY = (val: number) => {
-					const maxDb = 6;
-					const minDb = -60;
-					return h - Math.max(0, Math.min(1, (val - minDb) / (maxDb - minDb))) * h;
-				};
-				const y0 = mapDbToY(0);
-				const y6 = mapDbToY(-6);
-				const y12 = mapDbToY(-12);
-				for (const y of [y0, y6, y12]) {
+				loudCtx.font = labelFont();
+				loudCtx.textBaseline = 'middle';
+				for (const mark of [0, -12, -24, -36]) {
+					const y = Math.round(mapDbToY(mark)) + 0.5;
+					loudCtx.setLineDash(mark === 0 ? [] : [2 * dpr, 3 * dpr]);
+					loudCtx.strokeStyle =
+						mark === 0 ? 'rgba(224, 108, 117, 0.35)' : 'rgba(255, 255, 255, 0.12)';
 					loudCtx.beginPath();
-					loudCtx.moveTo(0, y);
-					loudCtx.lineTo(w, y);
+					loudCtx.moveTo(22 * dpr, y);
+					loudCtx.lineTo(traceRight, y);
 					loudCtx.stroke();
+					loudCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+					loudCtx.textAlign = 'right';
+					loudCtx.fillText(String(mark), 18 * dpr, y);
 				}
 				loudCtx.restore();
 
-				loudCtx.font = labelFont();
-				loudCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-				loudCtx.fillText('0dB', 2, y0 - 2);
-				loudCtx.fillText('-6', 2, y6 - 2);
-				loudCtx.fillText('-12', 2, y12 - 2);
-
 				loudCtx.beginPath();
-				for (let i = 0; i < loudnessHistory.length; i++) {
+				const last = loudnessHistory.length - 1;
+				const xAt = (i: number) => traceRight - (last - i) * step;
+				for (let i = 0; i <= last; i++) {
 					const y = mapDbToY(loudnessHistory[i]);
-					if (i === 0) loudCtx.moveTo(i, y);
-					else loudCtx.lineTo(i, y);
+					if (i === 0) loudCtx.moveTo(xAt(i), y);
+					else loudCtx.lineTo(xAt(i), y);
 				}
 				loudCtx.strokeStyle = '#e06c75';
-				loudCtx.lineWidth = 1.5;
+				loudCtx.lineWidth = 1.5 * dpr;
 				loudCtx.stroke();
 
 				const grad = loudCtx.createLinearGradient(0, 0, 0, h);
-				grad.addColorStop(0, 'rgba(224, 108, 117, 0.6)');
+				grad.addColorStop(0, 'rgba(224, 108, 117, 0.45)');
 				grad.addColorStop(1, 'rgba(224, 108, 117, 0.0)');
-				loudCtx.lineTo(w, h);
-				loudCtx.lineTo(0, h);
+				loudCtx.lineTo(traceRight, h);
+				loudCtx.lineTo(xAt(0), h);
 				loudCtx.fillStyle = grad;
 				loudCtx.fill();
 
-				const curDb = loudnessHistory[loudnessHistory.length - 1];
-				const barH = h - mapDbToY(curDb);
-				loudCtx.fillStyle = curDb > 0 ? 'rgba(255, 0, 0, 0.8)' : 'rgba(152, 195, 121, 0.8)';
-				loudCtx.fillRect(w - 6, h - barH, 6, barH);
+				/* The meter bar: green, amber in the last 6 dB, red past full scale. */
+				const curDb = loudnessHistory[last] ?? -100;
+				const barTop = mapDbToY(curDb);
+				loudCtx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+				loudCtx.fillRect(w - barW, pad, barW, h - 2 * pad);
+				loudCtx.fillStyle =
+					curDb > 0
+						? 'rgba(224, 108, 117, 0.95)'
+						: curDb > -6
+							? 'rgba(229, 192, 123, 0.9)'
+							: 'rgba(152, 195, 121, 0.85)';
+				loudCtx.fillRect(w - barW, barTop, barW, h - pad - barTop);
+
+				loudCtx.font = labelFont();
+				loudCtx.textAlign = 'right';
+				loudCtx.textBaseline = 'top';
+				loudCtx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+				loudCtx.fillText(
+					curDb <= -99 ? '-∞ dB' : `${curDb.toFixed(1)} dB`,
+					traceRight - 2 * dpr,
+					pad + dpr
+				);
 			}
 		};
 
@@ -321,7 +366,7 @@
 		{#if activeOutVisualizer === 'fft'}
 			<span class="text-[9px] text-white/50 font-bold shrink-0">20Hz-20k</span>
 		{:else if activeOutVisualizer === 'loudness'}
-			<span class="text-[9px] text-white/50 font-bold shrink-0">-60dB to +6dB</span>
+			<span class="text-[9px] text-white/50 font-bold shrink-0">-48dB to +3dB</span>
 		{:else}
 			<div class="flex items-center gap-0.5 shrink-0">
 				{#each TIME_BASES as tb (tb)}

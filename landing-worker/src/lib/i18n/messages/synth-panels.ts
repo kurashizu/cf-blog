@@ -185,7 +185,7 @@ export default {
 		'synthPanels.out.scopeModeHint':
 			'Visualiser Mode: Oscilloscope Waveform — Real-time time-domain audio wave display',
 		'synthPanels.out.loudnessModeHint':
-			'Visualiser Mode: RMS Loudness Meter & History — Real-time dynamic decibel range (-60dB to +6dB)',
+			'Visualiser Mode: RMS Loudness Meter & History — Real-time dynamic decibel range (-48dB to +3dB)',
 		'synthPanels.out.recordingHint': 'Recording — {seconds}s. Click to stop and download.',
 		'synthPanels.out.recordIdleHint':
 			'Record the master output and download it when stopped (WebM/Opus, or M4A on Safari)',
@@ -478,7 +478,7 @@ export default {
 		'synthPanels.out.fftModeHint': '可视化模式：FFT 对数频谱分析——显示 20Hz 至 20kHz 的频率分布',
 		'synthPanels.out.scopeModeHint': '可视化模式：示波器波形——实时时域音频波形显示',
 		'synthPanels.out.loudnessModeHint':
-			'可视化模式：RMS 响度表与历史记录——实时动态分贝范围（-60dB 至 +6dB）',
+			'可视化模式：RMS 响度表与历史记录——实时动态分贝范围（-48dB 至 +3dB）',
 		'synthPanels.out.recordingHint': '录制中 —— {seconds}秒。点击停止并下载。',
 		'synthPanels.out.recordIdleHint': '录制主输出，停止后自动下载（WebM/Opus，Safari 上为 M4A）',
 		'synthPanels.out.recorderUnsupported': '此浏览器不支持 MediaRecorder',
@@ -755,7 +755,7 @@ export default {
 		'synthPanels.out.fftModeHint': '視覺化模式：FFT 對數頻譜分析——顯示 20Hz 至 20kHz 的頻率分佈',
 		'synthPanels.out.scopeModeHint': '視覺化模式：示波器波形——即時時域音訊波形顯示',
 		'synthPanels.out.loudnessModeHint':
-			'視覺化模式：RMS 響度表與歷史記錄——即時動態分貝範圍（-60dB 至 +6dB）',
+			'視覺化模式：RMS 響度表與歷史記錄——即時動態分貝範圍（-48dB 至 +3dB）',
 		'synthPanels.out.recordingHint': '錄製中 —— {seconds} 秒。點擊停止並下載。',
 		'synthPanels.out.recordIdleHint': '錄製主輸出，停止後自動下載（WebM/Opus，Safari 上為 M4A）',
 		'synthPanels.out.recorderUnsupported': '此瀏覽器不支援 MediaRecorder',
@@ -1074,7 +1074,7 @@ export default {
 		'synthPanels.out.scopeModeHint':
 			'ビジュアライザーモード：オシロスコープ波形 — リアルタイム時間軸オーディオ波形表示',
 		'synthPanels.out.loudnessModeHint':
-			'ビジュアライザーモード：RMSラウドネスメーター＆履歴 — リアルタイムのダイナミックデシベル範囲（-60dB〜+6dB）',
+			'ビジュアライザーモード：RMSラウドネスメーター＆履歴 — リアルタイムのダイナミックデシベル範囲（-48dB〜+3dB）',
 		'synthPanels.out.recordingHint': '録音中 — {seconds}秒。クリックで停止してダウンロード。',
 		'synthPanels.out.recordIdleHint':
 			'マスター出力を録音し、停止時にダウンロードします（WebM/Opus、SafariではM4A）',
@@ -1390,7 +1390,7 @@ export default {
 		'synthPanels.out.scopeModeHint':
 			'시각화 모드: 오실로스코프 파형 — 실시간 시간 영역 오디오 파형 표시',
 		'synthPanels.out.loudnessModeHint':
-			'시각화 모드: RMS 러프니스 미터 및 히스토리 — 실시간 다이내믹 데시벨 범위(-60dB~+6dB)',
+			'시각화 모드: RMS 러프니스 미터 및 히스토리 — 실시간 다이내믹 데시벨 범위(-48dB~+3dB)',
 		'synthPanels.out.recordingHint': '녹음 중 — {seconds}초. 클릭하면 중지하고 다운로드합니다.',
 		'synthPanels.out.recordIdleHint':
 			'마스터 출력을 녹음하고 중지 시 다운로드합니다(WebM/Opus, Safari에서는 M4A)',
