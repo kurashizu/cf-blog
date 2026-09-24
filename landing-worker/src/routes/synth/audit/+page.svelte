@@ -189,6 +189,174 @@
 	}
 
 	/**
+	 * Several timed notes of the patch on track 0, as a 16-bit stereo WAV
+	 * (base64), for listening rather than measuring -- `renderNote` hears one
+	 * key, and a patch meant to be played is judged on chords, runs and the way
+	 * one note rings under the next.
+	 *
+	 * Same context setup as `renderNote`: the voice bus only, no master FX.
+	 */
+	async function renderPhrase(
+		notes: { note: number; at: number; dur: number; vel: number }[],
+		seconds: number
+	): Promise<{ ok: boolean; wav?: string; peak?: number; firstNonFinite?: number; error?: string }> {
+		const rate = 48000;
+		const offline = new OfflineAudioContext(2, Math.ceil(seconds * rate), rate);
+		await ensureLiveDsp(offline);
+		const S = modularSynth as unknown as {
+			renderCtx: unknown;
+			renderMaster: GainNode | null;
+			masterFXCtx: unknown;
+			regenerateNoiseBuffer(): void;
+			triggerTrackVoice(...a: unknown[]): unknown;
+			activeVoices: Map<string, unknown>;
+			clearGraphCache?(): void;
+		};
+		const savedCtx = S.renderCtx;
+		try {
+			S.renderCtx = offline;
+			S.masterFXCtx = null;
+			S.clearGraphCache?.();
+			S.activeVoices.clear();
+			S.regenerateNoiseBuffer();
+			const bus = offline.createGain();
+			bus.connect(offline.destination);
+			S.renderMaster = bus;
+			for (const n of notes) S.triggerTrackVoice(0, n.note, 0, n.at, n.dur, n.vel, n.vel);
+			const buf = await offline.startRendering();
+			const l = buf.getChannelData(0);
+			const r = buf.getChannelData(1);
+			let peak = 0;
+			let nan = -1;
+			for (let i = 0; i < l.length; i++) {
+				if (nan < 0 && !(Number.isFinite(l[i]) && Number.isFinite(r[i]))) nan = i / rate;
+				peak = Math.max(peak, Math.abs(l[i]), Math.abs(r[i]));
+			}
+			const bytes = new Uint8Array(44 + l.length * 4);
+			const v = new DataView(bytes.buffer);
+			const str = (o: number, s: string) => {
+				for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i));
+			};
+			str(0, 'RIFF');
+			v.setUint32(4, 36 + l.length * 4, true);
+			str(8, 'WAVEfmt ');
+			v.setUint32(16, 16, true);
+			v.setUint16(20, 1, true);
+			v.setUint16(22, 2, true);
+			v.setUint32(24, rate, true);
+			v.setUint32(28, rate * 4, true);
+			v.setUint16(32, 4, true);
+			v.setUint16(34, 16, true);
+			str(36, 'data');
+			v.setUint32(40, l.length * 4, true);
+			const s16 = (x: number) => Math.round(Math.max(-1, Math.min(1, x)) * 32767);
+			for (let i = 0; i < l.length; i++) {
+				v.setInt16(44 + i * 4, s16(l[i]), true);
+				v.setInt16(46 + i * 4, s16(r[i]), true);
+			}
+			let bin = '';
+			for (let i = 0; i < bytes.length; i += 0x8000)
+				bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+			return { ok: true, wav: btoa(bin), peak, firstNonFinite: nan };
+		} catch (e) {
+			return { ok: false, error: e instanceof Error ? e.message : String(e) };
+		} finally {
+			S.renderCtx = savedCtx;
+			S.renderMaster = null;
+			S.masterFXCtx = null;
+			S.clearGraphCache?.();
+			S.activeVoices.clear();
+		}
+	}
+
+	/**
+	 * Keys played the way a hand plays them: each held open-ended and let go
+	 * with a real key-up, through the master FX the way a live key sounds --
+	 * not the bare voice bus the other renders tap. What it answers is whether
+	 * playing leaves the output alive: the first non-finite sample (one NaN in
+	 * a master filter's state silences everything after it), RMS per slice,
+	 * and how many voices are still held once it is over.
+	 */
+	async function renderLive(
+		events: { note: number; on: number; off: number; vel: number }[],
+		seconds: number,
+		slices = 20
+	): Promise<{
+		ok: boolean;
+		envelope?: number[];
+		firstNonFinite?: number;
+		voicesLeft?: number;
+		error?: string;
+	}> {
+		const rate = 48000;
+		const offline = new OfflineAudioContext(2, Math.ceil(seconds * rate), rate);
+		await ensureLiveDsp(offline);
+		const S = modularSynth as unknown as {
+			renderCtx: unknown;
+			renderMaster: GainNode | null;
+			masterFXCtx: unknown;
+			initMasterFX(ctx: unknown): void;
+			regenerateNoiseBuffer(): void;
+			triggerTrackVoice(...a: unknown[]): string | undefined;
+			releaseTrackVoice(k: string): void;
+			activeVoices: Map<string, unknown>;
+			clearGraphCache?(): void;
+		};
+		const savedCtx = S.renderCtx;
+		try {
+			S.renderCtx = offline;
+			S.renderMaster = null;
+			S.masterFXCtx = null;
+			S.clearGraphCache?.();
+			S.activeVoices.clear();
+			S.regenerateNoiseBuffer();
+			S.initMasterFX(offline);
+			const at = (t: number, fn: () => void) =>
+				offline.suspend(t).then(() => {
+					fn();
+					void offline.resume();
+				});
+			const keys = new Map<number, string | undefined>();
+			const times = [...new Set(events.flatMap((e) => [e.on, e.off]))].sort((a, b) => a - b);
+			for (const t of times)
+				void at(t, () => {
+					for (const [i, e] of events.entries()) {
+						if (e.off === t) {
+							const k = keys.get(i);
+							if (k) S.releaseTrackVoice(k);
+						}
+						if (e.on === t) keys.set(i, S.triggerTrackVoice(0, e.note, 0, t, 0, e.vel, e.vel));
+					}
+				});
+			const buf = await offline.startRendering();
+			const l = buf.getChannelData(0);
+			const r = buf.getChannelData(1);
+			let nan = -1;
+			for (let i = 0; i < l.length; i++)
+				if (!(Number.isFinite(l[i]) && Number.isFinite(r[i]))) {
+					nan = i / rate;
+					break;
+				}
+			const per = Math.floor(l.length / slices);
+			const envelope: number[] = [];
+			for (let s = 0; s < slices; s++) {
+				let sum = 0;
+				for (let i = s * per; i < (s + 1) * per; i++) sum += Number.isFinite(l[i]) ? l[i] * l[i] : 0;
+				envelope.push(Math.round(Math.sqrt(sum / per) * 10000) / 10000);
+			}
+			return { ok: true, envelope, firstNonFinite: nan, voicesLeft: S.activeVoices.size };
+		} catch (e) {
+			return { ok: false, error: e instanceof Error ? e.message : String(e) };
+		} finally {
+			S.renderCtx = savedCtx;
+			S.renderMaster = null;
+			S.masterFXCtx = null;
+			S.clearGraphCache?.();
+			S.activeVoices.clear();
+		}
+	}
+
+	/**
 	 * `renderNote`, but the key comes up mid-render rather than being held for
 	 * the whole thing -- what a graph wired to REL actually needs proven.
 	 *
@@ -469,6 +637,11 @@
 		   the JSON back out of the DOM. */
 		(window as unknown as Record<string, unknown>).__audit = {
 			renderNote,
+			renderPhrase,
+			renderLive,
+			// The live engine itself, for driving a realtime context the way a key does.
+			engine: modularSynth,
+			sound: soundEngine,
 			renderWithRelease,
 			renderTwoKeysReleaseOne,
 			playAndSample,
