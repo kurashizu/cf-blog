@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { rolesCompatible } from '../../src/lib/stores/graph-model';
 import { MAP_SHAPES, ACTIVATION_TYPES, EVENT_SOURCE_TYPES } from '../../src/lib/stores/synth-modules';
 import { modularSynth } from '../../src/lib/synth';
-import { FakeCtx, FakeParam, type FakeNode } from './stubs/audio-context';
+import { FakeCtx, FakeParam, type FakeNode, FakeWorklet } from './stubs/audio-context';
 
 /** The smallest patch that makes ADV own the voice. */
 const ADV_GRAPH = {
@@ -416,30 +416,33 @@ describe('the pure nodes', () => {
 			{ velocity: 0.8, noteIndex: 48, tuning: 440 }
 		);
 		expect(made).not.toBe(null);
-		const shaper = ctx.nodes.find((n) => n.kind === 'shaper') as unknown as {
-			curve: Float32Array;
-			oversample: string;
-		};
-		expect(shaper, 'no waveshaper built').toBeTruthy();
-		/* 2x, because a lookup table makes harmonics above the sample rate and
-		   they fold back down as tones nobody played. */
-		expect(shaper.oversample).toBe('2x');
+		const map = ctx.nodes.find((n) => n.kind === 'worklet') as unknown as FakeWorklet;
+		expect(map, 'no MAP processor built').toBeTruthy();
+		expect(map.processor).toBe('krsz-map');
+		const opts = map.options.processorOptions as { mode: string; table: Float32Array };
+		expect(opts.mode).toBe('clamp');
 
-		/* The table is indexed -1..1 and stores its result normalised to the
-		   same span, which is what the gain and offset either side undo. Read a
-		   few points back out and they have to be the evaluator's answers. */
+		/* The table is the shape over 0..1 in and out; the processor carries it
+		   through the X and Y ranges, which are its own live parameters. Read a
+		   few points back out the way the processor does and they have to be
+		   the evaluator's answers. */
+		const lo = map.parameters.get('inLo')!.value;
+		const hi = map.parameters.get('inHi')!.value;
+		const outLo = map.parameters.get('outLo')!.value;
+		const outHi = map.parameters.get('outHi')!.value;
+		expect([lo, hi, outLo, outHi]).toEqual([P.inLo, P.inHi, P.outLo, P.outHi]);
 		const fromTable = (x: number) => {
-			const t = ((x - P.inLo) / (P.inHi - P.inLo)) * 2 - 1;
-			const i = Math.round(((t + 1) / 2) * (shaper.curve.length - 1));
-			return ((shaper.curve[i] + 1) / 2) * (P.outHi - P.outLo) + P.outLo;
+			const u = Math.max(0, Math.min(1, (x - lo) / (hi - lo)));
+			const i = Math.round(u * (opts.table.length - 1));
+			return outLo + opts.table[i] * (outHi - outLo);
 		};
 		for (const x of [-1, -0.5, 0, 0.5, 1]) {
 			expect(fromTable(x), `x=${x}`).toBeCloseTo(evalPure('map', { a: x }, P), 3);
 		}
 
 		// And the ends still hold, which is what clamps a signal past the range.
-		expect(fromTable(-1)).toBeCloseTo(P.outLo, 3);
-		expect(fromTable(1)).toBeCloseTo(P.outHi, 3);
+		expect(fromTable(-2)).toBeCloseTo(P.outLo, 3);
+		expect(fromTable(2)).toBeCloseTo(P.outHi, 3);
 	});
 
 	it('knows which types are pure, and which merely have a value', () => {

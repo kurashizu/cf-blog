@@ -128,3 +128,55 @@ describe("ENV's attack follows a signal patched into it", () => {
 			expect(Math.abs(driven.envelope[i] - typed.envelope[i])).toBeLessThan(0.05 * typed.peak);
 	});
 });
+
+describe("MAP's ranges follow a signal patched into them", () => {
+	it('Y.HI driven by a swelling envelope carries the swell through', async () => {
+		/* CONST 1 into A with the EXP shape puts MAP's output exactly at Y.HI.
+		   Y.HI is patched from an envelope that rises over a second, and the
+		   result is the level of the VCA -- so the render swells if and only if
+		   the range is read live. Read once, a moving Y.HI was 0 and the patch
+		   was silent. The CONST also exercises A holding a value while only a
+		   range moves, which a pure node building nothing used to drop. */
+		const exp = 1; // MAP_SHAPES index of EXP
+		const timbre = {
+			advanced: true,
+			rackGraph: {
+				nodes: [
+					{ id: 'entry', type: 'in' },
+					{ id: 'output', type: 'out' },
+					{ id: 'osc', type: 'osc' },
+					{ id: 'vca', type: 'gain' },
+					{ id: 'one', type: 'const' },
+					{ id: 'map', type: 'map' },
+					{ id: 'swell', type: 'env' }
+				],
+				cables: [
+					wire('entry', 'then', 'output', 'exec'),
+					wire('osc', 'out', 'vca', 'in'),
+					wire('vca', 'out', 'output', 'in'),
+					wire('one', 'out', 'map', 'a'),
+					wire('swell', 'out', 'map', 'outHi'),
+					wire('map', 'out', 'vca', 'level')
+				]
+			},
+			graphParams: {
+				'vca.level': 0,
+				'one.kind': 0,
+				'one.value': 1,
+				'map.shape': exp,
+				'map.inLo': 0,
+				'map.inHi': 1,
+				'map.outLo': 0,
+				'swell.envA': 1,
+				'swell.envD': 0.01,
+				'swell.envS': 100
+			}
+		};
+		const e = await render(timbre);
+		expect(e.ok).toBe(true);
+		expect(e.peak, 'silent: Y.HI read as 0').toBeGreaterThan(0.01);
+		expect(onset(e), 'no swell: Y.HI read once').toBeLessThan(0.15);
+		// Rising through the first second.
+		expect(e.envelope[8]).toBeGreaterThan(e.envelope[2]);
+	});
+});

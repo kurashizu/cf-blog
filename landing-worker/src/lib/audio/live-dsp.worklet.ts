@@ -11,7 +11,13 @@
  * Runs on the audio thread, bundled on its own by Vite (`?worker&url`), so it
  * imports nothing but the shared parameter list.
  */
-import { ENV_PARAMS, ENV_PROCESSOR } from './live-dsp-params';
+import {
+	ENV_PARAMS,
+	ENV_PROCESSOR,
+	MAP_PARAMS,
+	MAP_PROCESSOR,
+	type MapOptions
+} from './live-dsp-params';
 
 /* The AudioWorkletGlobalScope, which TypeScript's DOM lib does not describe. */
 declare const sampleRate: number;
@@ -144,3 +150,66 @@ class EnvProcessor extends StoppableProcessor {
 }
 
 registerProcessor(ENV_PROCESSOR, EnvProcessor);
+
+/* ── MAP ────────────────────────────────────────────────────────────────── */
+
+/**
+ * A transfer curve whose ranges move.
+ *
+ * It was a WaveShaperNode between a gain and an offset, all three set from
+ * the X and Y ranges when the note was built -- so a cable into X.LO or Y.HI
+ * could only be read once, and a moving one read as 0. Here the ranges are
+ * a-rate parameters and the input is normalised against them per sample.
+ *
+ * The shaper also oversampled 2x, because a table applied to audio makes
+ * harmonics above Nyquist. This evaluates the curve at the midpoint between
+ * each sample and the last as well and averages the two -- the cheap half of
+ * the same idea, and enough to take the edge off a GATE or a staircase
+ * driven by a waveform.
+ */
+class MapProcessor extends StoppableProcessor {
+	static get parameterDescriptors() {
+		return MAP_PARAMS;
+	}
+	private table: Float32Array;
+	private mode: MapOptions['mode'];
+	private prev = 0;
+	constructor(options?: { processorOptions?: Partial<MapOptions> }) {
+		super(options);
+		const o = options?.processorOptions ?? {};
+		this.table = o.table && o.table.length > 1 ? o.table : new Float32Array([0, 1]);
+		this.mode = o.mode ?? 'clamp';
+	}
+	private curve(a: number, lo: number, hi: number): number {
+		const span = hi - lo;
+		if (this.mode === 'gate') return span === 0 || a < (lo + hi) / 2 ? 0 : 1;
+		const raw = span === 0 ? 0 : (a - lo) / span;
+		const x = this.mode === 'wrap' ? raw - Math.floor(raw) : Math.max(0, Math.min(1, raw));
+		const t = this.table;
+		const f = x * (t.length - 1);
+		const k = Math.min(t.length - 2, Math.floor(f));
+		return t[k] + (t[k + 1] - t[k]) * (f - k);
+	}
+	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const out = outputs[0]?.[0];
+		if (!out) return !this.finished();
+		const input = inputs[0]?.[0];
+		const dt = 1 / sampleRate;
+		for (let i = 0; i < out.length; i++) {
+			if (currentTime + i * dt >= this.stopAt) {
+				out[i] = 0;
+				continue;
+			}
+			const a = input ? input[i] : 0;
+			const lo = at(p.inLo, i);
+			const hi = at(p.inHi, i);
+			const s = 0.5 * (this.curve(a, lo, hi) + this.curve((a + this.prev) / 2, lo, hi));
+			this.prev = a;
+			const outLo = at(p.outLo, i);
+			out[i] = outLo + s * (at(p.outHi, i) - outLo);
+		}
+		return !this.finished();
+	}
+}
+
+registerProcessor(MAP_PROCESSOR, MapProcessor);

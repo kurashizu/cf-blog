@@ -103,7 +103,7 @@ describe('every knob is what the card says it is', () => {
 				   socket takes a CONST or anything else resolved per note. */
 				if (m.id === 'osc' && q.id === 'phase') continue;
 				/* MAP's A is the third, and it is the signal path rather than a
-				   param: the curve is a WaveShaperNode and A is what goes into it.
+				   param: the curve is a worklet processor and A is what goes into it.
 				   Declared `mod` because a control value must reach it too -- fed
 				   velocity it is one number per note, fed a waveform it bends every
 				   sample -- so the cable lands on the node's own inlet, which is

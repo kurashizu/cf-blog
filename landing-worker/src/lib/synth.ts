@@ -29,7 +29,7 @@ import { graphOf, type GraphCable, type RackGraph } from './stores/graph-model';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { createLiveDsp, ensureLiveDsp } from './audio/live-dsp';
-import { ENV_PROCESSOR } from './audio/live-dsp-params';
+import { ENV_PROCESSOR, MAP_PROCESSOR } from './audio/live-dsp-params';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
 import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
@@ -2035,81 +2035,63 @@ class ModularSynth {
            -- measured, a TO-CV into MAP's A came out 0 rather than following
            the wave. A shaping node that cannot shape a signal is the wrong
            half of the module.
-        
-           A WaveShaperNode is the mechanism, because a lookup table *is* an
-           arbitrary function applied sample by sample. Its domain is fixed at
-           -1..1, so the ranges live in the nodes either side: a gain and an
-           offset map X.LO..X.HI onto -1..1 going in, and the reverse pair puts
-           the result into Y.LO..Y.HI coming out.
-        
-           The table is filled by calling the evaluator, so the curve here and
-           the curve a pure read computes are one function. Writing the shapes
-           out a second time is the duplication this file has drifted on before
-           -- and the card draws through the same call, so all three agree. */
-				const lo = p('inLo', 0);
-				const hi = p('inHi', 1);
-				const span = hi - lo || 1;
 
-				/* In: x -> (x - lo) / span * 2 - 1, as a gain and an offset. The
-           shaper clamps its own domain, which is what gives the ends their
-           hold: anything past X.HI reads the last entry of the table. */
-				const inGain = ctx.createGain();
-				inGain.gain.value = 2 / span;
-				const inOffset = ctx.createConstantSource();
-				inOffset.offset.value = -1 - (2 * lo) / span;
-				sources.push(inOffset);
-				const shaped = ctx.createGain();
-				inGain.connect(shaped);
-				inOffset.connect(shaped);
+           Built in the live-DSP worklet: the ranges are parameters it reads
+           per sample, so X.LO..Y.HI can be turned or patched while it runs.
+           It used to be a WaveShaperNode between a gain and an offset, all
+           three set from the ranges at the note -- a cable into a range was
+           read once, and a moving one read as 0.
 
-				const shaper = ctx.createWaveShaper();
+           The shape stays a table, sampled over 0..1 by the evaluator itself
+           with the ranges held at 0..1, so the curve here and the curve a
+           pulled MAP computes are one function -- and the card draws through
+           the same call, so all three agree. Which shape is a choice made
+           per note; GATE and WRAP are read from the raw input rather than
+           the clamped one, so they are modes rather than tables. */
+				const shape = Math.round(p('shape', 0));
+				const unit: Record<string, number> = { inLo: 0, inHi: 1, outLo: 0, outHi: 1 };
 				const N = 1024;
 				const table = new Float32Array(N);
-				const outLo = p('outLo', 0);
-				const outHi = p('outHi', 1);
-				const outSpan = outHi - outLo;
 				for (let i = 0; i < N; i++) {
-					// The table's index is -1..1; ask the evaluator in X's own units.
-					const t = (i / (N - 1)) * 2 - 1;
-					const x = lo + ((t + 1) / 2) * span;
-					const y = PURE_NODES.map(
+					const x = i / (N - 1);
+					table[i] = PURE_NODES.map(
 						{ get: (port, f) => (port === 'a' ? x : f) },
-						(key, def) => p(key, def)
+						(key, def) => (key in unit ? unit[key] : p(key, def))
 					);
-					/* Stored normalised, because the shaper's own output is read as
-             -1..1 by everything after it. The scaling back out happens in the
-             two nodes below, where Y.LO and Y.HI can be anything -- a cutoff
-             of 8000 has no business inside a lookup table. */
-					table[i] = outSpan === 0 ? 0 : ((y - outLo) / outSpan) * 2 - 1;
 				}
-				shaper.curve = table;
-				/* 2x, for the reason SHAPE oversamples: a lookup table makes
-           harmonics above the sample rate, and they fold back down as tones
-           nobody played. A gentle curve barely needs it and a steep one -- a
-           GATE, a staircase -- very much does. */
-				shaper.oversample = '2x';
-				shaped.connect(shaper);
+				const map = createLiveDsp(ctx, MAP_PROCESSOR, {
+					numberOfInputs: 1,
+					numberOfOutputs: 1,
+					outputChannelCount: [1],
+					channelCount: 1,
+					channelCountMode: 'explicit',
+					processorOptions: {
+						mode: shape === 0 ? 'gate' : shape === 10 ? 'wrap' : 'clamp',
+						table
+					}
+				});
+				if (!map) return null;
+				knob(map.param('inLo'), 'inLo', 0);
+				knob(map.param('inHi'), 'inHi', 1);
+				knob(map.param('outLo'), 'outLo', 0);
+				knob(map.param('outHi'), 'outHi', 1);
+				sources.push(map.source);
 
-				/* Out: y = outLo + (t + 1) / 2 * outSpan, the inverse pair. */
-				const outGain = ctx.createGain();
-				outGain.gain.value = outSpan / 2;
-				const outOffset = ctx.createConstantSource();
-				outOffset.offset.value = outLo + outSpan / 2;
-				sources.push(outOffset);
-				const result = ctx.createGain();
-				shaper.connect(outGain);
-				outGain.connect(result);
-				outOffset.connect(result);
-
-				/* `a` is where the signal enters, and the mod loop looks that name up
-           in this map. Without it a cable into MAP was classed as a mod cable
-           -- the card declares `a` as `kind: 'mod'`, since a control value has
-           to reach it too -- found nothing to land on, and was dropped: the
-           shaper sat on the constant offset and MAP put out a flat level while
-           every one of its settings still visibly changed that level, which is
-           what made it look like it was working. */
+				/* `a` is where the signal enters. A value on it -- a CONST, a
+           velocity -- is held by a constant source summing into the same
+           inlet, the way TO-FREQ's A is: a pure node builds nothing, so
+           without it a MAP built because a *range* moves would read its
+           input as 0. The mod loop looks `a` up in this map; without the
+           entry a cable into MAP was classed as a mod cable, found nothing to
+           land on, and was dropped. */
+				const inGain = ctx.createGain();
+				const restA = ctx.createConstantSource();
+				restA.offset.value = p('a', 0);
+				sources.push(restA);
+				restA.connect(inGain);
+				inGain.connect(map.node);
 				mod.set('a', inGain);
-				return { in: inGain, out: result, mod };
+				return { in: inGain, out: map.node, mod };
 			}
 
 			case 'shape': {
