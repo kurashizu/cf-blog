@@ -107,90 +107,118 @@ export function setSustainPedal(down: boolean): void {
 	modularSynth.setSustainPedal(down);
 }
 
-/** Wires the Web MIDI API — call once, client-side, from onMount. Always routes to the latest activeTrackId. */
-export function initMidi(): () => void {
-	if (!browser || !navigator.requestMIDIAccess) return () => {};
+/**
+ * Where MIDI access stands, so the UI can offer to ask for it.
+ *
+ * Asking on mount is enough in Chrome, which remembers the grant. Safari (and
+ * any browser that only shows a permission prompt in answer to a click) can
+ * swallow a request that no gesture started, and then nothing on screen says
+ * MIDI is off or offers a way to turn it on. `idle` and `denied` are the two
+ * states a GRANT button answers.
+ */
+export type MidiAccessState = 'unsupported' | 'idle' | 'pending' | 'granted' | 'denied';
+export const midiAccessState = writable<MidiAccessState>(
+	browser && 'requestMIDIAccess' in navigator ? 'idle' : 'unsupported'
+);
 
-	let midiAccess: MIDIAccess | null = null;
+let midiAccess: MIDIAccess | null = null;
 
-	const handleMidiMessage = (event: MIDIMessageEvent) => {
-		const selectedDevId = modularSynth.getMidiSelectedDeviceId();
-		const target = event.target as MIDIInput | null;
-		if (selectedDevId !== 'all' && target?.id && target.id !== selectedDevId) return;
-
-		const data = event.data;
-		if (!data || data.length < 2) return;
-		const cmd = data[0] >> 4;
-		const noteNumber = data[1];
-		const velocity = data.length > 2 ? data[2] : 0;
-		/* A device plays the tracks it names, whatever is selected on screen: two
-		   keyboards can drive two tracks at once, one keyboard can layer several
-		   under a key, and a keyboard the OS lists twice (USB and Bluetooth for
-		   the same instrument) can have its duplicate switched off. Inputs with
-		   no binding follow the active track. */
-		const targetTracks = modularSynth.getMidiTracksFor(target?.id, get(activeTrackId));
-		if (!targetTracks.length) return; // switched off
-
-		if (cmd === 9 && velocity > 0) {
-			const noteIdx = 108 - noteNumber;
-			if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
-				targetTracks.forEach((trkId) => holdManualNote(trkId, noteIdx, velocity));
-			}
-		} else if (cmd === 8 || (cmd === 9 && velocity === 0)) {
-			const noteIdx = 108 - noteNumber;
-			if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
-				targetTracks.forEach((trkId) => releaseManualNote(trkId, noteIdx));
-			}
-		} else if (cmd === 11 && noteNumber === 64) {
-			setSustainPedal(velocity >= 64);
-		}
-	};
-
-	const attachInputs = (access: MIDIAccess) => {
-		const devList: { id: string; name: string }[] = [];
-		let firstDeviceName: string | null = null;
-		for (const input of access.inputs.values()) {
-			input.onmidimessage = handleMidiMessage;
-			const name = input.name || tr('synth.midi.deviceFallbackName', { id: input.id });
-			devList.push({ id: input.id, name });
-			if (!firstDeviceName) firstDeviceName = name;
-		}
-
-		/* Only the first input plays by default; the rest arrive switched off.
-		   One keyboard is routinely listed twice -- a Roland GO:KEYS on USB is
-		   advertised over Bluetooth as well -- and letting both through voiced
-		   every key press twice, about 10 ms apart, which sounds like a flam on
-		   every note. Silence is the safe default: a second input that is really
-		   a second keyboard is one click from playing, whereas a duplicate that
-		   plays by default is a bug the player has to diagnose by ear.
-
-		   Only inputs never seen before are defaulted, so unplugging a cable
-		   does not overwrite choices already made. */
-		modularSynth.defaultUnroutedMidiDevices(devList.map((d) => d.id));
-
-		midiDevices.set(devList);
-		midiConnectedDevice.set(firstDeviceName);
-		midiDeviceTracks.set(modularSynth.getMidiDeviceTracks());
-	};
-
-	navigator
-		.requestMIDIAccess({ sysex: false })
+/**
+ * Ask for MIDI access. Safe to call again: from a button, after a request
+ * made on mount went unanswered or was refused. `requestMIDIAccess` is the
+ * first thing it does, so a click that calls this still counts as the gesture.
+ */
+export function requestMidi(): void {
+	if (!browser || !navigator.requestMIDIAccess) return;
+	if (midiAccess) return;
+	const pending = navigator.requestMIDIAccess({ sysex: false });
+	midiAccessState.set('pending');
+	pending
 		.then((access) => {
 			midiAccess = access;
 			attachInputs(access);
 			access.onstatechange = () => attachInputs(access);
+			midiAccessState.set('granted');
 		})
 		.catch(() => {
-			// MIDI not permitted or unsupported
+			midiAccessState.set('denied');
 		});
+}
 
+const handleMidiMessage = (event: MIDIMessageEvent) => {
+	const selectedDevId = modularSynth.getMidiSelectedDeviceId();
+	const target = event.target as MIDIInput | null;
+	if (selectedDevId !== 'all' && target?.id && target.id !== selectedDevId) return;
+
+	const data = event.data;
+	if (!data || data.length < 2) return;
+	const cmd = data[0] >> 4;
+	const noteNumber = data[1];
+	const velocity = data.length > 2 ? data[2] : 0;
+	/* A device plays the tracks it names, whatever is selected on screen: two
+	   keyboards can drive two tracks at once, one keyboard can layer several
+	   under a key, and a keyboard the OS lists twice (USB and Bluetooth for
+	   the same instrument) can have its duplicate switched off. Inputs with
+	   no binding follow the active track. */
+	const targetTracks = modularSynth.getMidiTracksFor(target?.id, get(activeTrackId));
+	if (!targetTracks.length) return; // switched off
+
+	if (cmd === 9 && velocity > 0) {
+		const noteIdx = 108 - noteNumber;
+		if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
+			targetTracks.forEach((trkId) => holdManualNote(trkId, noteIdx, velocity));
+		}
+	} else if (cmd === 8 || (cmd === 9 && velocity === 0)) {
+		const noteIdx = 108 - noteNumber;
+		if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
+			targetTracks.forEach((trkId) => releaseManualNote(trkId, noteIdx));
+		}
+	} else if (cmd === 11 && noteNumber === 64) {
+		setSustainPedal(velocity >= 64);
+	}
+};
+
+const attachInputs = (access: MIDIAccess) => {
+	const devList: { id: string; name: string }[] = [];
+	let firstDeviceName: string | null = null;
+	for (const input of access.inputs.values()) {
+		input.onmidimessage = handleMidiMessage;
+		const name = input.name || tr('synth.midi.deviceFallbackName', { id: input.id });
+		devList.push({ id: input.id, name });
+		if (!firstDeviceName) firstDeviceName = name;
+	}
+
+	/* Only the first input plays by default; the rest arrive switched off.
+	   One keyboard is routinely listed twice -- a Roland GO:KEYS on USB is
+	   advertised over Bluetooth as well -- and letting both through voiced
+	   every key press twice, about 10 ms apart, which sounds like a flam on
+	   every note. Silence is the safe default: a second input that is really
+	   a second keyboard is one click from playing, whereas a duplicate that
+	   plays by default is a bug the player has to diagnose by ear.
+
+	   Only inputs never seen before are defaulted, so unplugging a cable
+	   does not overwrite choices already made. */
+	modularSynth.defaultUnroutedMidiDevices(devList.map((d) => d.id));
+
+	midiDevices.set(devList);
+	midiConnectedDevice.set(firstDeviceName);
+	midiDeviceTracks.set(modularSynth.getMidiDeviceTracks());
+};
+
+/** Wires the Web MIDI API — call once, client-side, from onMount. Always routes to the latest activeTrackId. */
+export function initMidi(): () => void {
+	if (!browser || !navigator.requestMIDIAccess) return () => {};
+	requestMidi();
 	return () => {
 		if (midiAccess) {
 			try {
 				for (const input of midiAccess.inputs.values()) input.onmidimessage = null;
+				midiAccess.onstatechange = null;
 			} catch {
 				// best-effort cleanup
 			}
 		}
+		midiAccess = null;
+		midiAccessState.set('idle');
 	};
 }

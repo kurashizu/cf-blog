@@ -36,6 +36,24 @@
 		}
 	}
 
+	/* Output names (and, in Safari, the outputs themselves) only appear once
+	   the page holds a microphone grant. Asking from a click is what gets the
+	   prompt shown in a browser that drops requests nothing started; the
+	   stream is closed the moment it arrives -- nothing is recorded. */
+	let grantRefused = $state(false);
+	async function grantAccess() {
+		if (!navigator.mediaDevices?.getUserMedia) return;
+		grantRefused = false;
+		try {
+			const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+			for (const track of s.getTracks()) track.stop();
+		} catch {
+			grantRefused = true;
+		}
+		await listOutputs();
+	}
+	let needsGrant = $derived(labelsHidden || outputs.length === 0);
+
 	/** Move the live context to another output, if this browser allows it. */
 	async function applySink(deviceId: string) {
 		selectedOutput = deviceId;
@@ -368,9 +386,16 @@
 			<span class="text-[11px] font-mono text-[#e5c07b]"
 				>{$t('utilities.audioout.output.unsupportedNote')}</span
 			>
-		{:else if labelsHidden}
-			<span class="text-[11px] font-mono text-white/40">
-				{$t('utilities.audioout.output.labelsHiddenNote')}
+		{:else if needsGrant}
+			<button
+				onclick={grantAccess}
+				class="press px-2 py-1 border border-[#98c379] text-[#98c379] rounded-xs text-[11px] font-black cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors"
+				>{$t('utilities.audioout.output.grant')}</button
+			>
+			<span class="text-[11px] font-mono {grantRefused ? 'text-[#e06c75]' : 'text-white/40'}">
+				{grantRefused
+					? $t('utilities.audioout.output.grantDenied')
+					: $t('utilities.audioout.output.labelsHiddenNote')}
 			</span>
 		{/if}
 	</div>

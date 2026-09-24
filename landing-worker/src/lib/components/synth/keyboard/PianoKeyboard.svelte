@@ -20,7 +20,9 @@
 		isSustainActive,
 		setSustainPedal,
 		velocityCurve,
-		cycleVelocityCurve
+		cycleVelocityCurve,
+		midiAccessState,
+		requestMidi
 	} from '../../../stores/synth-midi';
 	import { isSynthSettingsOpen, synthSettingsTab } from '../../../stores/synth-settings';
 
@@ -84,6 +86,10 @@
 		return keys;
 	});
 
+	/* MIDI is not granted yet: the badge asks for it instead of saying STANDBY. */
+	let needsGrant = $derived(
+		$midiAccessState === 'idle' || $midiAccessState === 'pending' || $midiAccessState === 'denied'
+	);
 	let keyWidthPct = $derived(whiteKeys.length > 0 ? 100 / whiteKeys.length : 0);
 	let percussion = $derived(!!$activeTrackRow?.percussion);
 
@@ -454,24 +460,37 @@
 			<!-- Pinned right: a device name is as long as its maker made it, and
 			     letting it sit inline shifted every control before it. Names the
 			     inputs routed to *this* track rather than the first one connected,
-			     which said GO:KEYS on a track GO:KEYS does not play. -->
+			     which said GO:KEYS on a track GO:KEYS does not play.
+
+			     Until access is granted it says so and asks: a browser that only
+			     prompts in answer to a click (Safari) can drop the request made on
+			     load, and STANDBY then read as "no keyboard plugged in" when the
+			     truth was "not allowed to look". The click itself makes the
+			     request, so it carries the gesture the prompt needs. -->
 			<button
 				onclick={() => {
+					if (needsGrant) requestMidi();
 					synthSettingsTab.set('midi');
 					isSynthSettingsOpen.set(true);
 					playSound('click');
 				}}
-				title={$t('synthPanels.midi.openSettingsHint')}
-				class="press ml-auto flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold whitespace-nowrap cursor-pointer {$midiInputsForActiveTrack.length
-					? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]'
-					: 'border-white/20 bg-white/5 text-white/40 hover:text-white/70'}"
+				title={needsGrant
+					? $t('synthPanels.midi.grantHint')
+					: $t('synthPanels.midi.openSettingsHint')}
+				class="press ml-auto flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold whitespace-nowrap cursor-pointer {needsGrant
+					? 'border-[#e5c07b] bg-[#e5c07b]/15 text-[#e5c07b] hover:bg-[#e5c07b]/25'
+					: $midiInputsForActiveTrack.length
+						? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]'
+						: 'border-white/20 bg-white/5 text-white/40 hover:text-white/70'}"
 			>
 				<span
-					class="w-1.5 h-1.5 rounded-full {$midiInputsForActiveTrack.length
-						? 'bg-[#98c379] animate-pulse'
-						: 'bg-white/30'}"
+					class="w-1.5 h-1.5 rounded-full {needsGrant
+						? 'bg-[#e5c07b]'
+						: $midiInputsForActiveTrack.length
+							? 'bg-[#98c379] animate-pulse'
+							: 'bg-white/30'}"
 				></span>
-				<span>MIDI: {midiBadgeLabel($midiInputsForActiveTrack)}</span>
+				<span>MIDI: {needsGrant ? 'GRANT' : midiBadgeLabel($midiInputsForActiveTrack)}</span>
 			</button>
 		</div>
 	</div>

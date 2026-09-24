@@ -5,7 +5,9 @@
 		midiDevices,
 		midiDeviceTracks,
 		toggleMidiDeviceTrack,
-		setMidiDeviceTracks
+		setMidiDeviceTracks,
+		midiAccessState,
+		requestMidi
 	} from '../../../stores/synth-midi';
 	import { TRACK_COUNT } from '../../../synth';
 
@@ -28,7 +30,30 @@
 		</div>
 
 		<div class="space-y-2 pt-1">
-			{#if $midiDevices.length > 0}
+			<!-- Access first: with none, an empty device list says nothing about
+			     why. A browser that only prompts in answer to a click can drop the
+			     request made on load, so the button makes it again from one. -->
+			{#if $midiAccessState === 'unsupported'}
+				<div class="p-3 border border-white/5 bg-black/20 rounded-xs text-white/40 text-[11px]">
+					{$t('synthPanels.midi.unsupportedHint')}
+				</div>
+			{:else if $midiAccessState !== 'granted'}
+				<div class="p-3 border border-[#e5c07b]/30 bg-[#e5c07b]/5 rounded-xs text-[11px] space-y-2">
+					<div class="text-white/60">
+						{$midiAccessState === 'denied'
+							? $t('synthPanels.midi.grantDeniedHint')
+							: $t('synthPanels.midi.grantIdleHint')}
+					</div>
+					<button
+						onclick={() => {
+							requestMidi();
+							playSound('click');
+						}}
+						class="press px-2 py-1 border border-[#e5c07b] text-[#e5c07b] rounded-xs font-black cursor-pointer hover:bg-[#e5c07b] hover:text-black transition-colors"
+						>{$t('synthPanels.midi.grantButton')}</button
+					>
+				</div>
+			{:else if $midiDevices.length > 0}
 				<!-- Each input picks the tracks it plays, several at once if you want
 				     them layered under one key. One keyboard is often listed twice (USB
 				     and Bluetooth for the same instrument), which voiced every key press

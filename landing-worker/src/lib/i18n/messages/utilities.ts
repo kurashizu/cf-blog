@@ -277,7 +277,10 @@ export default {
 		'utilities.audioout.output.unsupportedNote':
 			'setSinkId unsupported — playing on the system default',
 		'utilities.audioout.output.labelsHiddenNote':
-			'Device names stay hidden until a microphone grant exists — the MIC IN tool unlocks them.',
+			'Device names stay hidden until a microphone grant exists. GRANT asks for one; the microphone is closed again straight away.',
+		'utilities.audioout.output.grant': 'GRANT ACCESS',
+		'utilities.audioout.output.grantDenied':
+			'Access was refused — allow the microphone for this site in the browser settings, then try again.',
 		'utilities.audioout.level.label': 'LEVEL',
 		'utilities.audioout.level.idle': 'idle',
 		'utilities.audioout.level.hzSuffix': ' · {hz} Hz',
@@ -842,7 +845,10 @@ export default {
 			'此浏览器无法将 WebAudio 重定向到指定输出 — 将始终使用系统默认设备',
 		'utilities.audioout.output.unsupportedNote': '不支持 setSinkId — 正在系统默认设备上播放',
 		'utilities.audioout.output.labelsHiddenNote':
-			'设备名称在获得麦克风授权前保持隐藏 — 使用麦克风输入工具即可解锁。',
+			'设备名称在获得麦克风授权前保持隐藏。点「授权」申请一次，麦克风会立即关闭。',
+		'utilities.audioout.output.grant': '授权',
+		'utilities.audioout.output.grantDenied':
+			'授权被拒绝了——请在浏览器设置里允许本站使用麦克风，然后再试一次。',
 		'utilities.audioout.level.label': '音量',
 		'utilities.audioout.level.idle': '空闲',
 		'utilities.audioout.level.hzSuffix': ' · {hz} Hz',
@@ -1398,7 +1404,10 @@ export default {
 			'此瀏覽器無法將 WebAudio 重新導向到指定輸出 — 將一律使用系統預設裝置',
 		'utilities.audioout.output.unsupportedNote': '不支援 setSinkId — 正在系統預設裝置上播放',
 		'utilities.audioout.output.labelsHiddenNote':
-			'裝置名稱在取得麥克風授權前保持隱藏 — 使用麥克風輸入工具即可解鎖。',
+			'裝置名稱在取得麥克風授權前保持隱藏。點「授權」申請一次，麥克風會立即關閉。',
+		'utilities.audioout.output.grant': '授權',
+		'utilities.audioout.output.grantDenied':
+			'授權被拒絕了——請在瀏覽器設定中允許本站使用麥克風，然後再試一次。',
 		'utilities.audioout.level.label': '音量',
 		'utilities.audioout.level.idle': '閒置',
 		'utilities.audioout.level.hzSuffix': ' · {hz} Hz',
@@ -1971,7 +1980,10 @@ export default {
 			'このブラウザはWebAudioの出力先を切り替えられません — 常にシステム既定を使用します',
 		'utilities.audioout.output.unsupportedNote': 'setSinkId非対応 — システム既定で再生しています',
 		'utilities.audioout.output.labelsHiddenNote':
-			'マイクの許可が得られるまでデバイス名は非表示です — MIC INツールで解除されます。',
+			'マイクの許可が得られるまでデバイス名は非表示です。「許可」で一度だけ求めます。マイクはすぐに閉じられます。',
+		'utilities.audioout.output.grant': '許可',
+		'utilities.audioout.output.grantDenied':
+			'許可が拒否されました — ブラウザの設定でこのサイトのマイクを許可してから、もう一度お試しください。',
 		'utilities.audioout.level.label': 'レベル',
 		'utilities.audioout.level.idle': '待機中',
 		'utilities.audioout.level.hzSuffix': ' · {hz} Hz',
@@ -2552,7 +2564,10 @@ export default {
 		'utilities.audioout.output.unsupportedNote':
 			'setSinkId 미지원 — 시스템 기본값으로 재생 중입니다',
 		'utilities.audioout.output.labelsHiddenNote':
-			'마이크 권한이 있어야 장치 이름이 표시됩니다 — MIC IN 도구에서 잠금이 해제됩니다.',
+			'마이크 권한이 있어야 장치 이름이 표시됩니다. "허용"을 누르면 한 번 요청하고, 마이크는 바로 닫힙니다.',
+		'utilities.audioout.output.grant': '허용',
+		'utilities.audioout.output.grantDenied':
+			'권한이 거부되었습니다 — 브라우저 설정에서 이 사이트의 마이크를 허용한 뒤 다시 시도하세요.',
 		'utilities.audioout.level.label': '레벨',
 		'utilities.audioout.level.idle': '대기 중',
 		'utilities.audioout.level.hzSuffix': ' · {hz} Hz',

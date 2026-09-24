@@ -318,6 +318,14 @@ export default {
 		'synthPanels.midi.followsActive': 'ACTIVE',
 		'synthPanels.midi.deviceOff': 'OFF',
 		'synthPanels.midi.openSettingsHint': 'Open MIDI settings',
+		'synthPanels.midi.grantHint': 'MIDI is not allowed yet — click to ask the browser for access',
+		'synthPanels.midi.grantButton': 'GRANT MIDI ACCESS',
+		'synthPanels.midi.grantIdleHint':
+			'The browser has not been asked for MIDI access yet, or its prompt did not appear (Safari can drop a request made on page load). Click to ask.',
+		'synthPanels.midi.grantDeniedHint':
+			"MIDI access was refused. Allow MIDI for this site in the browser's settings, then ask again.",
+		'synthPanels.midi.unsupportedHint':
+			'This browser has no Web MIDI. Chrome, Edge and Firefox do; the computer keyboard can still play the on-screen keys.',
 		'synthPanels.voice.advDefaultTitle': 'Advanced Mode by Default',
 		'synthPanels.voice.editingLayout': 'Editing Layout',
 		'synthPanels.voice.advDefaultOn': 'Tracks open in ADV',
@@ -597,6 +605,14 @@ export default {
 		'synthPanels.midi.followsActive': '当前轨',
 		'synthPanels.midi.deviceOff': '关闭',
 		'synthPanels.midi.openSettingsHint': '打开 MIDI 设置',
+		'synthPanels.midi.grantHint': '尚未获得 MIDI 权限——点击向浏览器申请',
+		'synthPanels.midi.grantButton': '授予 MIDI 权限',
+		'synthPanels.midi.grantIdleHint':
+			'还没有向浏览器申请 MIDI 权限，或者授权窗口没有弹出（Safari 可能会忽略页面加载时发起的请求）。点击申请。',
+		'synthPanels.midi.grantDeniedHint':
+			'MIDI 权限被拒绝了。请在浏览器设置里允许本站使用 MIDI，然后再申请一次。',
+		'synthPanels.midi.unsupportedHint':
+			'这个浏览器不支持 Web MIDI。Chrome、Edge 和 Firefox 支持；也可以用电脑键盘弹奏屏幕上的琴键。',
 		'synthPanels.voice.advDefaultTitle': '默认进入高级模式',
 		'synthPanels.voice.editingLayout': '编辑布局',
 		'synthPanels.voice.advDefaultOn': '音轨默认进入 ADV',
@@ -874,6 +890,14 @@ export default {
 		'synthPanels.midi.followsActive': '目前軌',
 		'synthPanels.midi.deviceOff': '關閉',
 		'synthPanels.midi.openSettingsHint': '開啟 MIDI 設定',
+		'synthPanels.midi.grantHint': '尚未取得 MIDI 權限——點擊向瀏覽器申請',
+		'synthPanels.midi.grantButton': '授予 MIDI 權限',
+		'synthPanels.midi.grantIdleHint':
+			'還沒有向瀏覽器申請 MIDI 權限，或授權視窗沒有彈出（Safari 可能會忽略頁面載入時發起的請求）。點擊申請。',
+		'synthPanels.midi.grantDeniedHint':
+			'MIDI 權限被拒絕了。請在瀏覽器設定中允許本站使用 MIDI，然後再申請一次。',
+		'synthPanels.midi.unsupportedHint':
+			'這個瀏覽器不支援 Web MIDI。Chrome、Edge 和 Firefox 支援；也可以用電腦鍵盤彈奏螢幕上的琴鍵。',
 		'synthPanels.voice.advDefaultTitle': '預設進入進階模式',
 		'synthPanels.voice.editingLayout': '編輯佈局',
 		'synthPanels.voice.advDefaultOn': '音軌預設進入 ADV',
@@ -1201,6 +1225,15 @@ export default {
 		'synthPanels.midi.followsActive': '選択中',
 		'synthPanels.midi.deviceOff': 'オフ',
 		'synthPanels.midi.openSettingsHint': 'MIDI設定を開く',
+		'synthPanels.midi.grantHint':
+			'MIDI がまだ許可されていません — クリックしてブラウザに許可を求めます',
+		'synthPanels.midi.grantButton': 'MIDI を許可',
+		'synthPanels.midi.grantIdleHint':
+			'ブラウザにまだ MIDI の許可を求めていないか、許可ダイアログが表示されませんでした（Safari はページ読み込み時のリクエストを無視することがあります）。クリックして許可を求めてください。',
+		'synthPanels.midi.grantDeniedHint':
+			'MIDI の許可が拒否されました。ブラウザの設定でこのサイトの MIDI を許可してから、もう一度求めてください。',
+		'synthPanels.midi.unsupportedHint':
+			'このブラウザは Web MIDI に対応していません。Chrome、Edge、Firefox は対応しています。PC のキーボードでも画面の鍵盤を弾けます。',
 		'synthPanels.voice.advDefaultTitle': '既定でアドバンストモード',
 		'synthPanels.voice.editingLayout': '編集レイアウト',
 		'synthPanels.voice.advDefaultOn': 'トラックはADVで開く',
@@ -1516,6 +1549,15 @@ export default {
 		'synthPanels.midi.followsActive': '현재 트랙',
 		'synthPanels.midi.deviceOff': '꺼짐',
 		'synthPanels.midi.openSettingsHint': 'MIDI 설정 열기',
+		'synthPanels.midi.grantHint':
+			'아직 MIDI 권한이 없습니다 — 클릭해서 브라우저에 권한을 요청하세요',
+		'synthPanels.midi.grantButton': 'MIDI 권한 허용',
+		'synthPanels.midi.grantIdleHint':
+			'아직 브라우저에 MIDI 권한을 요청하지 않았거나, 권한 창이 뜨지 않았습니다(Safari는 페이지 로드 시 요청을 무시할 수 있습니다). 클릭해서 요청하세요.',
+		'synthPanels.midi.grantDeniedHint':
+			'MIDI 권한이 거부되었습니다. 브라우저 설정에서 이 사이트의 MIDI를 허용한 뒤 다시 요청하세요.',
+		'synthPanels.midi.unsupportedHint':
+			'이 브라우저는 Web MIDI를 지원하지 않습니다. Chrome, Edge, Firefox는 지원합니다. 컴퓨터 키보드로도 화면 건반을 연주할 수 있습니다.',
 		'synthPanels.voice.advDefaultTitle': '기본으로 고급 모드',
 		'synthPanels.voice.editingLayout': '편집 레이아웃',
 		'synthPanels.voice.advDefaultOn': '트랙이 ADV로 열림',
