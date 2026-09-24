@@ -185,17 +185,33 @@ out of ninety-nine params were registered by hand; the other ninety-three drew a
 cable on the canvas and carried nothing. A knob cannot be modulatable in the
 catalogue and inert in the engine if the two are the same line.
 
-### A knob that cannot be driven says so
+### Every knob is live; the few that are not are not values
 
-Some knobs are not AudioParams and never can be. STRING's DECAY shapes a bank of
-oscillator envelopes built for this note; SPACE's SIZE is the length of a buffer
-generated at build time; REED's STIFF is the shape of a waveshaper curve. There
-is no param to connect a cable to.
+A knob a cable can reach must follow a moving signal while the note plays,
+not be read once when it starts. Native Web Audio nodes cannot do that for
+everything: an envelope's attack is baked into the automation curve the moment
+it is written, a resonator's partial decays likewise, a convolver's room is a
+buffer generated at build. Those modules run in the **live-DSP AudioWorklet**
+(`src/lib/audio/live-dsp.worklet.ts`) instead -- ENV, MAP, SHAPE, STRING, TUBE,
+MODES, EXCITE's burst and SPACE -- where every setting is an a-rate
+AudioParam the processor reads per sample (or per 128-sample render block,
+for what is expensive to re-plan). `knob()` binds to those params exactly as it
+binds to a native one.
 
-Mark those `fixed: true`. The canvas then stops offering them when a cable is
-dropped on the module -- it used to offer whichever knob was declared first,
-which is how SEQ's GAP and SCOPE's SPAN got suggested as places to send an
-envelope, neither of which the engine reads through a param at all.
+- `live-dsp-params.ts` is the parameter list both sides share.
+- `ensureLiveDsp(ctx)` loads the module into a context; every context that
+  builds voices must have been through it (the live one on the synth page's
+  mount, each offline one before it renders).
+- `createLiveDsp` returns the node, its params and a `start`/`stop` adapter so
+  a voice stops a processor like any source; the processor then returns
+  `false` and is collected. An effect with a tail (SPACE) is stopped that much
+  later, as a native effect with no `stop` rang on.
+
+`fixed: true` is left for what is not a value that moves: a selector read once
+(TUBE's ODD), a moment in the execution chain (WAIT's GAP, ACT, OUT's SEC --
+read when execution reaches them, which is the point), a probe's display range
+(SCOPE, LOUD), a routing id (SEND/RTN's BUS), the master tuning TO-FREQ reads.
+The canvas does not offer those as destinations.
 
 `tests/unit/knob-binding.test.ts` enforces both directions: a knob without the
 flag must be registered in `mod`, and a knob with it must _not_ be. The flag has
@@ -213,9 +229,11 @@ hard right.
 fraction. Registering the bare param let a cable bypass the divide -- MIX A at
 100 is a gain of 1, and a CONST of 100 gave 101.
 
-Not every conversion fits. COMP's GAIN is decibels and its param is a linear
-gain, which is exponential, so no scaling node can express it: it is `fixed`,
-and a patch that wants to modulate level uses a VCA.
+Not every conversion is linear. COMP's MAKE is decibels on a linear gain, an
+exponential no scaling node can express, so `knobFn(key, def, lo, hi, fn)`
+carries the knob (and any cable into it) through `fn` as a signal: a constant
+source, a gain and an offset onto a WaveShaper's -1..1, and `fn` sampled across
+the knob's range as its table.
 
 ### Both ends of a cable resolve by port name
 
