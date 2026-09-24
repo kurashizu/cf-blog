@@ -81,6 +81,46 @@
 		return params?.[`${nodeId}.${key}`] ?? def;
 	}
 
+	/* A field is typed over, not edited: clicking into one selects what it
+	   holds, so the next keystroke replaces it. Selecting on focus alone is
+	   not enough -- the mouseup that finishes the same click lands after the
+	   focus and collapses the selection to a caret -- so the first mouseup
+	   after a click-to-focus is swallowed. A click into a field that already
+	   has focus places the caret as usual. */
+	function selectOnFocus(node: HTMLInputElement) {
+		let justFocused = false;
+		const focus = () => {
+			node.select();
+			justFocused = true;
+		};
+		const mouseup = (e: MouseEvent) => {
+			if (justFocused) e.preventDefault();
+			justFocused = false;
+		};
+		const blur = () => (justFocused = false);
+		node.addEventListener('focus', focus);
+		node.addEventListener('mouseup', mouseup);
+		node.addEventListener('blur', blur);
+		return {
+			destroy() {
+				node.removeEventListener('focus', focus);
+				node.removeEventListener('mouseup', mouseup);
+				node.removeEventListener('blur', blur);
+			}
+		};
+	}
+
+	/* Enter commits (by leaving the field, which fires `change`); Escape puts
+	   back what the patch holds and leaves without committing. */
+	function fieldKeys(e: KeyboardEvent, restore: () => string) {
+		const el = e.currentTarget as HTMLInputElement;
+		if (e.key === 'Enter') el.blur();
+		else if (e.key === 'Escape') {
+			el.value = restore();
+			el.blur();
+		}
+	}
+
 	/* How much room the port labels need on either side.
 	
 	   The canvas draws them over the card's edges, so the controls have to keep
@@ -142,9 +182,7 @@
 	   patched, audio wins -- it is the one with a fixed meaning, so the trace
 	   stays readable and the CV is drawn against the same full scale rather
 	   than silently rescaling the sound. */
-	let probeIsCv = $derived(
-		!!wired?.(nodeId, 'cv') && !wired?.(nodeId, 'in')
-	);
+	let probeIsCv = $derived(!!wired?.(nodeId, 'cv') && !wired?.(nodeId, 'in'));
 
 	let knobs = $derived(spec.params.filter((p) => !p.choices && !p.field && !p.wave));
 
@@ -265,8 +303,7 @@
 				placeholder={$t('synthPatch.notePlaceholder')}
 				rows="3"
 				class="w-full bg-black/60 border border-white/15 rounded-xs px-1 py-0.5 font-mono text-[10px] outline-none resize-none focus:border-white/40"
-				style="color: {spec.color}"
-			></textarea>
+				style="color: {spec.color}"></textarea>
 		{:else}
 			<input
 				value={labels?.[nodeId] ?? ''}
@@ -466,7 +503,10 @@
 							type="text"
 							disabled={taken}
 							value={noteName(Math.max(p.min, Math.min(p.max, val(p.key, p.def))))}
+							use:selectOnFocus
 							onpointerdown={(e) => e.stopPropagation()}
+							onkeydown={(e) =>
+								fieldKeys(e, () => noteName(Math.max(p.min, Math.min(p.max, val(p.key, p.def)))))}
 							onchange={(e) => {
 								const el = e.currentTarget as HTMLInputElement;
 								const n = noteNumber(el.value);
@@ -484,10 +524,32 @@
 							min={p.min}
 							max={p.max}
 							step={p.step}
+							use:selectOnFocus
 							onpointerdown={(e) => e.stopPropagation()}
+							onkeydown={(e) => fieldKeys(e, () => String(val(p.key, p.def)))}
+							/* Heard while typing, but only once what is typed is a value
+							   in range. Clamping every keystroke wrote the clamp back into
+							   the field mid-word: on a field with a floor of 20, the "4" of
+							   "440" became 20 before the next key arrived. An empty field
+							   (cleared, or a lone "-") reads as "" and is not a zero. */
 							oninput={(e) => {
-								const v = Number((e.currentTarget as HTMLInputElement).value);
-								if (Number.isFinite(v)) onParam(p.key, Math.max(p.min, Math.min(p.max, v)));
+								const raw = (e.currentTarget as HTMLInputElement).value;
+								const v = Number(raw);
+								if (raw !== '' && Number.isFinite(v) && v >= p.min && v <= p.max) onParam(p.key, v);
+							}}
+							/* Leaving the field is where it is settled: an out-of-range
+							   number is clamped, and anything unreadable goes back to
+							   what the patch holds. */
+							onchange={(e) => {
+								const el = e.currentTarget as HTMLInputElement;
+								const v = Number(el.value);
+								if (el.value === '' || !Number.isFinite(v)) {
+									el.value = String(val(p.key, p.def));
+									return;
+								}
+								const c = Math.max(p.min, Math.min(p.max, v));
+								onParam(p.key, c);
+								el.value = String(c);
 							}}
 							class="no-spin min-w-0 flex-1 bg-black/60 border border-white/20 rounded-xs px-1 py-0.5 text-[9px] font-mono text-right text-white focus:border-white/60 focus:outline-none"
 						/>
@@ -549,7 +611,9 @@
 	     shared name would make editing one change the other. -->
 	<CurveDrawDialog
 		initial={val('drawN', 0)
-			? Array.from({ length: Math.round(val('drawN', 0)) }, (_, i) => val(`d${i}`, i / Math.max(1, Math.round(val('drawN', 0)) - 1)))
+			? Array.from({ length: Math.round(val('drawN', 0)) }, (_, i) =>
+					val(`d${i}`, i / Math.max(1, Math.round(val('drawN', 0)) - 1))
+				)
 			: null}
 		onSave={(pts) => {
 			onParam('drawN', pts.length);
