@@ -380,11 +380,15 @@
 			<!-- One window rather than a cascade: a strip of tabs across the top,
 			     the chosen category's entries under it, the actions along the
 			     bottom. Same shape as the site's own tab bar, and nothing has to
-			     escape a scrolling ancestor to be seen. -->
+			     escape a scrolling ancestor to be seen.
+
+			     A fixed height, not a cap: sized to its content, the window was a
+			     different shape for every tab and ran to the bottom of the screen
+			     once MINE held a few dozen entries. The panes scroll inside it. -->
 			<div
 				bind:this={menuEl}
 				class="origin-top absolute left-0 top-full mt-1 z-50 w-[460px] max-w-[92vw] flex flex-col bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] text-xs font-mono overflow-hidden"
-				style="max-height: var(--krsz-menu-max, 60vh)"
+				style="height: min(440px, var(--krsz-menu-max, 60vh))"
 				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
 				<!-- Creating comes before browsing: you either start from nothing or
