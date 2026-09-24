@@ -127,7 +127,15 @@
 	   gesture now and captures the pointer, so a drag that leaves the strip
 	   still ends where it should; the key under the pointer is looked up on
 	   every move, and changing key hands the note on. Pointer events cover
-	   touch as well, so a finger slides the same way. */
+	   touch as well, so a finger slides the same way.
+
+	   The gaps between keys are not a key, and crossing one must not end the
+	   gesture. It did: the pointer landing on the 2px seam between two white
+	   keys released the note and cleared the key, and every move after that
+	   read "not gliding" -- so a slow drag died within half a second, at the
+	   first seam it happened to stop on. Over a seam the note that is sounding
+	   keeps sounding; only letting go ends it. */
+	let gliding = false;
 	let glideIdx: number | null = null;
 	function keyAt(x: number, y: number): number | null {
 		const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>(
@@ -145,13 +153,16 @@
 		if (e.button !== 0) return;
 		e.preventDefault();
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		gliding = true;
 		glideTo(keyAt(e.clientX, e.clientY));
 	}
 	function glideMove(e: PointerEvent) {
-		if (glideIdx === null) return;
-		glideTo(keyAt(e.clientX, e.clientY));
+		if (!gliding) return;
+		const idx = keyAt(e.clientX, e.clientY);
+		if (idx !== null) glideTo(idx);
 	}
 	function glideEnd() {
+		gliding = false;
 		glideTo(null);
 	}
 
