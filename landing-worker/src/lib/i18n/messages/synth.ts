@@ -141,13 +141,11 @@ export default {
 		'synth.preset.removeHint': 'Remove {name}',
 		'synth.preset.removeAria': 'Remove {name}',
 		'synth.preset.nameAria': 'Name',
-		'synth.preset.saveTrackAsKit': 'SAVE TRACK AS KIT',
 		'synth.preset.saveKitOnHint': "Keep the active track\'s key table as a kit in this browser",
-		'synth.preset.saveKitOffHint': 'Turn on P on the active track and give keys their sounds first',
-		'synth.preset.importKit': 'IMPORT KIT…',
-		'synth.preset.importKitHint':
-			'Import a kit .json onto the active track; dropping the file anywhere on the page works too',
-		'synth.preset.exportKit': 'EXPORT KIT',
+		'synth.preset.saveKitNoneHint':
+			'Load one of your kits first -- a built-in kit cannot be overwritten; SAVE AS keeps this one as your own',
+		'synth.preset.saveAsKitHint':
+			"Save the active track's key table as a new kit under a name you type (Ctrl/Cmd+Shift+S)",
 		'synth.preset.exportKitOnHint': "Download the active track\'s key table as a kit .json",
 		'synth.preset.noneYet': 'none yet — save the active {target} below, or import a file',
 		'synth.preset.presetsLabel': 'PATCHES',
@@ -167,7 +165,7 @@ export default {
 		'synth.preset.myPresetsShort': 'MINE',
 		'synth.preset.importFile': 'IMPORT FILE…',
 		'synth.preset.importFileHint':
-			'Import a patch .json onto the active track or key; it is added to MY PATCHES. Dropping the file anywhere on the page works too.',
+			'Import a patch or kit .json; a patch lands on the active track or key and in MY PATCHES, a kit replaces the key table and joins the kits. Dropping the file anywhere on the page works too.',
 		'synth.preset.exportActive': 'EXPORT ACTIVE {target}',
 		'synth.preset.exportActiveHint':
 			'Download the active {targetPossessive} sound as a patch .json',
@@ -231,7 +229,8 @@ export default {
 		'synthPrefab.note.wide': 'Mono made stereo by delaying one side a few milliseconds.',
 		'synthPrefab.note.vib': "Vibrato: an oscillator moving another oscillator's frequency.",
 		'synthPrefab.note.duck': 'Sidechain ducking: one signal pushing another out of the way.',
-		'synthPrefab.note.pingpong': 'Two delays with crossed feedback, so repeats bounce side to side.',
+		'synthPrefab.note.pingpong':
+			'Two delays with crossed feedback, so repeats bounce side to side.',
 		'synthPatch.deleteHint': 'Delete the selection (Del)',
 		'synthPatch.selectAllHint': 'Select every module (Ctrl+A)',
 		'synthPatch.selectNoneHint': 'Clear the selection (Esc)',
@@ -242,7 +241,8 @@ export default {
 		'synthPatch.cableHint': 'Click a cable to select it, again to remove',
 		'synthPatch.cycle': 'Audio cannot loop back on itself',
 		'synthPatch.duplicate': 'That cable is already there',
-		'synthPatch.sharedActivation': 'That OUT already answers to a different THEN/REL -- use a second OUT',
+		'synthPatch.sharedActivation':
+			'That OUT already answers to a different THEN/REL -- use a second OUT',
 		'synthPatch.keyEventCapped': 'Only one KEY-EVENT allowed -- delete the existing one first',
 		'synthPatch.mismatch': 'Audio and CV do not connect',
 		'synthPatch.mod.osc': 'An oscillator. The thing that makes a tone.',
@@ -273,7 +273,8 @@ export default {
 			'Where the string is struck. Plucked at the bridge is thin, over the hole is round.',
 		'synthPatch.mod.space': 'A room. Every acoustic instrument is heard in one.',
 		'synthPatch.mod.fbsend': 'Sends into a feedback loop. Pair it with RTN on the same BUS.',
-		'synthPatch.mod.fbrtn': 'Returns what SEND was given, one block ago. Cable it onward to close the loop.',
+		'synthPatch.mod.fbrtn':
+			'Returns what SEND was given, one block ago. Cable it onward to close the loop.',
 		'synthPatch.mod.delay': 'A tap with feedback. Inside a voice, not just on the output.',
 		'synthPatch.mod.pan': 'Places the sound across the stereo field.',
 		'synthPatch.mod.in':
@@ -289,7 +290,8 @@ export default {
 		'synthPatch.mod.add': 'A plus B. An unwired leg reads 0; a CONST is how you pin one.',
 		'synthPatch.mod.mul': 'A times B. An unwired leg reads 1; a CONST is how you pin one.',
 		'synthPatch.mod.sub': 'A minus B. An unwired leg reads 0; a CONST is how you pin one.',
-		'synthPatch.mod.div': 'A over B. An unwired B reads 1; B at 0 also reads as the identity, never infinity.',
+		'synthPatch.mod.div':
+			'A over B. An unwired B reads 1; B at 0 also reads as the identity, never infinity.',
 		'synthPatch.mod.mod': 'A remainder B. An unwired B reads 0, the identity -- no wrap at all.',
 		'synthPatch.mod.remap':
 			'Takes a value from one range to another, clamped. Velocity 0-1 into a cutoff 200-8000.',
@@ -302,9 +304,11 @@ export default {
 			'What to do when the WHEN before it says yes: CUT stops the others, SOLO stops everything but this group.',
 		'synthPatch.mod.split': 'Takes a stereo signal apart so L and R can be processed separately.',
 		'synthPatch.mod.merge': 'Puts two mono paths back into one stereo signal.',
-		'synthPatch.mod.scope': 'The waveform at this point. Takes audio or a control value; a value is drawn against LO..HI.',
+		'synthPatch.mod.scope':
+			'The waveform at this point. Takes audio or a control value; a value is drawn against LO..HI.',
 		'synthPatch.mod.fft': 'The spectrum at this point. Passes the signal through untouched.',
-		'synthPatch.mod.loud': 'How big it is here: audio in dB, a control value as the number itself against LO..HI.',
+		'synthPatch.mod.loud':
+			'How big it is here: audio in dB, a control value as the number itself against LO..HI.',
 		'synthPatch.mod.sum': 'Adds two signals together.',
 		'synthPatch.mod.subtract': 'A minus B. Cancels what the two share and leaves the difference.',
 		'synthPatch.mod.ring': 'One signal multiplies the other. Inharmonic: bells, gongs, metal.',
@@ -340,7 +344,8 @@ export default {
 		'synthPatch.mod.make':
 			'Mid and side back into stereo. WIDE scales the side: more is wider, none is mono.',
 		'synthPatch.mod.mono': 'Folds a stereo signal down to one channel.',
-		'synthPatch.mod.nodept': 'Passes audio through unchanged. A named corner to route cables around, and the one socket a group can be entered by.',
+		'synthPatch.mod.nodept':
+			'Passes audio through unchanged. A named corner to route cables around, and the one socket a group can be entered by.',
 		'synthPatch.nodePlaceholder': 'name',
 		'synthPatch.notePlaceholder': 'note',
 		'synthPatch.mod.nodecv': 'Passes a control value through unchanged. The control-side terminal.',
@@ -696,12 +701,11 @@ export default {
 		'synth.preset.removeHint': '删除 {name}',
 		'synth.preset.removeAria': '删除 {name}',
 		'synth.preset.nameAria': '名称',
-		'synth.preset.saveTrackAsKit': '将音轨另存为鼓组',
 		'synth.preset.saveKitOnHint': '将当前音轨的按键音色表保存为浏览器本地的一个鼓组',
-		'synth.preset.saveKitOffHint': '请先在当前音轨开启 P，并为按键设置好音色',
-		'synth.preset.importKit': '导入鼓组…',
-		'synth.preset.importKitHint': '将一个鼓组 .json 导入到当前音轨；把文件拖到页面任意位置也可以',
-		'synth.preset.exportKit': '导出鼓组',
+		'synth.preset.saveKitNoneHint':
+			'请先载入一个你自己的鼓组 —— 内置鼓组不能覆盖，用「另存为」把它存成你自己的',
+		'synth.preset.saveAsKitHint':
+			'把当前音轨的按键音色表另存为一个新鼓组，名字自己取(Ctrl/Cmd+Shift+S)',
 		'synth.preset.exportKitOnHint': '将当前音轨的按键音色表下载为鼓组 .json',
 		'synth.preset.noneYet': '还没有 — 在下方保存当前{target}，或导入一个文件',
 		'synth.preset.presetsLabel': '音色',
@@ -719,7 +723,7 @@ export default {
 		'synth.preset.myPresetsShort': '我的',
 		'synth.preset.importFile': '导入文件…',
 		'synth.preset.importFileHint':
-			'将一个音色 .json 导入到当前音轨或按键；会被加入「我的音色」。把文件拖到页面任意位置也可以。',
+			'导入音色或鼓组 .json：音色会加到当前音轨或按键并进入「我的音色」，鼓组会替换按键音色表并加入鼓组列表。把文件拖到页面任意位置也可以。',
 		'synth.preset.exportActive': '导出当前{target}',
 		'synth.preset.exportActiveHint': '将当前{targetPossessive}音色下载为音色 .json',
 		'synth.preset.targetTrack': '音轨',
@@ -835,8 +839,7 @@ export default {
 		'synthPatch.mod.curve': '弯曲一个 0-1 的值。大于 1 起步慢,小于 1 起步快。',
 		'synthPatch.mod.seq': '让后面的模块晚一点执行。间隔 GAP 毫秒，两次击打就成了装饰音而不是一下。',
 		'synthPatch.mod.when': '一个分支。判断成立时，执行流才会从 TRUE 继续往下走。',
-		'synthPatch.mod.act':
-			'前面的 WHEN 成立时要做的事：CUT 掐断其他音，SOLO 只留下本组。',
+		'synthPatch.mod.act': '前面的 WHEN 成立时要做的事：CUT 掐断其他音，SOLO 只留下本组。',
 		'synthPatch.mod.split': '把立体声拆开，左右两路可以各自处理。',
 		'synthPatch.mod.merge': '把两路单声道合回立体声。',
 		'synthPatch.mod.scope': '这一点的波形。可接音频或调制值；调制值按 LO..HI 范围绘制。',
@@ -847,15 +850,18 @@ export default {
 		'synthPatch.mod.ring': '一路信号乘以另一路。产生非谐音：钟、锣、金属声。',
 		'synthPatch.mod.invert': '反相。单独听不出来；和自己的副本相加就会抵消。',
 		'synthPatch.mod.pwm': '脉宽可调可扫的方波。PW 是插孔，把力度接进去，按键越重脉冲开得越宽。',
-		'synthPatch.mod.gain': '声音乘以一个数。LVL 是静态电平，接上线是相加，这就是 VCA；-1 则是反相。',
-		'synthPatch.mod.follow': '信号有多响，输出为调制值。经过整流，没有负半周——适合闪避，不适合颤音。',
+		'synthPatch.mod.gain':
+			'声音乘以一个数。LVL 是静态电平，接上线是相加，这就是 VCA；-1 则是反相。',
+		'synthPatch.mod.follow':
+			'信号有多响，输出为调制值。经过整流，没有负半周——适合闪避，不适合颤音。',
 		'synthPatch.mod.wait': '把执行流延后 GAP。接在它后面的敲击会晚到，这就是装饰音。',
 		'synthPatch.mod.shape': '让波形穿过一条曲线：柔和、硬削或折返。先是饱和，再往上就是折叠。',
 		'synthPatch.mod.diff': 'A 减 B。抵消两者相同的部分，留下差异。',
 		'synthPatch.mod.break': '把立体声拆成中置和侧向两路。',
 		'synthPatch.mod.make': '中置和侧向合回立体声。WIDE 缩放侧向：越多越宽，为零就是单声道。',
 		'synthPatch.mod.mono': '把立体声并成一个声道。',
-		'synthPatch.mod.nodept': '原样传递音频。用来给线路转角命名，也可作为整个 group 的统一输入输出端子。',
+		'synthPatch.mod.nodept':
+			'原样传递音频。用来给线路转角命名，也可作为整个 group 的统一输入输出端子。',
 		'synthPatch.nodePlaceholder': '端子名',
 		'synthPatch.notePlaceholder': '注释',
 		'synthPatch.mod.nodecv': '原样传递控制值。控制侧的端子。',
@@ -1182,12 +1188,11 @@ export default {
 		'synth.preset.removeHint': '刪除 {name}',
 		'synth.preset.removeAria': '刪除 {name}',
 		'synth.preset.nameAria': '名稱',
-		'synth.preset.saveTrackAsKit': '將音軌另存為鼓組',
 		'synth.preset.saveKitOnHint': '將目前音軌的按鍵音色表儲存為瀏覽器本機的一個鼓組',
-		'synth.preset.saveKitOffHint': '請先在目前音軌開啟 P，並為按鍵設定好音色',
-		'synth.preset.importKit': '匯入鼓組…',
-		'synth.preset.importKitHint': '將一個鼓組 .json 匯入到目前音軌；把檔案拖到頁面任意位置也可以',
-		'synth.preset.exportKit': '匯出鼓組',
+		'synth.preset.saveKitNoneHint':
+			'請先載入一個你自己的鼓組 —— 內建鼓組無法覆寫，用「另存新檔」把它存成你自己的',
+		'synth.preset.saveAsKitHint':
+			'把目前音軌的按鍵音色表另存為新的鼓組，名稱自訂(Ctrl/Cmd+Shift+S)',
 		'synth.preset.exportKitOnHint': '將目前音軌的按鍵音色表下載為鼓組 .json',
 		'synth.preset.noneYet': '還沒有 — 在下方儲存目前{target}，或匯入一個檔案',
 		'synth.preset.presetsLabel': '音色',
@@ -1205,7 +1210,7 @@ export default {
 		'synth.preset.myPresetsShort': '我的',
 		'synth.preset.importFile': '匯入檔案…',
 		'synth.preset.importFileHint':
-			'將一個音色 .json 匯入到目前音軌或按鍵；會被加入「我的音色」。把檔案拖到頁面任意位置也可以。',
+			'匯入音色或鼓組 .json：音色會加到目前音軌或按鍵並進入「我的音色」，鼓組會取代按鍵音色表並加入鼓組清單。把檔案拖到頁面任意位置也可以。',
 		'synth.preset.exportActive': '匯出目前{target}',
 		'synth.preset.exportActiveHint': '將目前{targetPossessive}音色下載為音色 .json',
 		'synth.preset.targetTrack': '音軌',
@@ -1321,8 +1326,7 @@ export default {
 		'synthPatch.mod.curve': '彎曲一個 0-1 的值。大於 1 起步慢,小於 1 起步快。',
 		'synthPatch.mod.seq': '讓後面的模組晚一點執行。間隔 GAP 毫秒，兩次擊打就成了裝飾音而不是一下。',
 		'synthPatch.mod.when': '一個分支。判斷成立時，執行流才會從 TRUE 繼續往下走。',
-		'synthPatch.mod.act':
-			'前面的 WHEN 成立時要做的事：CUT 掐斷其他音，SOLO 只留下本組。',
+		'synthPatch.mod.act': '前面的 WHEN 成立時要做的事：CUT 掐斷其他音，SOLO 只留下本組。',
 		'synthPatch.mod.split': '把立體聲拆開，左右兩路可以各自處理。',
 		'synthPatch.mod.merge': '把兩路單聲道合回立體聲。',
 		'synthPatch.mod.scope': '這一點的波形。可接音訊或調制值；調制值按 LO..HI 範圍繪製。',
@@ -1333,15 +1337,18 @@ export default {
 		'synthPatch.mod.ring': '一路訊號乘以另一路。產生非諧音：鐘、鑼、金屬聲。',
 		'synthPatch.mod.invert': '反相。單獨聽不出來；和自己的副本相加就會抵消。',
 		'synthPatch.mod.pwm': '脈寬可調可掃的方波。PW 是插孔，把力度接進去，按鍵越重脈衝開得越寬。',
-		'synthPatch.mod.gain': '聲音乘以一個數。LVL 是靜態電平，接上線是相加，這就是 VCA；-1 則是反相。',
-		'synthPatch.mod.follow': '訊號有多響，輸出為調制值。經過整流，沒有負半週——適合閃避，不適合顫音。',
+		'synthPatch.mod.gain':
+			'聲音乘以一個數。LVL 是靜態電平，接上線是相加，這就是 VCA；-1 則是反相。',
+		'synthPatch.mod.follow':
+			'訊號有多響，輸出為調制值。經過整流，沒有負半週——適合閃避，不適合顫音。',
 		'synthPatch.mod.wait': '把執行流延後 GAP。接在它後面的敲擊會晚到，這就是裝飾音。',
 		'synthPatch.mod.shape': '讓波形穿過一條曲線：柔和、硬削或折返。先是飽和，再往上就是折疊。',
 		'synthPatch.mod.diff': 'A 減 B。抵消兩者相同的部分，留下差異。',
 		'synthPatch.mod.break': '把立體聲拆成中置和側向兩路。',
 		'synthPatch.mod.make': '中置和側向合回立體聲。WIDE 縮放側向：越多越寬，為零就是單聲道。',
 		'synthPatch.mod.mono': '把立體聲併成一個聲道。',
-		'synthPatch.mod.nodept': '原樣傳遞音訊。用來給線路轉角命名，也可作為整個 group 的統一輸入輸出端子。',
+		'synthPatch.mod.nodept':
+			'原樣傳遞音訊。用來給線路轉角命名，也可作為整個 group 的統一輸入輸出端子。',
 		'synthPatch.nodePlaceholder': '端子名',
 		'synthPatch.notePlaceholder': '註釋',
 		'synthPatch.mod.nodecv': '原樣傳遞控制值。控制側的端子。',
@@ -1682,15 +1689,12 @@ export default {
 		'synth.preset.removeHint': '{name} を削除',
 		'synth.preset.removeAria': '{name} を削除',
 		'synth.preset.nameAria': '名前',
-		'synth.preset.saveTrackAsKit': 'トラックをキットとして保存',
 		'synth.preset.saveKitOnHint':
 			'アクティブトラックのキー音色テーブルをこのブラウザにキットとして保存します',
-		'synth.preset.saveKitOffHint':
-			'まずアクティブトラックで P を ON にし、キーに音色を設定してください',
-		'synth.preset.importKit': 'キットをインポート…',
-		'synth.preset.importKitHint':
-			'キットの .json をアクティブトラックにインポートします。ファイルをページ内のどこにドロップしても構いません',
-		'synth.preset.exportKit': 'キットをエクスポート',
+		'synth.preset.saveKitNoneHint':
+			'まず自分のキットを読み込んでください。内蔵キットは上書きできません。「名前を付けて保存」で自分のキットとして保存できます',
+		'synth.preset.saveAsKitHint':
+			'アクティブトラックのキー音色テーブルを、入力した名前で新しいキットとして保存します（Ctrl/Cmd+Shift+S）',
 		'synth.preset.exportKitOnHint':
 			'アクティブトラックのキー音色テーブルをキット .json としてダウンロードします',
 		'synth.preset.noneYet':
@@ -1703,7 +1707,8 @@ export default {
 			'アクティブな{targetPossessive}現在のサウンド（ラック1-6と AIR。音量・パン・ノートは含みません）をこのブラウザにパッチとして保存します',
 		'synth.preset.saveShort': '保存',
 		'synth.preset.saveAsShort': '名前を付けて',
-		'synth.preset.saveAsHint': '現在のサウンドを入力した名前で新しいパッチとして保存します（Ctrl/Cmd+Shift+S）',
+		'synth.preset.saveAsHint':
+			'現在のサウンドを入力した名前で新しいパッチとして保存します（Ctrl/Cmd+Shift+S）',
 		'synth.preset.saveBuiltinHint':
 			'内蔵パッチは上書きできません -- SAVE AS で自分のパッチとして保存してください',
 		'synth.preset.importShort': '読込',
@@ -1711,7 +1716,7 @@ export default {
 		'synth.preset.myPresetsShort': 'マイ',
 		'synth.preset.importFile': 'ファイルをインポート…',
 		'synth.preset.importFileHint':
-			'パッチの .json をアクティブなトラックまたはキーにインポートします。「マイパッチ」に追加されます。ファイルをページ内のどこにドロップしても構いません。',
+			'パッチまたはキットの .json をインポートします。パッチはアクティブなトラックまたはキーに適用され「マイパッチ」に追加、キットはキー音色テーブルを置き換えてキット一覧に追加されます。ファイルをページ内のどこにドロップしても構いません。',
 		'synth.preset.exportActive': 'アクティブな{target}をエクスポート',
 		'synth.preset.exportActiveHint':
 			'アクティブな{targetPossessive}サウンドをパッチ .json としてダウンロードします',
@@ -1786,7 +1791,8 @@ export default {
 		'synthPatch.cableHint': 'ケーブルをクリックで選択、もう一度で削除',
 		'synthPatch.cycle': 'オーディオはループできません',
 		'synthPatch.duplicate': 'そのケーブルはすでにあります',
-		'synthPatch.sharedActivation': 'このOUTは別のTHEN/RELから既に駆動されています。別のOUTを使ってください',
+		'synthPatch.sharedActivation':
+			'このOUTは別のTHEN/RELから既に駆動されています。別のOUTを使ってください',
 		'synthPatch.keyEventCapped': 'KEY-EVENTは1つだけです。既存のものを先に削除してください',
 		'synthPatch.mismatch': 'オーディオとCVは接続できません',
 		'synthPatch.mod.osc': 'オシレーター。音程を作るものです。',
@@ -1814,7 +1820,8 @@ export default {
 		'synthPatch.mod.comb': '弦を弾く位置。駒の近くは細く、サウンドホールの上では丸くなります。',
 		'synthPatch.mod.space': '部屋。すべてのアコースティック楽器はどこかの空間で聴かれます。',
 		'synthPatch.mod.fbsend': 'フィードバックループへ送ります。同じ BUS の RTN と対で使います。',
-		'synthPatch.mod.fbrtn': '1 ブロック前に SEND が受け取った音を返します。配線で戻すとループが閉じます。',
+		'synthPatch.mod.fbrtn':
+			'1 ブロック前に SEND が受け取った音を返します。配線で戻すとループが閉じます。',
 		'synthPatch.mod.delay': 'フィードバック付きのディレイ。出力だけでなく音色の内側にも置けます。',
 		'synthPatch.mod.pan': '音をステレオ空間のどこに置くかを決めます。',
 		'synthPatch.mod.in':
@@ -1830,7 +1837,8 @@ export default {
 		'synthPatch.mod.add': 'A + B。未接続の側は 0 になります。固定したいときは CONST を挿します。',
 		'synthPatch.mod.mul': 'A × B。未接続の側は 1 になります。固定したいときは CONST を挿します。',
 		'synthPatch.mod.sub': 'A − B。未接続の側は 0 になります。固定したいときは CONST を挿します。',
-		'synthPatch.mod.div': 'A ÷ B。未接続の B は 1 になります。B が 0 のときも恒等値のままで、無限大にはなりません。',
+		'synthPatch.mod.div':
+			'A ÷ B。未接続の B は 1 になります。B が 0 のときも恒等値のままで、無限大にはなりません。',
 		'synthPatch.mod.mod': 'A を B で割った余り。未接続の B は 0、つまり恒等（余りを取りません）。',
 		'synthPatch.mod.remap':
 			'値を別の範囲へ変換しクランプします。ベロシティ 0-1 をカットオフ 200-8000 へ。',
@@ -1843,7 +1851,8 @@ export default {
 			'手前の WHEN が成立したときの動作：CUT は他の音を止め、SOLO はこのグループ以外を止めます。',
 		'synthPatch.mod.split': 'ステレオ信号を分け、LとRを別々に処理できるようにします。',
 		'synthPatch.mod.merge': '2つのモノ経路を1つのステレオ信号に戻します。',
-		'synthPatch.mod.scope': 'この地点の波形。音声も制御値も接続でき、制御値は LO..HI で描画します。',
+		'synthPatch.mod.scope':
+			'この地点の波形。音声も制御値も接続でき、制御値は LO..HI で描画します。',
 		'synthPatch.mod.fft': 'この地点のスペクトラム。信号はそのまま通過します。',
 		'synthPatch.mod.loud': 'この地点の大きさ。音声は dB、制御値は LO..HI に対する数値そのもの。',
 		'synthPatch.mod.sum': '2つの信号を足し合わせます。',
@@ -1857,7 +1866,8 @@ export default {
 			'音に数を掛けます。LVL は基準レベルで、ケーブルは加算される——それが VCA です。-1 で反転。',
 		'synthPatch.mod.follow':
 			'信号の大きさを値として出します。整流済みで負の半周期がなく、ダッキング向き、トレモロ向きではありません。',
-		'synthPatch.mod.wait': '実行を GAP だけ遅らせます。その先の打撃は遅れて届き、フラムになります。',
+		'synthPatch.mod.wait':
+			'実行を GAP だけ遅らせます。その先の打撃は遅れて届き、フラムになります。',
 		'synthPatch.mod.shape':
 			'波形をカーブに通します：ソフト、ハード、フォールド。まず飽和、その先が折り返しです。',
 		'synthPatch.mod.diff': 'AからBを引きます。共通部分が打ち消され、差だけが残ります。',
@@ -1865,13 +1875,13 @@ export default {
 		'synthPatch.mod.make':
 			'ミッドとサイドをステレオに戻します。WIDE はサイドの量：多いほど広く、ゼロならモノです。',
 		'synthPatch.mod.mono': 'ステレオ信号を1チャンネルにまとめます。',
-		'synthPatch.mod.nodept': '音声をそのまま通します。配線の中継点に名前を付け、グループの入出力端子にもなります。',
+		'synthPatch.mod.nodept':
+			'音声をそのまま通します。配線の中継点に名前を付け、グループの入出力端子にもなります。',
 		'synthPatch.nodePlaceholder': '端子名',
 		'synthPatch.notePlaceholder': 'コメント',
 		'synthPatch.mod.nodecv': 'コントロール値をそのまま通します。制御側の端子。',
 		'synthPatch.mod.note': 'コメント。説明するだけで、音は変わりません。',
-		'synthPatch.mod.tocv':
-			'音を符号ごと値として読みます。オーディオ側から制御側へ渡る扉です。',
+		'synthPatch.mod.tocv': '音を符号ごと値として読みます。オーディオ側から制御側へ渡る扉です。',
 		'synthPatch.mod.tosig':
 			'値が音になります。逆向きの扉であり、値が加算される入力に届く手段でもあります。',
 		'synthPatch.mod.cmp':
@@ -2233,13 +2243,11 @@ export default {
 		'synth.preset.removeHint': '{name} 삭제',
 		'synth.preset.removeAria': '{name} 삭제',
 		'synth.preset.nameAria': '이름',
-		'synth.preset.saveTrackAsKit': '트랙을 키트로 저장',
 		'synth.preset.saveKitOnHint': '활성 트랙의 건반 음색 테이블을 이 브라우저에 키트로 저장합니다',
-		'synth.preset.saveKitOffHint': '먼저 활성 트랙에서 P를 켜고 건반에 음색을 지정하세요',
-		'synth.preset.importKit': '키트 가져오기…',
-		'synth.preset.importKitHint':
-			'키트 .json 파일을 활성 트랙으로 가져옵니다. 파일을 페이지 어디에나 끌어다 놓아도 됩니다',
-		'synth.preset.exportKit': '키트 내보내기',
+		'synth.preset.saveKitNoneHint':
+			'먼저 내 키트를 불러오세요. 내장 키트는 덮어쓸 수 없으니 "다른 이름으로 저장"으로 내 키트로 저장하세요',
+		'synth.preset.saveAsKitHint':
+			'활성 트랙의 건반 음색 테이블을 입력한 이름의 새 키트로 저장합니다 (Ctrl/Cmd+Shift+S)',
 		'synth.preset.exportKitOnHint': '활성 트랙의 건반 음색 테이블을 키트 .json으로 다운로드합니다',
 		'synth.preset.noneYet':
 			'아직 없습니다 — 아래에서 활성 {target}을(를) 저장하거나 파일을 가져오세요',
@@ -2251,7 +2259,8 @@ export default {
 			'활성 {targetPossessive} 현재 사운드(랙 1-6과 AIR, 볼륨·팬·노트는 제외)를 이 브라우저에 패치로 저장합니다',
 		'synth.preset.saveShort': '저장',
 		'synth.preset.saveAsShort': '다른 이름으로',
-		'synth.preset.saveAsHint': '현재 사운드를 입력한 이름의 새 패치로 저장합니다 (Ctrl/Cmd+Shift+S)',
+		'synth.preset.saveAsHint':
+			'현재 사운드를 입력한 이름의 새 패치로 저장합니다 (Ctrl/Cmd+Shift+S)',
 		'synth.preset.saveBuiltinHint':
 			'내장 패치는 덮어쓸 수 없습니다 -- SAVE AS로 자신의 패치로 저장하세요',
 		'synth.preset.importShort': '가져오기',
@@ -2259,7 +2268,7 @@ export default {
 		'synth.preset.myPresetsShort': '내 것',
 		'synth.preset.importFile': '파일 가져오기…',
 		'synth.preset.importFileHint':
-			'패치 .json 파일을 활성 트랙이나 건반으로 가져옵니다. "내 패치"에 추가됩니다. 파일을 페이지 어디에나 끌어다 놓아도 됩니다.',
+			'패치 또는 키트 .json 파일을 가져옵니다. 패치는 활성 트랙이나 건반에 적용되어 "내 패치"에 추가되고, 키트는 건반 음색 테이블을 대체하고 키트 목록에 추가됩니다. 파일을 페이지 어디에나 끌어다 놓아도 됩니다.',
 		'synth.preset.exportActive': '활성 {target} 내보내기',
 		'synth.preset.exportActiveHint':
 			'활성 {targetPossessive} 사운드를 패치 .json으로 다운로드합니다',
@@ -2334,7 +2343,8 @@ export default {
 		'synthPatch.cableHint': '케이블을 클릭해 선택, 다시 클릭하면 삭제',
 		'synthPatch.cycle': '오디오는 되먹임 연결을 할 수 없습니다',
 		'synthPatch.duplicate': '이미 있는 케이블입니다',
-		'synthPatch.sharedActivation': '이 OUT은 이미 다른 THEN/REL이 사용 중입니다. 다른 OUT을 사용하세요',
+		'synthPatch.sharedActivation':
+			'이 OUT은 이미 다른 THEN/REL이 사용 중입니다. 다른 OUT을 사용하세요',
 		'synthPatch.keyEventCapped': 'KEY-EVENT는 하나만 사용할 수 있습니다. 기존 것을 먼저 삭제하세요',
 		'synthPatch.mismatch': '오디오와 CV는 연결되지 않습니다',
 		'synthPatch.mod.osc': '오실레이터. 음을 만드는 것.',
@@ -2361,12 +2371,14 @@ export default {
 		'synthPatch.mod.comb': '현을 뜯는 위치. 브리지 쪽은 얇고, 사운드홀 위는 둥급니다.',
 		'synthPatch.mod.space': '방. 모든 어쿠스틱 악기는 어떤 공간 안에서 들립니다.',
 		'synthPatch.mod.fbsend': '피드백 루프로 보냅니다. 같은 BUS의 RTN과 짝을 이룹니다.',
-		'synthPatch.mod.fbrtn': 'SEND가 한 블록 전에 받은 소리를 돌려줍니다. 다시 연결하면 루프가 닫힙니다.',
+		'synthPatch.mod.fbrtn':
+			'SEND가 한 블록 전에 받은 소리를 돌려줍니다. 다시 연결하면 루프가 닫힙니다.',
 		'synthPatch.mod.delay': '피드백이 있는 딜레이. 출력뿐 아니라 음색 안에도 놓을 수 있습니다.',
 		'synthPatch.mod.pan': '소리를 스테레오 공간 어디에 둘지 정합니다.',
 		'synthPatch.mod.in':
 			'음 자체입니다. THEN이 패치를 실행하고 PITCH VEL NOTE GATE가 무엇을 연주했는지 알려줍니다.',
-		'synthPatch.mod.out': '패치를 마스터 버스로 보냅니다. 여기에 닿지 않는 것은 소리 나지 않습니다.',
+		'synthPatch.mod.out':
+			'패치를 마스터 버스로 보냅니다. 여기에 닿지 않는 것은 소리 나지 않습니다.',
 		'synthPatch.mod.tofreq': '음높이를 그것이 가리키는 주파수로 바꿉니다. A4가 기준입니다.',
 		'synthPatch.mod.topitch': '주파수를 음높이로 정확히 되읽습니다. A4가 기준입니다.',
 		'synthPatch.mod.trsp':
@@ -2377,7 +2389,8 @@ export default {
 		'synthPatch.mod.add': 'A 더하기 B. 연결되지 않은 쪽은 0입니다. 고정하려면 CONST를 쓰세요.',
 		'synthPatch.mod.mul': 'A 곱하기 B. 연결되지 않은 쪽은 1입니다. 고정하려면 CONST를 쓰세요.',
 		'synthPatch.mod.sub': 'A 빼기 B. 연결되지 않은 쪽은 0입니다. 고정하려면 CONST를 쓰세요.',
-		'synthPatch.mod.div': 'A 나누기 B. 연결되지 않은 B는 1입니다. B가 0이어도 무한대가 아니라 항등값으로 읽습니다.',
+		'synthPatch.mod.div':
+			'A 나누기 B. 연결되지 않은 B는 1입니다. B가 0이어도 무한대가 아니라 항등값으로 읽습니다.',
 		'synthPatch.mod.mod': 'A를 B로 나눈 나머지. 연결되지 않은 B는 0, 즉 항등값입니다(나머지 없음).',
 		'synthPatch.mod.remap': '값을 다른 범위로 옮기고 제한합니다. 세기 0-1을 컷오프 200-8000으로.',
 		'synthPatch.mod.clamp': '값을 MIN과 MAX 사이로 유지합니다.',
@@ -2389,7 +2402,8 @@ export default {
 			'앞의 WHEN이 참일 때 할 일: CUT은 다른 음을 끊고, SOLO는 이 그룹만 남깁니다.',
 		'synthPatch.mod.split': '스테레오 신호를 나눠 L과 R을 따로 처리합니다.',
 		'synthPatch.mod.merge': '두 모노 경로를 하나의 스테레오 신호로 되돌립니다.',
-		'synthPatch.mod.scope': '이 지점의 파형. 오디오나 제어 값을 받으며, 제어 값은 LO..HI로 그립니다.',
+		'synthPatch.mod.scope':
+			'이 지점의 파형. 오디오나 제어 값을 받으며, 제어 값은 LO..HI로 그립니다.',
 		'synthPatch.mod.fft': '이 지점의 스펙트럼. 신호는 그대로 통과합니다.',
 		'synthPatch.mod.loud': '이 지점의 크기: 오디오는 dB, 제어 값은 LO..HI에 대한 숫자 그대로.',
 		'synthPatch.mod.sum': '두 신호를 더합니다.',
@@ -2403,7 +2417,8 @@ export default {
 			'소리에 숫자를 곱합니다. LVL은 기준 레벨이고 케이블은 더해집니다 — 그것이 VCA입니다. -1은 반전.',
 		'synthPatch.mod.follow':
 			'신호가 얼마나 큰지를 값으로 냅니다. 정류되어 음의 반주기가 없으니 더킹용이지 트레몰로용은 아닙니다.',
-		'synthPatch.mod.wait': '실행을 GAP만큼 늦춥니다. 뒤에 달린 타격은 늦게 도착하고, 그것이 플램입니다.',
+		'synthPatch.mod.wait':
+			'실행을 GAP만큼 늦춥니다. 뒤에 달린 타격은 늦게 도착하고, 그것이 플램입니다.',
 		'synthPatch.mod.shape':
 			'파형을 곡선에 통과시킵니다: 소프트, 하드, 폴드. 먼저 새츄레이션, 그 위는 접힘입니다.',
 		'synthPatch.mod.diff': 'A 빼기 B. 공통 부분이 상쇄되고 차이만 남습니다.',
@@ -2411,15 +2426,18 @@ export default {
 		'synthPatch.mod.make':
 			'미드와 사이드를 스테레오로 되돌립니다. WIDE는 사이드의 양: 많을수록 넓고, 0이면 모노입니다.',
 		'synthPatch.mod.mono': '스테레오 신호를 한 채널로 접습니다.',
-		'synthPatch.mod.nodept': '오디오를 그대로 통과시킵니다. 배선의 중계점에 이름을 붙이고 그룹의 입출력 단자가 됩니다.',
+		'synthPatch.mod.nodept':
+			'오디오를 그대로 통과시킵니다. 배선의 중계점에 이름을 붙이고 그룹의 입출력 단자가 됩니다.',
 		'synthPatch.nodePlaceholder': '단자명',
 		'synthPatch.notePlaceholder': '주석',
 		'synthPatch.mod.nodecv': '컨트롤 값을 그대로 통과시킵니다. 제어 측 단자.',
 		'synthPatch.mod.note': '주석 라벨. 설명만 할 뿐 소리는 바뀌지 않습니다.',
-		'synthPatch.mod.tocv': '소리를 부호까지 포함해 값으로 읽습니다. 오디오 쪽에서 제어 쪽으로 가는 문입니다.',
+		'synthPatch.mod.tocv':
+			'소리를 부호까지 포함해 값으로 읽습니다. 오디오 쪽에서 제어 쪽으로 가는 문입니다.',
 		'synthPatch.mod.tosig':
 			'값이 소리가 됩니다. 반대 방향의 문이자, 값이 더해지는 입력에 닿는 방법입니다.',
-		'synthPatch.mod.cmp': 'A와 B를 비교해 참거짓을 냅니다. 노브는 없습니다: 고정 피연산자는 CONST의 몫입니다.',
+		'synthPatch.mod.cmp':
+			'A와 B를 비교해 참거짓을 냅니다. 노브는 없습니다: 고정 피연산자는 CONST의 몫입니다.',
 		'synthPatch.mod.logic': '두 참거짓을 결합합니다: AND, OR, XOR, NAND, NOR.',
 		'synthPatch.mod.not': '참거짓을 뒤집습니다. 피연산자가 하나라서 독립된 카드입니다.',
 		'synthPatch.mod.map':

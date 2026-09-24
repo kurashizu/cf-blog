@@ -12,25 +12,22 @@
 		soundPresetIdx,
 		activeKitName,
 		applyPresetAt,
-		saveActiveAsPreset,
-		saveActivePreset,
-		canOverwritePreset,
+		saveActive,
+		saveActiveAs,
+		canOverwriteActive,
 		presetSaveAsRequest,
 		newPreset,
 		newAdvancedPreset,
 		presetModified,
 		deleteUserPreset,
 		renameUserPreset,
-		exportActivePreset,
-		handleImportPresetFile,
+		exportActive,
+		handleImportFile,
 		BUILTIN_KITS,
 		userKits,
 		applyKit,
-		saveActiveAsKit,
 		deleteUserKit,
 		renameUserKit,
-		exportActiveKit,
-		handleImportKitFile,
 		CATEGORY_HINTS,
 		type PresetCategory,
 		type DrumKit
@@ -83,7 +80,6 @@
 		return () => window.removeEventListener('resize', fitMenu);
 	});
 	let fileInput: HTMLInputElement | undefined = $state();
-	let kitInput: HTMLInputElement | undefined = $state();
 
 	let current = $derived($allPresets[$soundPresetIdx] ?? $allPresets[0]);
 	/* A kit is a whole key table, so no single preset names it; while one is
@@ -159,12 +155,12 @@
 	   original with nothing to go back to -- so SAVE is inert there and SAVE AS
 	   is the way out. */
 	function save() {
-		if (!$canOverwritePreset) {
+		if (!$canOverwriteActive) {
 			startSaveAs();
 			return;
 		}
 		close();
-		saveActivePreset();
+		saveActive();
 	}
 
 	/* Named in the menu rather than in a dialog, using the row editor that
@@ -194,7 +190,7 @@
 	function commitSaveAs() {
 		savingAs = false;
 		close();
-		saveActiveAsPreset(saveAsName);
+		saveActiveAs(saveAsName);
 	}
 
 	function startNew() {
@@ -207,19 +203,9 @@
 		newAdvancedPreset();
 	}
 
-	function saveKit() {
-		close();
-		saveActiveAsKit();
-	}
-
 	function exportPreset() {
 		close();
-		exportActivePreset();
-	}
-
-	function exportKit() {
-		close();
-		exportActiveKit();
+		exportActive();
 	}
 
 	function importPreset() {
@@ -228,22 +214,10 @@
 		fileInput?.click();
 	}
 
-	function importKit() {
-		close();
-		playSound('click');
-		kitInput?.click();
-	}
-
 	function onImportChange(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
-		if (file) handleImportPresetFile(file);
+		if (file) handleImportFile(file);
 		if (fileInput) fileInput.value = '';
-	}
-
-	function onKitImportChange(e: Event) {
-		const file = (e.target as HTMLInputElement).files?.[0];
-		if (file) handleImportKitFile(file);
-		if (kitInput) kitInput.value = '';
 	}
 
 	async function startRename(list: 'preset' | 'kit', i: number) {
@@ -287,13 +261,6 @@
 	bind:this={fileInput}
 	type="file"
 	onchange={onImportChange}
-	accept=".json,application/json"
-	class="hidden"
-/>
-<input
-	bind:this={kitInput}
-	type="file"
-	onchange={onKitImportChange}
 	accept=".json,application/json"
 	class="hidden"
 />
@@ -562,40 +529,6 @@
 											)}
 										{/each}
 									{/if}
-									<div class="border-t border-white/10 mt-1 pt-1">
-										<button
-											onclick={saveKit}
-											class="{actionRow} {percussion
-												? 'text-[#98c379] hover:bg-[#98c379]/20'
-												: 'text-white/30 cursor-not-allowed'}"
-											title={percussion
-												? $t('synth.preset.saveKitOnHint')
-												: $t('synth.preset.saveKitOffHint')}
-										>
-											<span class="shrink-0">＋</span>
-											<span>{$t('synth.preset.saveTrackAsKit')}</span>
-										</button>
-										<button
-											onclick={importKit}
-											class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20"
-											title={$t('synth.preset.importKitHint')}
-										>
-											<span class="shrink-0">▲</span>
-											<span>{$t('synth.preset.importKit')}</span>
-										</button>
-										<button
-											onclick={exportKit}
-											class="{actionRow} {percussion
-												? 'text-[#56b6c2] hover:bg-[#56b6c2]/20'
-												: 'text-white/30 cursor-not-allowed'}"
-											title={percussion
-												? $t('synth.preset.exportKitOnHint')
-												: $t('synth.preset.saveKitOffHint')}
-										>
-											<span class="shrink-0">▼</span>
-											<span>{$t('synth.preset.exportKit')}</span>
-										</button>
-									</div>
 								{/snippet}
 							{:else}
 								{@render flyout(mineList)}
@@ -702,17 +635,19 @@
 				<div class="border-t border-white/10 shrink-0 flex items-center gap-1 px-1 py-1">
 					<button
 						onclick={save}
-						disabled={!$canOverwritePreset}
-						class="press flex-1 min-w-0 px-2 py-1 rounded-xs font-bold transition-colors flex items-center gap-1.5 {$canOverwritePreset
+						disabled={!$canOverwriteActive}
+						class="press flex-1 min-w-0 px-2 py-1 rounded-xs font-bold transition-colors flex items-center gap-1.5 {$canOverwriteActive
 							? 'cursor-pointer text-[#98c379] hover:bg-[#98c379]/20'
 							: 'cursor-not-allowed text-white/25'}"
-						title={$canOverwritePreset
-							? $t('synth.preset.saveActiveHint', {
-									targetPossessive: percussion
-										? $t('synth.preset.targetKeyPossessive')
-										: $t('synth.preset.targetTrackPossessive')
-								})
-							: $t('synth.preset.saveBuiltinHint')}
+						title={percussion
+							? $canOverwriteActive
+								? $t('synth.preset.saveKitOnHint')
+								: $t('synth.preset.saveKitNoneHint')
+							: $canOverwriteActive
+								? $t('synth.preset.saveActiveHint', {
+										targetPossessive: $t('synth.preset.targetTrackPossessive')
+									})
+								: $t('synth.preset.saveBuiltinHint')}
 					>
 						<span class="shrink-0">▣</span>
 						<span>{$t('synth.preset.saveShort')}</span>
@@ -720,7 +655,7 @@
 					<button
 						onclick={startSaveAs}
 						class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#98c379] hover:bg-[#98c379]/20"
-						title={$t('synth.preset.saveAsHint')}
+						title={percussion ? $t('synth.preset.saveAsKitHint') : $t('synth.preset.saveAsHint')}
 					>
 						<span class="shrink-0">＋</span>
 						<span>{$t('synth.preset.saveAsShort')}</span>
@@ -736,11 +671,11 @@
 					<button
 						onclick={exportPreset}
 						class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#56b6c2] hover:bg-[#56b6c2]/20"
-						title={$t('synth.preset.exportActiveHint', {
-							targetPossessive: percussion
-								? $t('synth.preset.targetKeyPossessive')
-								: $t('synth.preset.targetTrackPossessive')
-						})}
+						title={percussion
+							? $t('synth.preset.exportKitOnHint')
+							: $t('synth.preset.exportActiveHint', {
+									targetPossessive: $t('synth.preset.targetTrackPossessive')
+								})}
 					>
 						<span class="shrink-0">▼</span>
 						<span>{$t('synth.preset.exportShort')}</span>

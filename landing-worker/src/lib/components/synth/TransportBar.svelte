@@ -10,11 +10,7 @@
 	} from '../../synth';
 	import { isSynthSettingsOpen } from '../../stores/synth-settings';
 	import { get } from 'svelte/store';
-	import {
-		canOverwritePreset,
-		openPresetSaveAs,
-		saveActivePreset
-	} from '../../stores/synth-presets';
+	import { canOverwriteActive, openPresetSaveAs, saveActive } from '../../stores/synth-presets';
 	import {
 		bpm,
 		setBpm,
@@ -127,8 +123,8 @@
 		// A field being typed into keeps its own Ctrl+S, if it has one.
 		if (['input', 'textarea', 'select'].includes(tag) || target?.isContentEditable) return;
 		e.preventDefault();
-		if (e.shiftKey || !get(canOverwritePreset)) openPresetSaveAs();
-		else saveActivePreset();
+		if (e.shiftKey || !get(canOverwriteActive)) openPresetSaveAs();
+		else saveActive();
 	}
 
 	function onTransportHotkey(e: KeyboardEvent) {

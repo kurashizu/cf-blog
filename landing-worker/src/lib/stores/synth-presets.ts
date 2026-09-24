@@ -218,7 +218,11 @@ function expandComposites(
 						'filter',
 						{ type: 6, cutoff: p.midFreq ?? 1200, q: p.midQ ?? 1, filterGain: p.midGain ?? 0 }
 					],
-					[`${id}_h`, 'filter', { type: 5, cutoff: p.highFreq ?? 5000, filterGain: p.highGain ?? 0 }]
+					[
+						`${id}_h`,
+						'filter',
+						{ type: 5, cutoff: p.highFreq ?? 5000, filterGain: p.highGain ?? 0 }
+					]
 				);
 				extra.push(`${id}>${id}_m`, `${id}_m>${id}_h`);
 				exit.set(id, `${id}_h`);
@@ -276,7 +280,11 @@ function expandComposites(
 					[`${id}_hp`, 'filter', { type: 1, cutoff: 440, q: 0.7 }],
 					[`${id}_sg`, 'gain', { level: noise * 0.6 }],
 					[`${id}_s`, 'sum'],
-					[`${id}_t`, 'filter', { type: 0, cutoff: 400 + ((p.bowPressure ?? 50) / 100) * 7000, q: 0.7 }]
+					[
+						`${id}_t`,
+						'filter',
+						{ type: 0, cutoff: 400 + ((p.bowPressure ?? 50) / 100) * 7000, q: 0.7 }
+					]
 				);
 				extra.push(
 					`${id}>${id}_dg`,
@@ -2305,13 +2313,15 @@ export function applyPresetFile(file: PresetFile): void {
 	playSound('toggle');
 }
 
-export function handleImportPresetFile(file: File): void {
+/** The menu's one IMPORT: a kit file lands as a kit, a patch file as a patch, whatever the track is in. */
+export function handleImportFile(file: File): void {
 	const reader = new FileReader();
 	reader.onload = (ev) => {
 		try {
 			const parsed = JSON.parse(ev.target?.result as string);
-			if (!isPresetFile(parsed)) throw new Error('not a preset');
-			applyPresetFile(parsed);
+			if (isKitFile(parsed)) applyKitFile(parsed);
+			else if (isPresetFile(parsed)) applyPresetFile(parsed);
+			else throw new Error('not a patch or kit');
 		} catch {
 			showSaveStatus(tr('synthPanels.toast.notAPreset'));
 		}
@@ -3370,25 +3380,80 @@ function upsertUserKit(kit: DrumKit): void {
 	});
 }
 
-/** Keep the active track's key table as a kit. Needs percussion mode with at least one customised key. */
-export function saveActiveAsKit(): void {
+/** The active track's key table, or null (with the reason shown) when there is no kit to keep. */
+function activeKitKeys(): Record<number, Partial<TrackData>> | null {
 	const row = get(activeTrackRow);
 	const keys = row?.percussion
 		? sanitiseKeys((row.keyTimbres ?? {}) as Record<string, unknown>)
 		: {};
 	if (!Object.keys(keys).length) {
 		showSaveStatus(tr('synthPanels.toast.noKitYet'));
-		return;
+		return null;
 	}
+	return keys;
+}
+
+/** The loaded kit is one of the player's own, so SAVE has something to write over. */
+export const canOverwriteKit = derived(
+	[activeKitName, userKits],
+	([$name, $user]) => !!$name && $user.some((k) => k.name === $name)
+);
+
+/** Write the key table back over the user kit it was loaded from, keeping its name. */
+export function saveActiveKit(): void {
+	const name = get(activeKitName);
+	if (!name || !get(canOverwriteKit)) return;
+	const keys = activeKitKeys();
+	if (!keys) return;
+	upsertUserKit({ name, keys });
+	presetModified.set(false);
+	showSaveStatus(tr('synthPanels.toast.kitApplied', { name }));
+	playSound('click');
+}
+
+/** Keep the active track's key table as a new kit. Needs percussion mode with at least one customised key. */
+export function saveActiveAsKit(rawName?: string): void {
+	const keys = activeKitKeys();
+	if (!keys) return;
 	const base =
-		row!.name
-			.replace(/^TRK\s*\d+\s*:\s*/i, '')
-			.trim()
-			.toUpperCase() || 'KIT';
-	const name = uniqueName(`${base} KIT`, kitNames());
+		(rawName ?? '').trim().toUpperCase().slice(0, 40) ||
+		`${
+			get(activeTrackRow)!
+				.name.replace(/^TRK\s*\d+\s*:\s*/i, '')
+				.trim()
+				.toUpperCase() || 'KIT'
+		} KIT`;
+	const name = uniqueName(base, kitNames());
 	upsertUserKit({ name, keys });
 	showSaveStatus(tr('synthPanels.toast.kitApplied', { name }));
 	playSound('click');
+}
+
+/* ── One set of actions for both: a percussion track keeps a kit ─────────
+   The menu's SAVE / SAVE AS / EXPORT and Ctrl+S act on whatever the active
+   track is -- the whole key table when it is in percussion mode, its one
+   sound otherwise -- so there is one row of buttons rather than a second set
+   for kits that only ever worked on half the tracks. */
+const percussionActive = () => !!get(activeTrackRow)?.percussion;
+
+export const canOverwriteActive = derived(
+	[activeTrackRow, canOverwritePreset, canOverwriteKit],
+	([$row, $preset, $kit]) => ($row?.percussion ? $kit : $preset)
+);
+
+export function saveActive(): void {
+	if (percussionActive()) saveActiveKit();
+	else saveActivePreset();
+}
+
+export function saveActiveAs(name?: string): void {
+	if (percussionActive()) saveActiveAsKit(name);
+	else saveActiveAsPreset(name);
+}
+
+export function exportActive(): void {
+	if (percussionActive()) exportActiveKit();
+	else exportActivePreset();
 }
 
 export function deleteUserKit(userIdx: number): void {
@@ -3413,13 +3478,8 @@ export function renameUserKit(userIdx: number, rawName: string): string | null {
 
 export function exportActiveKit(): void {
 	const row = get(activeTrackRow);
-	const keys = row?.percussion
-		? sanitiseKeys((row.keyTimbres ?? {}) as Record<string, unknown>)
-		: {};
-	if (!Object.keys(keys).length) {
-		showSaveStatus(tr('synthPanels.toast.noKitYet'));
-		return;
-	}
+	const keys = activeKitKeys();
+	if (!keys) return;
 	/* The kit's own name when one is loaded, the track's otherwise -- the same
 	   reasoning the preset export follows. `activeKitName` is cleared whenever a
 	   patch is applied, so it is only set while a kit really is what is loaded. */
@@ -3459,19 +3519,4 @@ export function applyKitFile(file: KitFile): void {
 	applyKitToActiveTrack(keys);
 	showSaveStatus(tr('synthPanels.toast.kitApplied', { name }));
 	playSound('toggle');
-}
-
-export function handleImportKitFile(file: File): void {
-	const reader = new FileReader();
-	reader.onload = (ev) => {
-		try {
-			const parsed = JSON.parse(ev.target?.result as string);
-			if (isKitFile(parsed)) applyKitFile(parsed);
-			else if (isPresetFile(parsed)) applyPresetFile(parsed);
-			else throw new Error('not a kit');
-		} catch {
-			showSaveStatus(tr('synthPanels.toast.notAKit'));
-		}
-	};
-	reader.readAsText(file);
 }

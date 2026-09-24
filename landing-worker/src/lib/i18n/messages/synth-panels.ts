@@ -360,8 +360,7 @@ export default {
 		'synthPanels.toast.kitApplied': '✓ KIT {name}',
 		'synthPanels.toast.newPreset': '✓ New patch',
 		'synthPanels.toast.newAdvancedPreset': '✓ New advanced patch',
-		'synthPanels.toast.noKitYet': 'X NO KIT — turn on P and give keys their sounds first',
-		'synthPanels.toast.notAKit': 'X NOT A KIT'
+		'synthPanels.toast.noKitYet': 'X NO KIT — turn on P and give keys their sounds first'
 	},
 	'zh-CN': {
 		'synthPanels.rack.resetHint': 'R——复位：将此机架恢复到中性值，对声音不产生任何影响',
@@ -636,8 +635,7 @@ export default {
 		'synthPanels.toast.kitApplied': '✓ 鼓组 {name}',
 		'synthPanels.toast.newPreset': '✓ 已新建音色',
 		'synthPanels.toast.newAdvancedPreset': '✓ 已新建高级音色',
-		'synthPanels.toast.noKitYet': 'X 还没有鼓组——请先开启 P（打击乐模式）并为按键设置音色',
-		'synthPanels.toast.notAKit': 'X 不是有效的鼓组文件'
+		'synthPanels.toast.noKitYet': 'X 还没有鼓组——请先开启 P（打击乐模式）并为按键设置音色'
 	},
 	'zh-TW': {
 		'synthPanels.rack.resetHint': 'R——重設：將此機架恢復為中性值，對聲音不產生任何影響',
@@ -914,8 +912,7 @@ export default {
 		'synthPanels.toast.kitApplied': '✓ 鼓組 {name}',
 		'synthPanels.toast.newPreset': '✓ 已新建音色',
 		'synthPanels.toast.newAdvancedPreset': '✓ 已新建進階音色',
-		'synthPanels.toast.noKitYet': 'X 還沒有鼓組——請先開啟 P（打擊樂模式）並為按鍵設定音色',
-		'synthPanels.toast.notAKit': 'X 不是有效的鼓組檔案'
+		'synthPanels.toast.noKitYet': 'X 還沒有鼓組——請先開啟 P（打擊樂模式）並為按鍵設定音色'
 	},
 	ja: {
 		'synthPanels.rack.resetHint':
@@ -1246,8 +1243,7 @@ export default {
 		'synthPanels.toast.newPreset': '✓ 新規パッチ',
 		'synthPanels.toast.newAdvancedPreset': '✓ 新規アドバンストパッチ',
 		'synthPanels.toast.noKitYet':
-			'X キットがまだありません — まずP（パーカッションモード）をオンにして、キーにサウンドを設定してください',
-		'synthPanels.toast.notAKit': 'X キットファイルではありません'
+			'X キットがまだありません — まずP（パーカッションモード）をオンにして、キーにサウンドを設定してください'
 	},
 	ko: {
 		'synthPanels.rack.resetHint':
@@ -1560,7 +1556,6 @@ export default {
 		'synthPanels.toast.newPreset': '✓ 새 패치',
 		'synthPanels.toast.newAdvancedPreset': '✓ 새 고급 패치',
 		'synthPanels.toast.noKitYet':
-			'X 킷이 없습니다 — 먼저 P(퍼커션 모드)를 켜고 키에 사운드를 설정하세요',
-		'synthPanels.toast.notAKit': 'X 킷 파일이 아닙니다'
+			'X 킷이 없습니다 — 먼저 P(퍼커션 모드)를 켜고 키에 사운드를 설정하세요'
 	}
 } satisfies Messages;
