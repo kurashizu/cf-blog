@@ -8,6 +8,8 @@ import { chromium, type Browser, type Page } from 'playwright';
    argument. */
 import { SOUND_PRESETS, HELD_BACK, type SoundPreset } from '../../src/lib/stores/synth-presets';
 import { MODULE_SPECS } from '../../src/lib/stores/synth-modules';
+import { flattenMacros } from '../../src/lib/stores/macros';
+import type { RackGraph } from '../../src/lib/stores/graph-model';
 import { BUILTIN_PREFABS } from '../../src/lib/stores/synth-prefabs';
 
 /**
@@ -2081,9 +2083,21 @@ const asTimbre = (p: SoundPreset): Record<string, unknown> => ({
 	advancedView: 'rack'
 });
 
-/** The graph a preset emits, or nothing if it is still held back. */
+/** The graph a preset emits, as the engine builds it -- its macros flattened,
+ *  so a composite's primitives are here under `instance/inner` -- or nothing
+ *  if it is still held back. */
 const graphOf = (p: SoundPreset) =>
-	p.preset.rackGraph as { nodes: { id: string; type: string }[]; cables: unknown[] } | undefined;
+	p.preset.rackGraph
+		? (flattenMacros(p.preset.rackGraph as RackGraph, p.preset.graphParams ?? {}).graph as {
+				nodes: { id: string; type: string }[];
+				cables: unknown[];
+			})
+		: undefined;
+/** A preset's knobs, keyed as the flattened graph's nodes are. */
+const paramsOf = (p: SoundPreset) =>
+	p.preset.rackGraph
+		? flattenMacros(p.preset.rackGraph as RackGraph, p.preset.graphParams ?? {}).params
+		: {};
 
 /** The presets that currently emit a graph -- what `patch()` let through. */
 const EMITTING = SOUND_PRESETS.filter((p) => (graphOf(p)?.nodes.length ?? 0) > 0);
@@ -2204,7 +2218,9 @@ describe('the shipped ADV presets', () => {
 		   an instrument legitimately moves these and the failure this is for is a
 		   graph collapsing to two or three nodes rather than one growing by two.
 		   Six is ENTRY, OUT, the injected trim and three modules, which is smaller
-		   than any real patch here.
+		   than any real patch here. The top was 60 until PIANO became the grand
+		   piano: 87 nodes once its macros are flattened (three strings, the case,
+		   their terminals, the hammer, the damper and the shared board), so 100.
 
 		   Every graph also has to reach OUT. `patch()` routes everything addressed
 		   to `output` through the injected trim, so the cable that actually lands
@@ -2214,7 +2230,7 @@ describe('the shipped ADV presets', () => {
 		const bad: string[] = [];
 		for (const p of EMITTING) {
 			const g = graphOf(p)!;
-			if (g.nodes.length < 6 || g.nodes.length > 60)
+			if (g.nodes.length < 6 || g.nodes.length > 100)
 				bad.push(`${p.name}: ${g.nodes.length} nodes is not a plausible patch`);
 			if (g.cables.length < g.nodes.length - 2)
 				bad.push(`${p.name}: ${g.cables.length} cables for ${g.nodes.length} nodes`);
@@ -2252,7 +2268,7 @@ describe('the shipped ADV presets', () => {
 		   `1 - 0.58` is 0.42000000000000004 in binary floating point and two of
 		   these already read that way in the emitted params. */
 		const bad: string[] = [];
-		const params = (p: SoundPreset) => (p.preset.graphParams ?? {}) as Record<string, number>;
+		const params = (p: SoundPreset) => paramsOf(p);
 		let bodies = 0;
 		for (const p of EMITTING) {
 			const g = graphOf(p)!;
@@ -2302,7 +2318,7 @@ describe('the shipped ADV presets', () => {
 		for (const p of EMITTING) {
 			const g = graphOf(p)!;
 			const ids = new Set(g.nodes.map((n) => n.id));
-			const params = (p.preset.graphParams ?? {}) as Record<string, number>;
+			const params = paramsOf(p);
 			for (const n of g.nodes) {
 				if (!n.id.endsWith('_o') || n.type !== 'sum') continue;
 				const base = n.id.slice(0, -2);

@@ -506,6 +506,31 @@ SEND/RTN bus numbers are the patch's, so two instances of a macro holding a
 loop on bus 0 share that bus -- give the loop's bus a socket-free number, or
 expand one.
 
+## The built-in patches
+
+The thirteen AC presets and the JAZZ KIT are written in `synth-presets.ts`
+with composites -- BODY, MIX, EQ, DRIVE, LFO, BOW, REED, COMB, SHELL -- and
+`patch()` turns each composite into a **macro**: its definition is that one
+composite run through the same expander as before, between terminals named for
+the ports its cables use, so the arithmetic is unchanged (all thirteen render
+within one 16-bit step of the flat version they replaced). The canvas shows the
+instrument -- KOTO is a pluck, a string, a COMB and a BODY -- and a double-click
+shows the primitives.
+
+- **PIANO** is the grand piano in `grand-piano.ts`: a felt pulse, three
+  detuned WIREs (one STR macro placed three times), a CASE macro, a damper, a
+  soundboard shared by the whole track through TSND/TRTN that CTRL's pedal
+  opens, and a REL damper thud. Its key tracking reads NOTE with reversed MAP
+  ranges, since PITCH may only reach a converter. Twenty-four voices.
+- **JAZZ KIT** emits its graphs again. They were built and discarded while
+  the catalogue was rebuilt, so every key played the track's oscillators under
+  a drum envelope. The old FILTER type order (LP, BP, HP) and the shaker's
+  self-feeding DELAY are translated: the shell is a SEND/RTN loop, which
+  compiles to a one-sample loop.
+
+The subtractive presets and the 808 kit are racks 1-7's instrument and stay
+there; ADV is its own instrument (see "ADV is its own instrument").
+
 ## What the notes share: TSND and TRTN
 
 Every node in a patch is built per note -- except what a **TRTN** feeds.

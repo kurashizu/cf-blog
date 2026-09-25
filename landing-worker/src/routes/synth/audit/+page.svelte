@@ -23,7 +23,7 @@
 	/* The default timbre every preset is built on, used here as the reset
 	   between renders -- see `setTrack`. Same object as the catalogue's, so the
 	   bench cannot drift from what a preset actually clears. */
-	import { BASE } from '$lib/stores/synth-presets';
+	import { BASE, BUILTIN_KITS, SOUND_PRESETS } from '$lib/stores/synth-presets';
 	/* The editing half of the canvas, so a test can draw a cable the way a
 	   pointer does rather than by writing the cable into a literal graph.
 
@@ -644,6 +644,8 @@
 			   same reason as `addCable`: an import inside `page.evaluate` does not
 			   survive Vitest's transform. */
 			liveDsp: { ensureLiveDsp, createLiveDsp },
+			// The shipped presets and kits, for tests that play them as the app would.
+			presets: { SOUND_PRESETS, BUILTIN_KITS },
 			// The live engine itself, for driving a realtime context the way a key does.
 			engine: modularSynth,
 			sound: soundEngine,

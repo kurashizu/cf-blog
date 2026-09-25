@@ -45,6 +45,8 @@ import {
 } from './synth-tracks';
 import { showSaveStatus, askConfirm } from './synth-confirm';
 import { ENTRY_ID, OUTPUT_ID, startingGraph, type GraphNode, type GraphCable } from './graph-model';
+import type { MacroDef } from './macros';
+import { grandPiano } from './grand-piano';
 
 const STORAGE_KEY = 'krsz-synth-presets-v1';
 const KIT_STORAGE_KEY = 'krsz-synth-kits-v1';
@@ -199,7 +201,7 @@ function expandComposites(
 	nodes: [string, string, Record<string, number>?][],
 	cables: string[]
 ): { nodes: [string, string, Record<string, number>?][]; cables: string[] } {
-	const COMPOSITE = new Set(['eq', 'drive', 'lfo', 'bow', 'reed']);
+	const COMPOSITE = new Set(['eq', 'drive', 'lfo', 'bow', 'reed', 'comb', 'shell']);
 	if (!nodes.some(([, type]) => COMPOSITE.has(type))) return { nodes, cables };
 	const out: [string, string, Record<string, number>?][] = [];
 	const extra: string[] = [];
@@ -309,6 +311,56 @@ function expandComposites(
 				);
 				extra.push(`${id}>${id}_g`);
 				exit.set(id, `${id}_g`);
+				break;
+			}
+			case 'comb': {
+				/* The old COMB: the signal plus one delayed copy of itself -- feed-
+				   forward, so it notches and never rings. POS is the delay as a
+				   percentage of 12 ms, DEPTH how loud the copy is. A cymbal's
+				   closely spaced plate modes are what it is for. */
+				out.push(
+					[id, 'gain', { level: 1 }],
+					[`${id}_d`, 'delay', { delayTime: ((p.combPos ?? 20) / 100) * 0.012 }],
+					[`${id}_g`, 'gain', { level: (p.combDepth ?? 50) / 100 }],
+					[`${id}_o`, 'sum']
+				);
+				extra.push(`${id}>${id}_o`, `${id}>${id}_d`, `${id}_d>${id}_g`, `${id}_g>${id}_o`);
+				exit.set(id, `${id}_o`);
+				break;
+			}
+			case 'shell': {
+				/* A short delay fed back through a lowpass: each lap is another
+				   handful of beads hitting a shaker's shell, which is what makes it
+				   ring on after the burst. The old DELAY carried its own feedback,
+				   tone and mix; the loop is SEND and RTN now, and closes in a
+				   sample because every module on it is one the loop processor
+				   knows. Bus 6, clear of the low numbers a patch reaches for. */
+				const mix = (p.dlMix ?? 50) / 100;
+				out.push(
+					[id, 'gain', { level: 1 }],
+					[`${id}_l`, 'sum'],
+					[`${id}_d`, 'delay', { delayTime: (p.dlTime ?? 11) / 1000 }],
+					[`${id}_t`, 'filter', { type: 0, cutoff: p.dlTone ?? 8000, q: 0.7 }],
+					[`${id}_s`, 'fbsend', { bus: 6 }],
+					[`${id}_r`, 'fbrtn', { bus: 6 }],
+					[`${id}_f`, 'gain', { level: (p.dlFeedback ?? 40) / 100 }],
+					[`${id}_w`, 'gain', { level: mix }],
+					[`${id}_dr`, 'gain', { level: 1 - mix }],
+					[`${id}_o`, 'sum']
+				);
+				extra.push(
+					`${id}>${id}_l`,
+					`${id}_l>${id}_d`,
+					`${id}_d>${id}_t`,
+					`${id}_t>${id}_s`,
+					`${id}_r>${id}_f`,
+					`${id}_f>${id}_l`,
+					`${id}_t>${id}_w`,
+					`${id}>${id}_dr`,
+					`${id}_w>${id}_o`,
+					`${id}_dr>${id}_o`
+				);
+				exit.set(id, `${id}_o`);
 				break;
 			}
 			default:
@@ -454,6 +506,178 @@ function expandBody(
 	return { nodes: out, cables: [...moved, ...extra] };
 }
 
+/** What each composite is called on its card: four characters, like every label. */
+const COMPOSITE_NAMES: Record<string, string> = {
+	body: 'BODY',
+	mix: 'MIX',
+	eq: 'EQ',
+	drive: 'DRV',
+	lfo: 'LFO',
+	bow: 'BOW',
+	reed: 'REED',
+	comb: 'COMB',
+	shell: 'SHEL'
+};
+
+/** Composites whose output is a value rather than sound. */
+const VALUE_COMPOSITES = new Set(['lfo']);
+
+/**
+ * Every composite in a preset as a macro: one card on the canvas, its
+ * primitives inside.
+ *
+ * The expanders above wrote BODY, MIX and the rest out as loose primitives,
+ * which was right for the engine and wrong for anyone opening the patch --
+ * KOTO drew as twenty cards where it is five things. A macro is the shape
+ * those always were: a named piece with sockets, built from primitives that
+ * are still there to see with a double-click.
+ *
+ * Each composite's definition comes from running the very same expander on
+ * that composite alone, between terminals named for the ports its cables
+ * use, so the arithmetic -- and the sound -- is what it was to the bit. One
+ * definition per instance: each carries its own voicing baked into its knobs,
+ * and a preset is a sound, not a library.
+ */
+function wrapComposites(
+	nodes: [string, string, Record<string, number>?][],
+	cables: string[]
+): {
+	nodes: [string, string, Record<string, number>?][];
+	cables: string[];
+	macros: Record<string, MacroDef>;
+	instances: Map<string, string>;
+} {
+	const macros: Record<string, MacroDef> = {};
+	const instances = new Map<string, string>();
+	const parse = (c: string) => {
+		const [lhs, rest] = c.split('>');
+		const [from, fromPort] = lhs.split('.');
+		const [to, toPort] = rest.split(':');
+		return { from, fromPort, to, toPort };
+	};
+	const composites = nodes.filter(([, type]) => COMPOSITE_NAMES[type]);
+	for (const [id, type, params] of composites) {
+		// Inlets: one terminal per port a cable lands on. Outlet: one, named OUT.
+		const ports = [
+			...new Set(
+				cables
+					.map(parse)
+					.filter((c) => c.to === id)
+					.map((c) => c.toPort || 'in')
+			)
+		];
+		const isValue = VALUE_COMPOSITES.has(type);
+		let inner: [string, string, Record<string, number>?][] = [
+			...ports.map((q) => [`i_${q}`, 'nodept'] as [string, string]),
+			[id, type, params],
+			['o', isValue ? 'nodecv' : 'nodept']
+		];
+		let innerCables = [
+			...ports.map((q) => `i_${q}>${id}${q === 'in' ? '' : `:${q}`}`),
+			`${id}>o${isValue ? ':a' : ''}`
+		];
+		({ nodes: inner, cables: innerCables } = expandBody(inner, innerCables));
+		({ nodes: inner, cables: innerCables } = expandMix(inner, innerCables));
+		({ nodes: inner, cables: innerCables } = expandComposites(inner, innerCables));
+		const def = graphOfTuples(inner, innerCables);
+		const defId = `${type}-${id}`;
+		macros[defId] = {
+			name: COMPOSITE_NAMES[type],
+			nodes: def.nodes,
+			cables: def.cables,
+			params: def.params,
+			labels: {
+				...Object.fromEntries(ports.map((q) => [`i_${q}`, q.toUpperCase()])),
+				o: isValue ? 'CV' : 'OUT'
+			}
+		};
+		instances.set(id, defId);
+	}
+	if (!instances.size) return { nodes, cables, macros, instances };
+	// The outer patch: each composite is its instance, cables on its sockets.
+	const outerNodes = nodes.map(
+		([id, type, params]) =>
+			(instances.has(id) ? [id, 'macro'] : [id, type, params]) as [
+				string,
+				string,
+				Record<string, number>?
+			]
+	);
+	const outerCables = cables.map((c) => {
+		const { from, fromPort, to, toPort } = parse(c);
+		const src = instances.has(from) ? `${from}.o` : fromPort ? `${from}.${fromPort}` : from;
+		const dst = instances.has(to) ? `${to}:i_${toPort || 'in'}` : toPort ? `${to}:${toPort}` : to;
+		return `${src}>${dst}`;
+	});
+	return { nodes: outerNodes, cables: outerCables, macros, instances };
+}
+
+/**
+ * Nodes and cables in the preset shorthand as a laid-out graph with its knobs.
+ *
+ * Each node sits one column right of the furthest node feeding it, so a cable
+ * runs left to right; peers in a column stack about the middle. Shared by a
+ * preset's own patch and by the macro definitions inside it.
+ */
+function graphOfTuples(
+	nodes: [string, string, Record<string, number>?][],
+	cables: string[],
+	fixed: Record<string, { x: number; y: number }> = {}
+): { nodes: GraphNode[]; cables: GraphCable[]; params: Record<string, number>; lastCol: number } {
+	const COL = 300;
+	const ROW = 124;
+	const feeders = new Map<string, string[]>();
+	for (const c of cables) {
+		const [lhs, rest] = c.split('>');
+		const from = lhs.split('.')[0];
+		const to = rest.split(':')[0];
+		feeders.set(to, [...(feeders.get(to) ?? []), from]);
+	}
+	const col = new Map<string, number>([[ENTRY_ID, 0]]);
+	const depth = (id: string, seen = new Set<string>()): number => {
+		if (col.has(id)) return col.get(id)!;
+		if (seen.has(id)) return 1;
+		seen.add(id);
+		const ins = feeders.get(id) ?? [];
+		const d = ins.length ? Math.max(...ins.map((f) => depth(f, seen))) + 1 : 1;
+		col.set(id, d);
+		return d;
+	};
+	for (const [id] of nodes) depth(id);
+	const inColumn = new Map<number, string[]>();
+	for (const [id] of nodes) {
+		const c = col.get(id) ?? 1;
+		inColumn.set(c, [...(inColumn.get(c) ?? []), id]);
+	}
+	const lastCol = Math.max(1, ...[...inColumn.keys()]);
+	const posOf = (id: string) => {
+		if (fixed[id]) return fixed[id];
+		const c = col.get(id) ?? 1;
+		const peers = inColumn.get(c) ?? [id];
+		const row = peers.indexOf(id);
+		return { x: 48 + c * COL, y: 168 + (row - (peers.length - 1) / 2) * ROW };
+	};
+	const params: Record<string, number> = {};
+	for (const [id, type, q] of nodes) {
+		for (const [k, v] of Object.entries(q ?? {})) {
+			const moved = MIGRATED_PARAMS[`${type}.${k}`];
+			if (moved) params[`${id}.${moved[0]}`] = moved[1](v);
+			else params[`${id}.${k}`] = v;
+		}
+	}
+	return {
+		nodes: nodes.map(([id, type]) => ({ id, type: MIGRATED[type] ?? type, ...posOf(id) })),
+		cables: cables.map((c) => {
+			const [lhs, rest] = c.split('>');
+			const [from, fromPort] = lhs.split('.');
+			const [to, toPort] = rest.split(':');
+			return { from, fromPort: fromPort || 'out', to, toPort: toPort || 'in' };
+		}),
+		params,
+		lastCol
+	};
+}
+
 function patch(
 	nodes: [string, string, Record<string, number>?][],
 	cables: string[],
@@ -479,42 +703,7 @@ function patch(
 	   A card is its controls plus the gutters its port labels need, so it is no
 	   longer a flat 176: a module with a four-character label on both sides is
 	   half again as wide. At 200 apart those overlapped their neighbours. */
-	const COL = 300;
-	const ROW = 124;
-	({ nodes, cables } = expandBody(nodes, cables));
-	({ nodes, cables } = expandMix(nodes, cables));
-	({ nodes, cables } = expandComposites(nodes, cables));
-	const feeders = new Map<string, string[]>();
-	for (const c of cables) {
-		const [lhs, rest] = c.split('>');
-		const from = lhs.split('.')[0];
-		const to = rest.split(':')[0];
-		feeders.set(to, [...(feeders.get(to) ?? []), from]);
-	}
-	const col = new Map<string, number>([[ENTRY_ID, 0]]);
-	const depth = (id: string, seen = new Set<string>()): number => {
-		if (col.has(id)) return col.get(id)!;
-		if (seen.has(id)) return 1;
-		seen.add(id);
-		const ins = feeders.get(id) ?? [];
-		const d = ins.length ? Math.max(...ins.map((f) => depth(f, seen))) + 1 : 1;
-		col.set(id, d);
-		return d;
-	};
-	for (const [id] of nodes) depth(id);
-	// Nodes sharing a column stack vertically, centred on the ENTRY/OUTPUT line.
-	const inColumn = new Map<number, string[]>();
-	for (const [id] of nodes) {
-		const c = col.get(id) ?? 1;
-		inColumn.set(c, [...(inColumn.get(c) ?? []), id]);
-	}
-	const lastCol = Math.max(1, ...[...inColumn.keys()]);
-	const posOf = (id: string) => {
-		const c = col.get(id) ?? 1;
-		const peers = inColumn.get(c) ?? [id];
-		const row = peers.indexOf(id);
-		return { x: 48 + c * COL, y: 168 + (row - (peers.length - 1) / 2) * ROW };
-	};
+	const wrapped = wrapComposites(nodes, cables);
 	/* The trim is a VCA in front of OUT, not a knob on it.
 	
 	   OUT sends the patch to the master and does nothing else, so the one place
@@ -528,11 +717,22 @@ function patch(
 	if (nodes.some(([id]) => id === TRIM_ID)) {
 		throw new Error(`preset node id "${TRIM_ID}" collides with the injected trim`);
 	}
+	/* Anything a patch sends to OUT goes through the trim on its way, which is
+	   what makes the gain stage part of the signal path rather than a setting
+	   hidden on the endpoint. */
+	const toTrim = wrapped.cables.map((c) => {
+		const [lhs, rest] = c.split('>');
+		const [to, port] = rest.split(':');
+		return to === OUTPUT_ID ? `${lhs}>${TRIM_ID}${port ? `:${port}` : ''}` : c;
+	});
+	const laid = graphOfTuples(wrapped.nodes, toTrim);
 	const graphNodes: GraphNode[] = [
 		{ id: ENTRY_ID, type: 'in', x: 48, y: 168 },
-		...nodes.map(([id, type]) => ({ id, type: MIGRATED[type] ?? type, ...posOf(id) })),
-		{ id: TRIM_ID, type: 'gain', x: 48 + (lastCol + 1) * COL, y: 168 },
-		{ id: OUTPUT_ID, type: 'out', x: 48 + (lastCol + 2) * COL, y: 168 }
+		...laid.nodes.map((n) =>
+			wrapped.instances.has(n.id) ? { ...n, macro: wrapped.instances.get(n.id) } : n
+		),
+		{ id: TRIM_ID, type: 'gain', x: 48 + (laid.lastCol + 1) * 300, y: 168 },
+		{ id: OUTPUT_ID, type: 'out', x: 48 + (laid.lastCol + 2) * 300, y: 168 }
 	];
 	/* The trim, in GAIN's units.
 	
@@ -541,31 +741,16 @@ function patch(
 	   renamed. Copying it straight over would have made every one of these
 	   patches a hundred times too loud, which is the kind of migration that
 	   passes a type check and fails an ear. */
-	const graphParams: Record<string, number> = { [`${TRIM_ID}.level`]: outLevel / 100 };
-	for (const [id, type, params] of nodes) {
-		for (const [k, v] of Object.entries(params ?? {})) {
-			const moved = MIGRATED_PARAMS[`${type}.${k}`];
-			if (moved) graphParams[`${id}.${moved[0]}`] = moved[1](v);
-			else graphParams[`${id}.${k}`] = v;
-		}
-	}
-	/* 'a>b' is the common case: the OUT socket into the IN socket. A source
-	   port is named after a dot ('sp.r>x') for the modules with two outlets --
-	   SPLIT's R, ENTRY's TRIG -- and a destination port after a colon
-	   ('x>mx:b') for the ones with two inlets. */
-	const graphCables: GraphCable[] = cables.map((c) => {
-		const [lhs, rest] = c.split('>');
-		const [from, fromPort] = lhs.split('.');
-		const [to, toPort] = rest.split(':');
-		/* Anything a patch sends to OUT goes through the trim on its way, which
-		   is what makes the gain stage part of the signal path rather than a
-		   setting hidden on the endpoint. */
-		const dest = to === OUTPUT_ID ? TRIM_ID : to;
-		return { from, fromPort: fromPort || 'out', to: dest, toPort: toPort || 'in' };
-	});
-	graphCables.push({ from: TRIM_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' });
-	// OUT runs when the note does; without this the patch builds and stays mute.
-	graphCables.push({ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' });
+	const graphParams: Record<string, number> = {
+		[`${TRIM_ID}.level`]: outLevel / 100,
+		...laid.params
+	};
+	const graphCables: GraphCable[] = [
+		...laid.cables,
+		{ from: TRIM_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' },
+		// OUT runs when the note does; without this the patch builds and stays mute.
+		{ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' }
+	];
 	/* Emitted only if every type in it exists.
 
 	   These patches predate the rebuild, and each is wired out of some modules
@@ -587,7 +772,10 @@ function patch(
 	   this function. `missingTypes` is what the build test reports, so a module
 	   deleted tomorrow names the presets it breaks rather than silently
 	   emptying them. */
-	const missing = missingTypes(graphNodes);
+	const missing = missingTypes([
+		...graphNodes.filter((n) => n.type !== 'macro'),
+		...Object.values(wrapped.macros).flatMap((d) => d.nodes)
+	]);
 	if (missing.length) {
 		/* Keyed by the patch's own nodes rather than by a name, because `patch`
 		   is called from inside a preset literal and does not know which one it
@@ -601,7 +789,8 @@ function patch(
 		);
 		return {};
 	}
-	return { rackGraph: { nodes: graphNodes, cables: graphCables }, graphParams };
+	const macros = Object.keys(wrapped.macros).length ? { macros: wrapped.macros } : {};
+	return { rackGraph: { nodes: graphNodes, cables: graphCables, ...macros }, graphParams };
 }
 
 /**
@@ -1454,14 +1643,16 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	   The plucked three ignore how long the key is held, as a struck string
 	   does; the blown three sound for as long as they are blown. */
 	{
-		// A hammer, a stiff string and a soundboard. STIF is what stretches the
-		// partials sharp of the harmonic series -- the reason a piano does not
-		// sound like an organ.
+		/* A grand piano: a felt hammer, three detuned waveguide strings, the case,
+		   a damper, and one soundboard the whole track shares, which the pedal
+		   opens. See grand-piano.ts. Twenty-four voices, because released notes
+		   ring for seconds and a pedalled chord is a dozen strings at once. */
 		name: 'PIANO',
 		category: 'KEYBOARD',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 1.13,
+			presetGain: 0.4,
+			polyphony: 24,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -1470,24 +1661,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.06,
 			ampSustain: 0,
 			ampRelease: 0.03,
-			/* Felt hammer, string, and the rest of the instrument ringing with it.
-			   The second string is the una corda pair detuned a little against
-			   the first -- that beating is most of what makes a piano sound like
-			   a piano -- and SPACE stands in for the sympathetic resonance of
-			   the undamped strings above. */
-			...patch(
-				[
-					['ham', 'excite', { hardness: 44, exLength: 9, exTone: 3400 }],
-					['ex', 'sum'],
-					['s1', 'string', { decayTime: 4, damping: 22, stiffness: 45 }],
-					['s2', 'string', { decayTime: 3.6, damping: 26, stiffness: 48 }],
-					['mx', 'mix', { mixA: 100, mixB: 64 }],
-					['bod', 'body', { bodySize: 35, bodyDepth: 55, bodyMix: 55 }],
-					['symp', 'space', { spaceSize: 26, spaceDecay: 56, spaceMix: 16 }]
-				],
-				['ham>ex', 'ex>s1', 's1>mx', 'ex>s2', 's2>mx:b', 'mx>bod', 'bod>symp', 'symp>output'],
-				13
-			)
+			...grandPiano()
 		})
 	},
 	{
@@ -2588,7 +2762,7 @@ const wire = (from: string, to: string, toPort = 'in') => ({
  * 0..1 and the knob wants hundreds, which is exactly the conversion the node
  * exists for. */
 const velToTone = (target: string, lo: number, hi: number) => ({
-	nodes: [{ id: 'vt', type: 'remap', x: 48, y: 40 }],
+	nodes: [{ id: 'vt', type: 'map', x: 48, y: 40 }],
 	cables: [
 		{ from: ENTRY_ID, fromPort: 'vel', to: 'vt', toPort: 'a' },
 		{ from: 'vt', fromPort: 'out', to: target, toPort: 'exTone' }
@@ -2655,7 +2829,7 @@ function drumPatch(o: DrumSpec): Partial<TrackData> {
 			node(ENTRY_ID, 'in', 0),
 			node('n', 'excite', 1),
 			node('bp', 'filter', 2),
-			node('sh', 'delay', 3),
+			node('sh', 'shell', 3),
 			node(OUTPUT_ID, 'out', 4)
 		];
 		cables = [wire('n', 'bp'), wire('bp', 'sh'), wire('sh', OUTPUT_ID)];
@@ -2821,29 +2995,39 @@ function drumPatch(o: DrumSpec): Partial<TrackData> {
 		gp = { ...gp, ...vt.params };
 	}
 
-	/* The kit's own trim, as a gain stage rather than a knob on OUT: a drum
-	   graph arrives far hotter than a melodic one, and 15% is where the 47 keys
-	   sit level with the rest of the instrument. */
-	const TRIM = 'trim';
-	const outNode = nodes.find((n) => n.id === OUTPUT_ID)!;
-	nodes = [...nodes, { id: TRIM, type: 'vca', x: outNode.x, y: outNode.y }];
-	outNode.x += COL;
-	cables = cables.map((c) => (c.to === OUTPUT_ID ? { ...c, to: TRIM } : c));
-	cables = [
-		...cables,
-		wire(TRIM, OUTPUT_ID),
-		{ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' }
-	];
-	gp[`${TRIM}.gain`] = 15;
+	/* Emitted through `patch()`, like every melodic AC preset: its composites
+	   (BODY, MIX, DRIVE, COMB, SHELL) become macros, it gets ENTRY, OUT and the
+	   trim, and anything the catalogue does not carry holds it back. These
+	   graphs were built and then discarded while the catalogue was rebuilt,
+	   so a JAZZ KIT key played the track's own oscillators under a drum
+	   envelope; every type they name is a module or a composite again.
 
-	/* Held back with the melodic patches above, and for the same reason: every
-	   drum key here is wired out of primitives the catalogue no longer carries,
-	   so the graph would load, draw, and play nothing. `advanced` goes with it --
-	   a track switched to ADV with an empty patch is silent, where left on the
-	   racks it still plays the kit. */
-	void nodes;
-	void cables;
-	void gp;
+	   Two conventions from the old catalogue are translated on the way. FILTER
+	   listed its types LP, BP, HP where it now lists LP, HP, BP, so the 1s and
+	   2s are swapped; and its old envelope DEPTH is gone. The trim is the kit's
+	   own: a drum graph arrives far hotter than a melodic one, and 15% is where
+	   the keys sit level with the rest of the instrument. */
+	const LEGACY_FILTER: Record<number, number> = { 1: 2, 2: 1 };
+	const typeOf = new Map(nodes.map((n) => [n.id, n.type]));
+	const knobs = new Map<string, Record<string, number>>();
+	for (const [k, v] of Object.entries(gp)) {
+		const dot = k.indexOf('.');
+		const id = k.slice(0, dot);
+		const key = k.slice(dot + 1);
+		if (typeOf.get(id) === 'filter' && key === 'depth') continue;
+		const val = typeOf.get(id) === 'filter' && key === 'type' ? (LEGACY_FILTER[v] ?? v) : v;
+		knobs.set(id, { ...(knobs.get(id) ?? {}), [key]: val });
+	}
+	const graph = patch(
+		nodes
+			.filter((n) => n.id !== ENTRY_ID && n.id !== OUTPUT_ID)
+			.map((n) => [n.id, n.type, knobs.get(n.id)] as [string, string, Record<string, number>?]),
+		cables.map(
+			(c) =>
+				`${c.from}${c.fromPort === 'out' ? '' : `.${c.fromPort}`}>${c.to}${c.toPort === 'in' ? '' : `:${c.toPort}`}`
+		),
+		15
+	);
 	return keyOnly({
 		ampAttack: 0.001,
 		/* The envelope must not close before the instrument has finished
@@ -2858,7 +3042,8 @@ function drumPatch(o: DrumSpec): Partial<TrackData> {
 		ampDecay: Math.max(o.decay * 2.5, q / 12),
 		ampSustain: 0,
 		ampRelease: o.release ?? 0.04,
-		muteGroup: o.group ?? 0
+		muteGroup: o.group ?? 0,
+		...(graph.rackGraph ? { ...graph, advanced: true } : {})
 	});
 }
 

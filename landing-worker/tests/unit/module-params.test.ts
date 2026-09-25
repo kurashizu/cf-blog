@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import { MODULE_SPECS } from '../../src/lib/stores/synth-modules';
 import { SOUND_PRESETS, BUILTIN_KITS } from '../../src/lib/stores/synth-presets';
+import { flattenMacros } from '../../src/lib/stores/macros';
+import type { RackGraph } from '../../src/lib/stores/graph-model';
 import { roleOf, rolesCompatible } from '../../src/lib/stores/graph-model';
 import { isPureNode, PURE_NODES } from '../../src/lib/stores/node-graph';
 import { modularSynth } from '../../src/lib/synth';
@@ -736,7 +738,13 @@ describe('presets match the catalogue', () => {
 				(e) => [`${k.name}:${e[0]}`, e[1].rackGraph, e[1].graphParams] as const
 			)
 		)
-	].map((e) => [e[0], e[1] as never, e[2] as never]);
+	].map((e) => {
+		/* As the engine builds it: a preset's composites are macros, and the
+		   cables that matter are the ones between primitives, inside them. */
+		const g = e[1] as RackGraph | undefined;
+		const flat = g?.nodes ? flattenMacros(g, (e[2] ?? {}) as Record<string, number>) : undefined;
+		return [e[0], flat?.graph as never, flat?.params as never];
+	});
 
 	it('names only ports that exist, with compatible roles', () => {
 		const bad: string[] = [];
