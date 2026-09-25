@@ -32,6 +32,7 @@ import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { createLiveDsp, ensureLiveDsp, type LiveDsp } from './audio/live-dsp';
 import { planLoops, LOOP_KNOBS, type LoopIsland } from './audio/loop-plan';
+import { flattenMacros } from './stores/macros';
 import {
 	ENV_PROCESSOR,
 	MAP_PROCESSOR,
@@ -948,6 +949,26 @@ class ModularSynth {
 		);
 	}
 
+	/* Each track's sound with its macros flattened, cached per track object: a
+	   track is replaced, never edited in place, so a new object is a new patch. */
+	private flattened = new WeakMap<TrackData, TrackData>();
+
+	/**
+	 * The sound as the engine builds it: every macro instance replaced by what
+	 * it holds (`flattenMacros`), knobs and waves rekeyed to match. Everything
+	 * that reads a track's graph to play it -- the voice, its tail, the shared
+	 * chain -- reads it through this, so none of them knows macros exist.
+	 */
+	private playable<T extends TrackData | undefined>(track: T): T {
+		if (!track?.rackGraph?.macros) return track;
+		const hit = this.flattened.get(track);
+		if (hit) return hit as T;
+		const flat = flattenMacros(track.rackGraph as RackGraph, track.graphParams ?? {}, track.graphWaves ?? {});
+		const out = { ...track, rackGraph: flat.graph, graphParams: flat.params, graphWaves: flat.waves };
+		this.flattened.set(track, out);
+		return out as T;
+	}
+
 	/**
 	 * One compiled loop, as stand-ins for each of its modules.
 	 *
@@ -1194,7 +1215,7 @@ class ModularSynth {
 			}
 			const now = ctx.currentTime;
 			for (const [trackId, chain] of [...chains]) {
-				const track = this.tracks[trackId];
+				const track = this.playable(this.tracks[trackId]);
 				const graph = track?.advanced && track.rackGraph?.nodes?.length ? graphOf(track) : undefined;
 				const stale =
 					!graph || ModularSynth.chainSig(graph, trackScope(graph, EXEC_PORT_IDS), track) !== chain.sig;
@@ -3390,7 +3411,14 @@ class ModularSynth {
 				/* Offline renders have no frames to draw on, and the map is read by the
            canvas while a live voice is sounding. Keyed by node so several
            probes in one patch stay apart. */
-				if (!this.renderCtx) this.graphProbes.set(probeKey, an);
+				if (!this.renderCtx) {
+					this.graphProbes.set(probeKey, an);
+					/* A probe inside a macro is `instance/inner` here, and the canvas
+					   opened into that macro draws it as `inner`. The last note built
+					   wins, the same rule two tracks sharing an id already live by. */
+					const slash = probeKey.lastIndexOf('/');
+					if (slash >= 0) this.graphProbes.set(probeKey.slice(slash + 1), an);
+				}
 				// No `out`: the sink only gathers nodes marked isOutput, and a meter is
 				// not one, so a dangling gain here is heard by nobody.
 				return { in: g, out: g, mod };
@@ -5515,7 +5543,7 @@ class ModularSynth {
 		if (!noteInfo) return;
 
 		// In percussion mode the key decides the sound; everything below reads the merged timbre.
-		const track = effectiveTimbre(trackRow, noteIndex);
+		const track = this.playable(effectiveTimbre(trackRow, noteIndex));
 
 		const acc = typeof accentLevel === 'boolean' ? (accentLevel ? 1 : 0) : accentLevel || 0;
 
@@ -6958,7 +6986,7 @@ class ModularSynth {
 			filter.frequency.setValueAtTime(filter.frequency.value, now);
 			filter.frequency.exponentialRampToValueAtTime(baseCutoff, now + Math.max(0.02, vcfRel));
 
-			const track = voice.trackId !== undefined ? this.tracks[voice.trackId] : undefined;
+			const track = voice.trackId !== undefined ? this.playable(this.tracks[voice.trackId]) : undefined;
 			/* Same gap the timed-note path closes: a resonator's ring-out is not
          `ampRel`/`vcfRel`, both of which are the classic voice's own release
          and stop shaping the ADV graph the moment its oscillator does. Without

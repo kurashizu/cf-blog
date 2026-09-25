@@ -49,6 +49,7 @@
 		fbsend: 'M2 8h7M6 5l3 3-3 3M11 3a5 5 0 0 1 0 10',
 		fbrtn: 'M14 8H7M10 5L7 8l3 3M5 3a5 5 0 0 0 0 10',
 		tsend: 'M1 4h6M1 8h6M1 12h6M7 4l4 4-4 4M11 8h4',
+		macro: 'M2 3h12v10H2zM5 6h6M5 8h6M5 10h4',
 		trtn: 'M1 8h4M5 8l4-4M5 8l4 4M5 8h4M9 4h6M9 8h6M9 12h6',
 		pan: 'M8 13V6M8 6L3 3M8 6l5-3M1 13h4M11 13h4',
 		sum: 'M8 3v10M3 8h10',

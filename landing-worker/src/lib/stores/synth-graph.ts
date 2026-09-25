@@ -10,7 +10,15 @@ import {
 	type Snapshot
 } from './graph-history';
 import { modularSynth, type TrackData } from '../synth';
-import { MODULE_SPECS } from './synth-modules';
+import { MODULE_SPECS, nodeSpec } from './synth-modules';
+import {
+	collapseToMacro,
+	expandMacro,
+	macrosInUse,
+	pruneMacros,
+	MACRO_EXCLUDED,
+	MACRO_TYPE
+} from './macros';
 import { activeTrackId } from './synth-transport';
 import { refreshTracks } from './synth-tracks';
 import {
@@ -182,9 +190,195 @@ export function canRedo(trackId: number): boolean {
 	return historyCanRedo(histories.get(trackId));
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Macros: which definition the canvas is inside, and where edits go
+   ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * The macro definitions the canvas has been opened into, outermost first.
+ * Empty at the track's own patch. Definitions all live in the track's one
+ * table, so the last id is enough to find what is being edited; the rest is
+ * the way back out.
+ */
+export const macroPath = writable<string[]>([]);
+activeTrackId.subscribe(() => macroPath.set([]));
+
+/** What the canvas edits: the track's patch, or the definition it is inside. */
+export function editedView(
+	track: TrackData | undefined,
+	path: string[]
+): {
+	graph: RackGraph;
+	params: Record<string, number> | undefined;
+	waves: Record<string, string> | undefined;
+	labels: Record<string, string> | undefined;
+} {
+	const outer = graphOf(track);
+	const def = path.length ? outer.macros?.[path[path.length - 1]] : undefined;
+	if (!def)
+		return {
+			graph: outer,
+			params: track?.graphParams,
+			waves: track?.graphWaves,
+			labels: track?.graphLabels
+		};
+	return {
+		/* The table comes along so a macro placed inside this one still has
+		   sockets to draw, and a collapse in here can add to it. */
+		graph: { nodes: def.nodes, cables: def.cables, groups: def.groups, macros: outer.macros },
+		params: def.params,
+		waves: def.waves,
+		labels: def.labels
+	};
+}
+
+/**
+ * Every edit's one way into the track.
+ *
+ * At the track's own patch it is `updateTrack`. Inside a macro the same
+ * fields -- the graph, its knobs, waves and labels -- belong to the
+ * definition instead, so they are written there and the track keeps its own.
+ * Undo needs nothing extra: definitions live in the track's graph, which is
+ * what an undo step snapshots.
+ */
+function writeActive(partial: Partial<TrackData>): void {
+	const id = get(activeTrackId);
+	const path = get(macroPath);
+	const track = modularSynth.getTrack(id);
+	const outer = graphOf(track);
+	const defId = path[path.length - 1];
+	const def = defId ? outer.macros?.[defId] : undefined;
+	if (!def) {
+		const next = partial.rackGraph
+			? { ...partial, rackGraph: pruneMacros(partial.rackGraph as RackGraph) }
+			: partial;
+		modularSynth.updateTrack(id, next as Partial<TrackData>);
+		return;
+	}
+	const g = partial.rackGraph as RackGraph | undefined;
+	const nextDef = {
+		...def,
+		...(g ? { nodes: g.nodes, cables: g.cables, groups: g.groups } : {}),
+		...(partial.graphParams ? { params: partial.graphParams } : {}),
+		...(partial.graphWaves ? { waves: partial.graphWaves } : {}),
+		...(partial.graphLabels ? { labels: partial.graphLabels } : {})
+	};
+	const table = { ...(g?.macros ?? outer.macros ?? {}), [defId]: nextDef };
+	modularSynth.updateTrack(id, {
+		rackGraph: pruneMacros({ ...outer, macros: table })
+	} as Partial<TrackData>);
+}
+
+/** Open a macro's definition on the canvas. */
+export function enterMacro(defId: string): void {
+	const outer = graphOf(modularSynth.getTrack(get(activeTrackId)));
+	if (!outer.macros?.[defId]) return;
+	selectedNodes.set(new Set());
+	selectedNode.set(null);
+	macroPath.update((p) => [...p, defId]);
+}
+
+/** Back out one level, or all the way with `toTop`. */
+export function leaveMacro(toTop = false): void {
+	selectedNodes.set(new Set());
+	selectedNode.set(null);
+	macroPath.update((p) => (toTop ? [] : p.slice(0, -1)));
+}
+
+/** Rename a definition; every instance shows the new name. */
+export function renameMacro(defId: string, name: string): void {
+	const id = get(activeTrackId);
+	const outer = graphOf(modularSynth.getTrack(id));
+	const def = outer.macros?.[defId];
+	const clean = name.trim().slice(0, 4).toUpperCase();
+	if (!def || !clean) return;
+	pushUndo(id);
+	modularSynth.updateTrack(id, {
+		rackGraph: { ...outer, macros: { ...outer.macros, [defId]: { ...def, name: clean } } }
+	} as Partial<TrackData>);
+	refreshTracks();
+	flushHistoryBump();
+}
+
+let macroSeq = 0;
+
+/**
+ * Collapse the selection into a new macro and put one instance in its place.
+ * Returns the definition's id, or why it could not.
+ */
+export function collapseSelection(
+	graph: RackGraph,
+	ids: Set<string>,
+	params: Record<string, number> | undefined,
+	waves: Record<string, string> | undefined,
+	labels: Record<string, string> | undefined
+): string | 'empty' | 'exec' {
+	const stamp = `${Date.now().toString(36)}-${macroSeq++}`;
+	const count = Object.keys(graph.macros ?? {}).length + 1;
+	const names = { def: `mdef-${stamp}`, instance: `${MACRO_TYPE}-${stamp}`, name: `M${count}` };
+	const kindOf = (c: GraphCable) => {
+		if (EXEC_PORT_IDS.has(c.toPort) && EXEC_PORT_IDS.has(c.fromPort)) return 'exec' as const;
+		return cableIsAudio(graph, c) ? ('audio' as const) : ('mod' as const);
+	};
+	const r = collapseToMacro(graph, params ?? {}, waves ?? {}, labels ?? {}, ids, kindOf, names);
+	if ('error' in r) return r.error;
+	pushUndo(get(activeTrackId));
+	writeActive({
+		rackGraph: r.graph,
+		graphParams: r.params,
+		graphWaves: r.waves,
+		graphLabels: r.labels
+	} as Partial<TrackData>);
+	selectedNodes.set(new Set([names.instance]));
+	selectedNode.set(names.instance);
+	refreshTracks();
+	flushHistoryBump();
+	return names.def;
+}
+
+/** Put the selected macro instances' insides back on the canvas. Returns how many. */
+export function expandSelection(
+	graph: RackGraph,
+	ids: Set<string>,
+	params: Record<string, number> | undefined,
+	waves: Record<string, string> | undefined,
+	labels: Record<string, string> | undefined
+): number {
+	let g = graph;
+	let p = params ?? {};
+	let w = waves ?? {};
+	let l = labels ?? {};
+	const placed = new Set<string>();
+	let n = 0;
+	for (const id of ids) {
+		const r = expandMacro(g, p, w, l, id, (type) => `${type}-${Date.now().toString(36)}-${seq++}`);
+		if (!r) continue;
+		({ graph: g, params: p, waves: w, labels: l } = r);
+		for (const x of r.ids) placed.add(x);
+		n++;
+	}
+	if (!n) return 0;
+	pushUndo(get(activeTrackId));
+	writeActive({
+		rackGraph: g,
+		graphParams: p,
+		graphWaves: w,
+		graphLabels: l
+	} as Partial<TrackData>);
+	selectedNodes.set(placed);
+	refreshTracks();
+	flushHistoryBump();
+	return n;
+}
+
+/** Can this node type go inside a macro? Execution cannot. */
+export function allowedInMacro(type: string): boolean {
+	return !MACRO_EXCLUDED.has(type);
+}
+
 function commit(graph: RackGraph): void {
 	pushUndo(get(activeTrackId));
-	modularSynth.updateTrack(get(activeTrackId), { rackGraph: graph } as Partial<TrackData>);
+	writeActive({ rackGraph: graph } as Partial<TrackData>);
 	refreshTracks();
 	flushHistoryBump();
 }
@@ -212,7 +406,7 @@ export function removeNode(graph: RackGraph, id: string, params?: Record<string,
 	   should not have to remember the same rule again. */
 	if (isFixedNode(graph, id)) return;
 	pushUndo(get(activeTrackId));
-	modularSynth.updateTrack(get(activeTrackId), {
+	writeActive({
 		rackGraph: withoutNode(graph, id),
 		// A node's knob settings go with it, or a patch accumulates dead keys
 		// that would silently reattach to a later node reusing the id.
@@ -231,8 +425,8 @@ export function removeNode(graph: RackGraph, id: string, params?: Record<string,
  * wrong. A knob is an inlet too, and always a control one.
  */
 function cableIsAudio(graph: RackGraph, cable: GraphCable): boolean {
-	const type = graph.nodes.find((n) => n.id === cable.to)?.type;
-	const spec = MODULE_SPECS.find((m) => m.id === type);
+	const node = graph.nodes.find((n) => n.id === cable.to);
+	const spec = node && nodeSpec(node, graph);
 	if (!spec) return false;
 	const port = spec.inputs.find((q) => q.id === cable.toPort);
 	if (port) return port.kind === 'audio';
@@ -290,8 +484,8 @@ function execEntriesReaching(graph: RackGraph, targetId: string): Set<string> {
 
 /** Does this cable land on a port the module declares, rather than on a knob? */
 function isDeclaredInlet(graph: RackGraph, cable: GraphCable): boolean {
-	const type = graph.nodes.find((n) => n.id === cable.to)?.type;
-	const spec = MODULE_SPECS.find((m) => m.id === type);
+	const node = graph.nodes.find((n) => n.id === cable.to);
+	const spec = node && nodeSpec(node, graph);
 	return !!spec?.inputs.some((q) => q.id === cable.toPort);
 }
 
@@ -336,7 +530,7 @@ function inferMapRange(graph: RackGraph, cable: GraphCable): void {
 	// Untouched means absent: a knob that has never been set is not in the patch.
 	if (params[`${to.id}.inLo`] !== undefined || params[`${to.id}.inHi`] !== undefined) return;
 	const from = graph.nodes.find((n) => n.id === cable.from);
-	const spec = MODULE_SPECS.find((m) => m.id === from?.type);
+	const spec = from && nodeSpec(from, graph);
 	const port = spec?.outputs.find((q) => q.id === cable.fromPort);
 	const range = port && ROLE_RANGE[roleOf(port)];
 	if (!range) return;
@@ -353,7 +547,7 @@ function inferMapRange(graph: RackGraph, cable: GraphCable): void {
 /** The live track's graph params, or undefined when there is no track. */
 function currentGraphParams(): Record<string, number> | undefined {
 	const id = get(activeTrackId);
-	return modularSynth.getTrack(id)?.graphParams as Record<string, number> | undefined;
+	return editedView(modularSynth.getTrack(id), get(macroPath)).params;
 }
 
 export function addCable(
@@ -455,7 +649,7 @@ export function setGraphParam(
 	lastParamKey = key;
 	lastParamAt = now;
 	const next = { ...(params ?? {}), [`${nodeId}.${param}`]: value };
-	modularSynth.updateTrack(get(activeTrackId), { graphParams: next } as Partial<TrackData>);
+	writeActive({ graphParams: next } as Partial<TrackData>);
 	refreshTracks();
 	flushHistoryBump();
 }
@@ -478,7 +672,7 @@ export function setGraphParams(
 	// Force the next single-knob write to open its own window: this was not a
 	// hand resting on a knob, so nothing should coalesce with it.
 	lastParamKey = '';
-	modularSynth.updateTrack(get(activeTrackId), {
+	writeActive({
 		graphParams: { ...(params ?? {}), ...clean }
 	} as Partial<TrackData>);
 	refreshTracks();
@@ -503,7 +697,7 @@ export function setGraphWave(
 	if (!value) return;
 	pushUndo(get(activeTrackId));
 	const next = { ...(waves ?? {}), [`${nodeId}.${param}`]: value };
-	modularSynth.updateTrack(get(activeTrackId), { graphWaves: next } as Partial<TrackData>);
+	writeActive({ graphWaves: next } as Partial<TrackData>);
 	refreshTracks();
 	flushHistoryBump();
 }
@@ -532,7 +726,7 @@ export function setGraphLabel(
 	const next = { ...(labels ?? {}) };
 	if (value) next[nodeId] = value;
 	else delete next[nodeId];
-	modularSynth.updateTrack(get(activeTrackId), { graphLabels: next } as Partial<TrackData>);
+	writeActive({ graphLabels: next } as Partial<TrackData>);
 	refreshTracks();
 	flushHistoryBump();
 }
@@ -592,7 +786,7 @@ function commitDuringDrag(graph: RackGraph): void {
 	   when the state it started from is recorded. Recording on pointer-down
 	   instead meant a click that moved nothing still pushed a snapshot. */
 	markGraphDragMoved();
-	modularSynth.updateTrack(get(activeTrackId), { rackGraph: graph } as Partial<TrackData>);
+	writeActive({ rackGraph: graph } as Partial<TrackData>);
 	refreshTracks();
 }
 
@@ -608,7 +802,7 @@ export function deleteSelection(
 	pushUndo(get(activeTrackId));
 	let next = params ?? {};
 	for (const id of ids) next = pruneGraphParams(next, id);
-	modularSynth.updateTrack(get(activeTrackId), {
+	writeActive({
 		rackGraph: withoutNodes(graph, ids),
 		graphParams: next
 	} as Partial<TrackData>);
@@ -619,6 +813,13 @@ export function deleteSelection(
 
 export function copySelection(graph: RackGraph, ids: Set<string>): number {
 	const clip = copyNodes(graph, ids);
+	/* A copied macro instance brings its definition, and any it holds, so
+	   pasting it into another track has something to build. */
+	const used = macrosInUse({ nodes: clip.nodes, macros: graph.macros });
+	if (used.size)
+		clip.macros = Object.fromEntries(
+			Object.entries(graph.macros ?? {}).filter(([id]) => used.has(id))
+		);
 	graphClipboard.set(clip.nodes.length ? clip : null);
 	return clip.nodes.length;
 }
@@ -673,10 +874,34 @@ export function pasteClipboard(graph: RackGraph, params?: Record<string, number>
 	   it does not land exactly on the original" is only true of the first. */
 	pasteRun = get(graphClipboard) === lastPastedClip ? pasteRun + 1 : 1;
 	lastPastedClip = clip;
-	const { graph: next, ids } = pasteNodes(graph, clip, 32 * pasteRun, idFor);
+	const pasted = pasteNodes(graph, clip, 32 * pasteRun, idFor);
+	const ids = pasted.ids;
+	/* Definitions the pasted instances need. One this patch already has under
+	   the same id and the same contents is shared; one that differs is not
+	   overwritten -- the pasted instances get a copy under a new id. */
+	let next = pasted.graph;
+	if (clip.macros) {
+		const table = { ...(graph.macros ?? {}) };
+		const rename = new Map<string, string>();
+		for (const [id, def] of Object.entries(clip.macros)) {
+			if (!table[id]) table[id] = def;
+			else if (JSON.stringify(table[id]) !== JSON.stringify(def)) {
+				const fresh = `mdef-${Date.now().toString(36)}-${macroSeq++}`;
+				table[fresh] = def;
+				rename.set(id, fresh);
+			}
+		}
+		next = {
+			...next,
+			nodes: next.nodes.map((n) =>
+				ids.has(n.id) && n.macro && rename.has(n.macro) ? { ...n, macro: rename.get(n.macro) } : n
+			),
+			macros: table
+		};
+	}
 	// The knobs come too: a pasted module that lost its settings is not a copy.
 	const gp = remapParams(params, params, oldIds, [...ids]);
-	modularSynth.updateTrack(get(activeTrackId), {
+	writeActive({
 		rackGraph: next,
 		graphParams: gp
 	} as Partial<TrackData>);
@@ -793,7 +1018,7 @@ export function refitGroupTo(
 	const graph = graphOf(modularSynth.getTrack(get(activeTrackId)));
 	const next = refitGroup(graph, groupId, ids, size);
 	if (next === graph) return;
-	modularSynth.updateTrack(get(activeTrackId), { rackGraph: next } as Partial<TrackData>);
+	writeActive({ rackGraph: next } as Partial<TrackData>);
 	refreshTracks();
 }
 
@@ -837,7 +1062,7 @@ export function deleteGroupAndMembers(
 	pushUndo(get(activeTrackId));
 	let next = params ?? {};
 	for (const id of members) next = pruneGraphParams(next, id);
-	modularSynth.updateTrack(get(activeTrackId), {
+	writeActive({
 		rackGraph: ungroup(withoutNodes(graph, members), groupId),
 		graphParams: next
 	} as Partial<TrackData>);
@@ -934,7 +1159,7 @@ export function dropPrefab(
 		const fresh = newIds[i];
 		if (text && fresh) labels[fresh] = text;
 	}
-	modularSynth.updateTrack(get(activeTrackId), {
+	writeActive({
 		rackGraph: next,
 		graphParams: remapParams(params, prefab.params, oldIds, [...ids]),
 		...(Object.keys(labels).length ? { graphLabels: labels } : {})

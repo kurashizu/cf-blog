@@ -1,3 +1,4 @@
+import { macroPorts, MACRO_TYPE, type MacroDef } from './macros';
 import type { PortSpec, PortRole } from './graph-model';
 import type { NoteDurationDiv } from '../track-data';
 
@@ -2266,6 +2267,31 @@ export const MODULE_SPECS: ModuleSpec[] = [
 
 export function moduleSpec(id: string): ModuleSpec | undefined {
 	return MODULE_SPECS.find((m) => m.id === id);
+}
+
+/**
+ * A node's card: its module's, or for a macro instance one made from its
+ * definition -- the name on the header, the terminals inside as its sockets.
+ * Not in MODULE_SPECS, because a macro is not a module: it is whatever its
+ * patch has made it, and it has no build case of its own.
+ */
+export function nodeSpec(
+	node: { type: string; macro?: string },
+	graph?: { macros?: Record<string, MacroDef> }
+): ModuleSpec | undefined {
+	if (node.type !== MACRO_TYPE) return moduleSpec(node.type);
+	const def = node.macro ? graph?.macros?.[node.macro] : undefined;
+	const { inputs, outputs } = macroPorts(def);
+	return {
+		id: MACRO_TYPE,
+		label: def?.name ?? '????',
+		group: 'UTILITY',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.macro',
+		inputs: inputs.map((q) => ({ id: q.id, label: q.label, kind: q.kind })),
+		outputs: outputs.map((q) => ({ id: q.id, label: q.label, kind: q.kind })),
+		params: []
+	};
 }
 
 /* ENTRY and OUTPUT are in every patch already and cannot be removed, so there

@@ -531,8 +531,13 @@ export interface TrackData {
      of building a voice and only one is in force, so switching between them
      must not destroy the other's work. See stores/synth-graph.ts. */
 	rackGraph?: {
-		nodes: { id: string; type: string; x: number; y: number }[];
+		nodes: { id: string; type: string; x: number; y: number; macro?: string }[];
 		cables: { from: string; fromPort: string; to: string; toPort: string }[];
+		/* The patch's macro definitions, whose shape is `MacroDef` in
+		   stores/macros.ts -- named loosely here because this file imports
+		   nothing but the lane types. Declared so the engine can ask whether a
+		   sound has any to flatten before it plays. */
+		macros?: Record<string, object>;
 	};
 	/** Per-node knob values, keyed `${nodeId}.${paramKey}`. */
 	graphParams?: Record<string, number>;

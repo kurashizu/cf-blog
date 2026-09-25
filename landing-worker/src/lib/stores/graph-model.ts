@@ -8,6 +8,7 @@
  * legal, and what order nodes are built in -- are exactly the parts worth
  * pinning down with tests.
  */
+import type { MacroDef } from './macros';
 /**
  * What a socket carries.
  *
@@ -188,6 +189,8 @@ export interface GraphNode {
 	/** Canvas position, in grid units rather than pixels so a zoom cannot drift it. */
 	x: number;
 	y: number;
+	/** A macro instance's definition, in `RackGraph.macros`. Only on `type: 'macro'`. */
+	macro?: string;
 }
 
 export interface GraphCable {
@@ -260,6 +263,9 @@ export interface RackGraph {
 	   "none" rather than defaulting it, so that loading an old patch does not
 	   rewrite it. */
 	groups?: GraphGroup[];
+	/* The macros this patch defines, by id; instances name one. Kept with the
+	   graph so a preset or a paste carries what its cards need. See macros.ts. */
+	macros?: Record<string, MacroDef>;
 }
 
 export const EMPTY_GRAPH: RackGraph = { nodes: [], cables: [] };
@@ -368,8 +374,10 @@ const RENAMED_PORTS: Record<string, string> = { in2: 'b' };
  * empty: joining them across someone's existing patch would invent a
  * connection they did not make.
  */
-export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph {
-	const g = track?.rackGraph;
+export function graphOf(track: { rackGraph?: object } | undefined): RackGraph {
+	/* Checked for shape below rather than trusted: this is a saved patch, and a
+	   track's own type names the graph loosely (track-data.ts imports nothing). */
+	const g = track?.rackGraph as RackGraph | undefined;
 	if (!g || !Array.isArray(g.nodes) || !Array.isArray(g.cables)) return startingGraph();
 
 	const cables = g.cables.some((c) => RENAMED_PORTS[c.toPort] || RENAMED_PORTS[c.fromPort])

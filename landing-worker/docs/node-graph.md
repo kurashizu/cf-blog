@@ -470,6 +470,42 @@ the pieces an OSC cannot be:
   FALL down, each to within 1 %. It starts where IN is. S&H through SLEW is a
   smooth random LFO; a pedal or gate through it gets a mechanism's lag.
 
+## Macros
+
+A macro is part of a patch collapsed into one card and placed as many times
+as it is wanted (`src/lib/stores/macros.ts`). The definition lives in the
+graph, `RackGraph.macros`, so a preset or a paste carries the macros its cards
+need; an instance is a node of type `macro` naming its definition.
+
+- **Sockets are terminals.** A definition's NODE terminals are its sockets: one
+  nothing inside feeds is an inlet, one nothing inside reads is an outlet
+  (`macroPorts`). NODE (audio) makes an audio socket, NODE.CV a value one; the
+  terminal's label is the socket's name. What a macro takes is drawn inside it.
+- **Every instance is the same inside.** Changing the definition -- open it with
+  a double-click, edit, come back -- changes every instance. Instances differ
+  only by what is cabled into their inlets, which is how a Blueprint macro is
+  parameterised.
+- **Signal and value only.** A definition holds no KEY-EVENT, OUT, ON-CHOKE,
+  WHEN, ACT, WAIT, TSND or TRTN (`MACRO_EXCLUDED`); collapsing a selection with
+  one, or with an exec cable across its edge, is refused, and the palette does
+  not offer them inside a macro.
+- **The engine never sees one.** `flattenMacros` replaces each instance with its
+  definition's nodes as `instance/inner` (and `a/b/inner` for one nested in
+  another), knobs rekeyed to match, before anything is built; `playable()` in
+  synth.ts is the one door every reader of a sound goes through. A macro sounds
+  sample for sample like its insides written out by hand. An instance naming a
+  missing definition, or nested past eight deep, builds nothing.
+- **Editing inside.** `macroPath` says which definition the canvas is in;
+  `editedView` is what it reads and `writeActive` is where every edit goes, so
+  a knob turned inside a macro lands in the definition and undo covers it (the
+  definition is part of the graph an undo step snapshots). MACRO collapses the
+  selection, EXPAND puts an instance's insides back, and an unused definition
+  is dropped.
+
+SEND/RTN bus numbers are the patch's, so two instances of a macro holding a
+loop on bus 0 share that bus -- give the loop's bus a socket-free number, or
+expand one.
+
 ## What the notes share: TSND and TRTN
 
 Every node in a patch is built per note -- except what a **TRTN** feeds.

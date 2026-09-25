@@ -56,6 +56,14 @@
 		deleteGroupAndMembers,
 		dropPrefab,
 		saveSelectionAsPrefab,
+		macroPath,
+		editedView,
+		enterMacro,
+		leaveMacro,
+		renameMacro,
+		collapseSelection,
+		expandSelection,
+		allowedInMacro,
 		GROUP_HEADER,
 		type GraphNode,
 		type GraphCable,
@@ -66,7 +74,7 @@
 	import {
 		PALETTE_SPECS,
 		MODULE_GROUPS,
-		moduleSpec,
+		nodeSpec,
 		moduleWidth,
 		CONST_KINDS,
 		type ModuleSpec
@@ -80,10 +88,21 @@
 	import type { CustomWave } from '../../../track-data';
 	import ModuleIcon from './ModuleIcon.svelte';
 
-	let graph = $derived(graphOf($currentTrack));
-	let graphParams = $derived($currentTrack?.graphParams);
-	let graphWaves = $derived($currentTrack?.graphWaves);
-	let graphLabels = $derived($currentTrack?.graphLabels);
+	/* What the canvas shows: the track's patch, or the macro definition it
+	   has been opened into (`macroPath`). Every edit goes back the same way. */
+	let view = $derived(editedView($currentTrack, $macroPath));
+	let graph = $derived(view.graph);
+	let graphParams = $derived(view.params);
+	let graphWaves = $derived(view.waves);
+	let graphLabels = $derived(view.labels);
+	/* The definition being edited, for the breadcrumb and its name. */
+	let insideMacro = $derived(
+		$macroPath.length
+			? graphOf($currentTrack).macros?.[$macroPath[$macroPath.length - 1]]
+			: undefined
+	);
+	/** A node's card, macro instances included. */
+	const specOf = (n: { type: string; macro?: string }) => nodeSpec(n, graph);
 	/* KEY-EVENT's palette cap: a UI affordance rather than a rule the graph
 	   itself enforces (see `isFixedNode`, which only refuses deleting the
 	   *last* one) -- a second KEY-EVENT is legal data, just not something the
@@ -386,7 +405,7 @@
 	function portPos(nodeId: string, port: string, isOutput: boolean) {
 		const n = graph.nodes.find((m) => m.id === nodeId);
 		if (!n) return { x: 0, y: 0 };
-		const spec = moduleSpec(n.type);
+		const spec = specOf(n);
 		if (!spec) return { x: 0, y: 0 };
 		/* A reroute has one dot standing for both its ports, so both ends of a
 		   cable meet at its centre. Asking the port list would put the inlet on
@@ -572,7 +591,7 @@
 			   drawn in the same frame is not wildly wrong. */
 			return { w: Math.min(NOTE_MAX_W, 10 + text.length * 6), h: 8 + lines * 15 };
 		}
-		const spec = moduleSpec(n.type);
+		const spec = specOf(n);
 		return { w: spec ? nodeWidth(spec) : NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
 	};
 
@@ -790,7 +809,7 @@
 		   always a working connection. */
 		if (pullFrom) {
 			const overNode = graph.nodes.some((n) => {
-				const spec = moduleSpec(n.type);
+				const spec = specOf(n);
 				if (!spec) return false;
 				const h = nodeHeight(n, spec);
 				const p = toCanvas(pointer.x, pointer.y);
@@ -826,6 +845,7 @@
 		if (!d) return [];
 		const q = searchQuery.trim().toLowerCase();
 		return PALETTE_SPECS.filter((spec) => {
+			if (insideMacro && !allowedInMacro(spec.id)) return false;
 			const takes = landingOn(spec, d.from.role) !== null;
 			if (!takes) return false;
 			if (!q) return true;
@@ -862,7 +882,7 @@
 		const y = Math.round((d.y - 20) / GRID) * GRID;
 		const id = addNode(graph, spec.id, x, y);
 		// addNode committed a new graph; wire against that one, not the stale copy.
-		const next = graphOf(get(currentTrack));
+		const next = editedView(get(currentTrack), get(macroPath)).graph;
 		addCable(
 			next,
 			{ from: d.from.node, fromPort: d.from.port, to: id, toPort: inlet.id },
@@ -903,7 +923,7 @@
 		e.stopPropagation();
 		const p = portPos(nodeId, port, true);
 		const n = graph.nodes.find((m) => m.id === nodeId);
-		const spec = n && moduleSpec(n.type);
+		const spec = n && specOf(n);
 		const socket = spec && outletsOf(n, spec).find((o) => o.id === port);
 		pullFrom = {
 			node: nodeId,
@@ -926,7 +946,7 @@
 		   already knew better and was only being used to dim the sockets, which
 		   is the worst of both: the interface said no and the drop said yes. */
 		const node = graph.nodes.find((n) => n.id === nodeId);
-		const target = (node && moduleSpec(node.type))?.inputs.find((p) => p.id === port);
+		const target = (node && specOf(node))?.inputs.find((p) => p.id === port);
 		if (!target || !rolesCompatible(pullFrom.role, roleOf(target))) {
 			// Audio into a mod inlet is not a patching mistake worth guessing at:
 			// they are different signals with different ranges.
@@ -1027,7 +1047,7 @@
 	   it leaves are obviously the same thing. */
 	function cableRole(c: GraphCable): PortRole {
 		const from = graph.nodes.find((n) => n.id === c.from);
-		const spec = from && moduleSpec(from.type);
+		const spec = from && specOf(from);
 		if (!spec) return 'signal';
 		const socket = outletsOf(from, spec).find((o) => o.id === c.fromPort);
 		return socket ? roleOf(socket) : 'signal';
@@ -1160,6 +1180,28 @@
 			class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"
 			title={$t('synthPatch.savePrefabHint')}>PREFAB</button
 		>
+		<!-- A macro: the selection as one card, used as many times as it is
+		     placed. MACRO collapses it, EXPAND puts an instance's insides back,
+		     and a double-click opens one to edit every instance at once. -->
+		<button
+			onclick={() => {
+				const r = collapseSelection(graph, $selectedNodes, graphParams, graphWaves, graphLabels);
+				if (r === 'exec') say($t('synthPatch.macroExec'));
+				else if (r === 'empty') say($t('synthPatch.macroEmpty'));
+				else playSound('click');
+			}}
+			class="press px-1.5 py-0.5 border border-[#56b6c2]/50 text-[#56b6c2] hover:border-[#56b6c2] rounded-xs font-bold cursor-pointer transition-colors"
+			title={$t('synthPatch.macroHint')}>MACRO</button
+		>
+		<button
+			onclick={() => {
+				const n = expandSelection(graph, $selectedNodes, graphParams, graphWaves, graphLabels);
+				if (n) playSound('click');
+				else say($t('synthPatch.expandNothing'));
+			}}
+			class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"
+			title={$t('synthPatch.expandHint')}>EXPAND</button
+		>
 
 		<div class="w-px h-3.5 bg-white/15 mx-0.5"></div>
 
@@ -1195,6 +1237,55 @@
 			title={$t('synthPatch.resetViewHint')}>FIT</button
 		>
 	</div>
+
+	{#if insideMacro}
+		<!-- Where the canvas is: inside a macro's definition, which every
+		     instance of it shares. The name edits in place. -->
+		<div
+			class="flex items-center gap-1.5 px-1.5 py-0.5 border border-[#56b6c2]/50 bg-[#56b6c2]/10 rounded-xs text-[10px] font-mono"
+		>
+			<button
+				onclick={() => {
+					leaveMacro(true);
+					playSound('click');
+				}}
+				class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white rounded-xs font-bold cursor-pointer"
+				title={$t('synthPatch.macroTopHint')}>{$t('synthPatch.macroTop')}</button
+			>
+			{#each $macroPath as defId, i (defId + i)}
+				<span class="text-white/35">/</span>
+				{#if i === $macroPath.length - 1}
+					<input
+						value={insideMacro.name}
+						maxlength="4"
+						onchange={(e) => renameMacro(defId, (e.target as HTMLInputElement).value)}
+						onkeydown={(e) => e.stopPropagation()}
+						class="w-12 bg-black/60 border border-[#56b6c2]/60 rounded-xs px-1 text-[#56b6c2] font-black uppercase outline-none"
+						title={$t('synthPatch.macroRenameHint')}
+					/>
+				{:else}
+					<button
+						onclick={() => {
+							macroPath.set($macroPath.slice(0, i + 1));
+							playSound('click');
+						}}
+						class="text-[#56b6c2] font-black cursor-pointer hover:underline"
+						>{graphOf($currentTrack).macros?.[defId]?.name ?? '?'}</button
+					>
+				{/if}
+			{/each}
+			<span class="text-white/45 ml-1">{$t('synthPatch.macroInsideNote')}</span>
+			<span class="flex-1"></span>
+			<button
+				onclick={() => {
+					leaveMacro();
+					playSound('click');
+				}}
+				class="press px-1.5 py-0.5 border border-[#56b6c2]/60 text-[#56b6c2] rounded-xs font-bold cursor-pointer"
+				title={$t('synthPatch.macroBackHint')}>{$t('synthPatch.macroBack')}</button
+			>
+		</div>
+	{/if}
 
 	<div class="flex-1 min-h-0 flex gap-1.5 overflow-hidden">
 		<!-- The workspace. role="application" with a tabindex is what a canvas that
@@ -1464,7 +1555,7 @@
 				style="transform: translate({cam.x}px, {cam.y}px) scale({cam.s}); transform-origin: 0 0"
 			>
 				{#each graph.nodes as n (n.id)}
-					{@const spec = moduleSpec(n.type)}
+					{@const spec = specOf(n)}
 					{#if spec && (n.type === 'nodept' || n.type === 'nodecv')}
 						<!-- A reroute point: a mini card, not a bare dot.
 
@@ -1616,6 +1707,13 @@
 								spec
 							)}px; border-color: {spec.color}{$selectedNode === n.id ? '' : '80'}"
 							onpointerdown={(e) => startDrag(e, n)}
+							ondblclick={() => {
+								// A macro opens on a double-click, as a collapsed graph does in Blueprint.
+								if (n.type === 'macro' && n.macro) {
+									enterMacro(n.macro);
+									playSound('click');
+								}
+							}}
 						>
 							<div
 								class="flex items-center justify-between px-1 border-b text-[10px] font-black cursor-grab overflow-hidden"
@@ -1921,7 +2019,9 @@
 						</div>
 					{/if}
 					{#each MODULE_GROUPS as g (g)}
-						{@const mods = PALETTE_SPECS.filter((m) => m.group === g)}
+						{@const mods = PALETTE_SPECS.filter(
+							(m) => m.group === g && (!insideMacro || allowedInMacro(m.id))
+						)}
 						{#if mods.length}
 							<div>
 								<div
