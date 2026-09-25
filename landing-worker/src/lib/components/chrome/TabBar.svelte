@@ -33,7 +33,7 @@
 
 	let tabStrip: HTMLDivElement | undefined = $state();
 	let tabsRow: HTMLDivElement | undefined = $state();
-	let tabBtns: (HTMLButtonElement | undefined)[] = [];
+	let tabBtns: (HTMLButtonElement | undefined)[] = $state([]);
 
 	/**
 	 * A single pill that slides between tabs, instead of each button silently
