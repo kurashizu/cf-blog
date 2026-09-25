@@ -1585,10 +1585,11 @@ describe('MAP: the ranges are affine, for every shape', () => {
  * rewrite's assumptions quietly stop matching the catalogue.
  */
 describe('ACTIVATION_TYPES and EVENT_SOURCE_TYPES: derived from the catalogue', () => {
-	it('finds exactly OUT as an activation point today', () => {
+	it('finds exactly OUT and TSND as activation points today', () => {
 		// OUT has both an exec inlet and an audio inlet. WAIT, WHEN and ACT
 		// have the first and none of the second -- they are logic, not sound.
-		expect([...ACTIVATION_TYPES]).toEqual(['out']);
+		// TSND has both too: it is OUT's shape, delivering to the track's chain.
+		expect([...ACTIVATION_TYPES].sort()).toEqual(['out', 'tsend']);
 	});
 
 	it('finds exactly ENTRY and ON-CHOKE as event sources today', () => {

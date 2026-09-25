@@ -101,6 +101,8 @@ export class FakeNode {
 		this.startedAt = t;
 	}
 	stop() {}
+	/** Real nodes are event targets; a source's `ended` is heard this way too. */
+	addEventListener() {}
 }
 
 class Osc extends FakeNode {

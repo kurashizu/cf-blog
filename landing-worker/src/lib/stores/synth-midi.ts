@@ -173,8 +173,19 @@ const handleMidiMessage = (event: MIDIMessageEvent) => {
 		if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
 			targetTracks.forEach((trkId) => releaseManualNote(trkId, noteIdx));
 		}
-	} else if (cmd === 11 && noteNumber === 64) {
-		setSustainPedal(velocity >= 64);
+	} else if (cmd === 11) {
+		// The pedal holds notes at 64 and up; CTRL's PED follows it continuously.
+		if (noteNumber === 64) setSustainPedal(velocity >= 64);
+		modularSynth.setController('cc', velocity / 127, noteNumber);
+	} else if (cmd === 14) {
+		// 14 bits, centre 8192: -1 at the bottom, just under +1 at the top.
+		modularSynth.setController('bend', ((velocity << 7) | noteNumber) / 8192 - 1);
+	} else if (cmd === 13) {
+		modularSynth.setController('pres', noteNumber / 127);
+	} else if (cmd === 10) {
+		// Per-key pressure, where a keyboard sends that instead: taken as the
+		// instrument's, since CTRL has one PRES.
+		modularSynth.setController('pres', velocity / 127);
 	}
 };
 

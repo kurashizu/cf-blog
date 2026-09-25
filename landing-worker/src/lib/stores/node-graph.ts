@@ -973,3 +973,38 @@ export function audioAncestors(
 	}
 	return ancestors;
 }
+
+/**
+ * The nodes that belong to the track rather than to a note: everything
+ * downstream of a TRTN, over audio and mod cables alike.
+ *
+ * A TRTN is where the notes on a track meet -- every voice's TSND on the same
+ * bus lands in one place -- so whatever it feeds is built once for the track
+ * and shared, not once per key. That is how a piano has one soundboard under
+ * eighty-eight strings. Downstream is the whole rule: a node a TRTN reaches
+ * cannot also be per-note, because it would need the shared signal and a
+ * note's own at once, and there is exactly one of the first.
+ *
+ * Exec cables are not followed. They say which nodes run, not where a signal
+ * goes, and an OUT reached from KEY-EVENT is still fed by what its audio
+ * inlet says. Taken as a parameter, like `execReach`'s, so this file does not
+ * read the catalogue.
+ */
+export function trackScope(
+	graph: EvalGraph,
+	execPortIds: ReadonlySet<string>,
+	returnType = 'trtn'
+): Set<string> {
+	const scope = new Set(graph.nodes.filter((n) => n.type === returnType).map((n) => n.id));
+	const queue = [...scope];
+	while (queue.length) {
+		const id = queue.shift()!;
+		for (const c of graph.cables) {
+			if (c.from !== id || scope.has(c.to)) continue;
+			if (execPortIds.has(c.fromPort) || execPortIds.has(c.toPort)) continue;
+			scope.add(c.to);
+			queue.push(c.to);
+		}
+	}
+	return scope;
+}

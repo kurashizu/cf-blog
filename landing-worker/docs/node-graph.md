@@ -395,6 +395,69 @@ key stealing this voice's slot, or a different voice's ACT reaching sideways
 with CUT or SOLO) is decided by *something else*, at a time this key's own
 press cannot predict or own. It fires as its own activation, on its own OUT.
 
+## The player's hands: CTRL
+
+KEY-EVENT says what one key did. **CTRL** says what the rest of the player is
+doing: `ped` (the sustain pedal, 0..1 -- continuous from CC 64, so a
+half-pedal is a half), `bend` (-1..1), `mod` (the wheel, CC 1), `pres`
+(channel or per-key pressure) and `cc` (whichever controller number its knob
+names). They belong to the instrument rather than to a key, and they move
+while notes sound, so they are **signals**, not values read at note-on: a
+pedal pressed under a held chord reaches every voice already ringing.
+
+Each outlet is a constant source of the voice's own, set to where the
+controller is at build time and moved by `setController` while it lives
+(a 4 ms glide, because controllers arrive in steps). A source per voice
+rather than gains fed from one shared node, because a shared source would
+hold every voice's graph alive after the voice ended; a voice's own is
+stopped with the rest of it.
+
+A render has no hands on it: in an export every outlet reads its resting
+value, whatever the controller was left at, so a WAV does not depend on the
+state of a keyboard nobody is playing.
+
+The engine's own sustain (holding a released key's voice until the pedal
+comes up) is separate and unchanged. PED is what a patch does *with* the
+pedal besides that -- a piano's lifted dampers letting the whole instrument
+ring, say.
+
+## What the notes share: TSND and TRTN
+
+Every node in a patch is built per note -- except what a **TRTN** feeds.
+Each voice's **TSND** delivers to the TRTN with the same BUS, and whatever is
+downstream of a TRTN (over audio and mod cables, not exec; `trackScope` in
+`node-graph.ts`) is built **once for the track** and shared by every note on
+it. That is a piano's one soundboard under all its strings, a room a part
+plays into. Built per note, one of those costs a reverb a key and never
+hears two notes at once, which is most of what a shared body is.
+
+- **TSND is an output.** It has OUT's shape -- an exec inlet and an audio
+  inlet -- so it is in `ACTIVATION_TYPES`: execution reaching it lets the
+  note through, and a release fades it with the same per-OUT gain an OUT
+  gets. A REL or ON-CHOKE activation can reach one too (a damper's thud in
+  the body). With no TRTN on its bus it goes nowhere.
+- **The chain has no note.** A node outside the chain is built into it only
+  if it settles to a number, is a CTRL, or is ENTRY -- and ENTRY there reads
+  a neutral note (velocity 1, no pitch), since there is no one note. A cable
+  from a note's own oscillator or envelope into the chain is dropped.
+- **Its OUT is the track's.** The chain reaches the mixer through an OUT
+  downstream of the TRTN, then the track's pan, its EQ bus and the sends,
+  like a voice. It takes the preset's level once, at its own sink.
+- **It does not hold notes open.** A voice's tail (`rackTailSeconds`,
+  `activationEnd`, DUR caps) ignores the chain's nodes, so a long room does
+  not keep every string computing for its length.
+
+Its lifetime is the track's, not a note's (`ensureTrackChain`):
+
+- Built at the first note that needs it, per context -- an export builds its
+  own.
+- Kept while its signature matches: its nodes, the cables into them, their
+  knobs and waves, the track's pan and preset level. An edit is noticed at the
+  next note; the old chain rings out for its own tail and the new one takes
+  the notes from then on, since notes already sounding stay wired to the old.
+- Retired when the track has been quiet for the chain's tail (checked once a
+  second), when the track stops playing that patch, and at once on STOP.
+
 ## ADV is its own instrument
 
 A track in ADV plays what the canvas builds and nothing else. ENTRY has no audio

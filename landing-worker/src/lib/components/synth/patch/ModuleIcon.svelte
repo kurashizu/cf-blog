@@ -38,12 +38,15 @@
 		space: 'M8 8m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M8 8m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
 		// MODULATE
 		env: 'M1 13L5 3l3 6v4M8 9h3l3 4',
+		ctrl: 'M2 14V9h3v5M7 14V5h3v9M12 14V2h3v12',
 		// UTILITY
 		delay: 'M2 4v8M6 5v6M10 7v2M14 8v0M2 8h12',
 		/* An arrow into the loop, and one coming back out of it: the two ends of
 		   the same circuit, drawn as the half each one is. */
 		fbsend: 'M2 8h7M6 5l3 3-3 3M11 3a5 5 0 0 1 0 10',
 		fbrtn: 'M14 8H7M10 5L7 8l3 3M5 3a5 5 0 0 0 0 10',
+		tsend: 'M1 4h6M1 8h6M1 12h6M7 4l4 4-4 4M11 8h4',
+		trtn: 'M1 8h4M5 8l4-4M5 8l4 4M5 8h4M9 4h6M9 8h6M9 12h6',
 		pan: 'M8 13V6M8 6L3 3M8 6l5-3M1 13h4M11 13h4',
 		sum: 'M8 3v10M3 8h10',
 		diff: 'M3 8h10',

@@ -22,6 +22,7 @@ import {
 	isPureNode,
 	isValueNode,
 	audioAncestors,
+	trackScope,
 	PURE_NODES,
 	type NoteEvent
 } from './stores/node-graph';
@@ -201,6 +202,20 @@ interface ActiveVoice {
 	>;
 }
 
+/** A track's shared chain: what its TRTNs feed, built once for every note. */
+interface TrackChain {
+	/** What the chain was built from, so an edit is noticed at the next note. */
+	sig: string;
+	/** Bus number to the gain every note's TSND lands on. */
+	buses: Map<number, GainNode>;
+	/** The chain's last node before the mixer, which a retirement fades. */
+	out: GainNode;
+	sources: AudioScheduledSourceNode[];
+	/** How long it rings after its last note, before it can be taken down. */
+	tail: number;
+	quietSince?: number;
+}
+
 class ModularSynth {
 	private tracks: TrackData[] = JSON.parse(JSON.stringify(INITIAL_TRACKS));
 	private activeVoices: Map<string, ActiveVoice> = new Map();
@@ -320,6 +335,16 @@ class ModularSynth {
 	 * notes are scheduled ahead and raise their gates as before.
 	 */
 	private deferredGates: { gate: AudioParam; t: number; heldSec: number; strike: boolean }[] | null = null;
+
+	/* The TRTN buses a note's TSND delivers to, set while that note builds. */
+	private trackBusSends: Map<number, AudioNode> | null = null;
+	/* The buses a track chain opens, collected while the chain builds. */
+	private trackBusReturns: Map<number, GainNode> | null = null;
+	/* Each track's shared chain, per context: an export renders its own. */
+	private trackChains = new WeakMap<BaseAudioContext, Map<number, TrackChain>>();
+	private chainWatch: ReturnType<typeof setInterval> | null = null;
+	/* The live context the watched chains belong to. */
+	private chainCtx: BaseAudioContext | null = null;
 
 	/** The context the engine should build into right now. */
 	private audioCtx(): AudioContext | null {
@@ -587,7 +612,10 @@ class ModularSynth {
 	 */
 	private static activationEnd(graph: RackGraph, params: Record<string, number>, heldSec: number): number {
 		let tail = 0.1;
+		// The track's chain rings on its own; a note's activation is not held for it.
+		const shared = trackScope(graph, EXEC_PORT_IDS);
 		for (const n of graph.nodes ?? []) {
+			if (shared.has(n.id)) continue;
 			const p: Record<string, number> = {};
 			const prefix = `${n.id}.`;
 			for (const [k, v] of Object.entries(params)) if (k.startsWith(prefix)) p[k.slice(prefix.length)] = v;
@@ -685,7 +713,12 @@ class ModularSynth {
 
 		if (graph && Array.isArray(graph.nodes)) {
 			const gp = track.graphParams ?? {};
+			/* The track's chain is not the note's: a soundboard's ring is the
+			   chain's own tail, and holding every voice open for it would cost a
+			   voice's worth of strings per key for as long as the board sounds. */
+			const shared = trackScope(graph, EXEC_PORT_IDS);
 			for (const n of graph.nodes) {
+				if (shared.has(n.id)) continue;
 				// Graph params are keyed per node; collect this node's into a flat set.
 				const p: Record<string, number> = {};
 				const prefix = `${n.id}.`;
@@ -756,9 +789,10 @@ class ModularSynth {
 		if (!graph || !Array.isArray(graph.nodes)) return undefined;
 		const params = track.graphParams ?? {};
 		const delays = execDelays(graph, params, EXEC_PORT_IDS, 'in', 'then');
+		const shared = trackScope(graph, EXEC_PORT_IDS);
 		let latest: number | undefined;
 		for (const n of graph.nodes) {
-			if (n.type !== 'out') continue;
+			if (n.type !== 'out' || shared.has(n.id)) continue;
 			const delay = delays.get(n.id) ?? 0;
 			const durCap = ModularSynth.durCapOfNode(n.id, params, this.bpm);
 			const deadline = durCap !== undefined ? t + delay + durCap : voiceStop + delay;
@@ -803,8 +837,11 @@ class ModularSynth {
 	): number | undefined {
 		if (!graph || !Array.isArray(graph.nodes)) return undefined;
 		let cap: number | undefined;
+		const shared = Array.isArray((graph as RackGraph).cables)
+			? trackScope(graph as RackGraph, EXEC_PORT_IDS)
+			: new Set<string>();
 		for (const n of graph.nodes) {
-			if (n.type !== 'out') continue;
+			if (n.type !== 'out' || shared.has(n.id)) continue;
 			const dur = ModularSynth.durCapOfNode(n.id, params, bpm);
 			if (dur === undefined) continue;
 			cap = cap === undefined ? dur : Math.min(cap, dur);
@@ -901,6 +938,190 @@ class ModularSynth {
 	}
 
 	/**
+	 * The track's shared chain for this patch, built if it is not already
+	 * running, and the buses a note's TSND can reach. Null when the patch has
+	 * no TRTN.
+	 *
+	 * Built at the first note that needs it and kept while the track sounds,
+	 * so the notes played into it meet there -- the body a piano's strings
+	 * share. An edit to anything the chain reads is noticed at the next note:
+	 * the old chain rings out for its own tail and a new one takes the notes
+	 * from then on, since notes already sounding are still wired to the old.
+	 */
+	private ensureTrackChain(
+		ctx: AudioContext,
+		trackId: number,
+		track: TrackData,
+		graph: RackGraph,
+		busInput: AudioNode
+	): Map<number, GainNode> | null {
+		let chains = this.trackChains.get(ctx);
+		if (!chains) {
+			chains = new Map();
+			this.trackChains.set(ctx, chains);
+		}
+		const current = chains.get(trackId);
+		const shared = trackScope(graph, EXEC_PORT_IDS);
+		if (!shared.size) {
+			if (current) this.retireChain(ctx, chains, trackId, current.tail);
+			return null;
+		}
+		const sig = ModularSynth.chainSig(graph, shared, track);
+		if (current?.sig === sig) {
+			current.quietSince = undefined;
+			return current.buses;
+		}
+		if (current) this.retireChain(ctx, chains, trackId, current.tail);
+
+		const params = track.graphParams ?? {};
+		const t = ctx.currentTime;
+		const buses = new Map<number, GainNode>();
+		/* Gates rise now, not on a note's deferred schedule: the chain is not a
+		   note, and outlives the one that happened to build it. */
+		const savedGates = this.noteGates;
+		const savedDeferred = this.deferredGates;
+		this.noteGates = null;
+		this.deferredGates = null;
+		this.trackBusReturns = buses;
+		let built: ReturnType<ModularSynth['buildActivation']> = null;
+		try {
+			built = this.buildActivation(
+				ctx,
+				graph,
+				'then',
+				params,
+				this.masterTuningFreq,
+				t,
+				// Held for as long as the chain lives; its sources stop when it retires.
+				1e5,
+				{},
+				track.presetGain ?? 1,
+				{ velocity: 1, noteIndex: 48 },
+				trackId,
+				track.graphWaves ?? {},
+				'in',
+				'track'
+			);
+		} finally {
+			this.trackBusReturns = null;
+			this.noteGates = savedGates;
+			this.deferredGates = savedDeferred;
+		}
+		if (!built || !buses.size) return null;
+		for (const src of built.sources) src.start(built.startAt.get(src) ?? t);
+
+		const out = ctx.createGain();
+		built.out.connect(out);
+		const pan = ctx.createStereoPanner();
+		pan.pan.value = track.pan;
+		out.connect(pan);
+		pan.connect(busInput);
+		if (this.delayNode && this.delayMix > 0) pan.connect(this.delayNode);
+		if (this.reverbConvolver && this.reverbMix > 0) out.connect(this.reverbConvolver);
+
+		let tail = 0.1;
+		for (const n of graph.nodes) {
+			if (!shared.has(n.id)) continue;
+			tail = Math.max(tail, ModularSynth.moduleTail(n.type, ModularSynth.paramsOf(n.id, params)));
+		}
+		chains.set(trackId, { sig, buses, out, sources: built.sources, tail: Math.min(20, tail) });
+		if (!this.renderCtx) {
+			this.chainCtx = ctx;
+			this.watchChains();
+		}
+		return buses;
+	}
+
+	/** What a chain reads: its nodes, the cables into them, their knobs, and the track's pan and level. */
+	private static chainSig(graph: RackGraph, shared: Set<string>, track: TrackData): string {
+		const cables = graph.cables.filter((c) => shared.has(c.to));
+		const readers = new Set([...shared, ...cables.map((c) => c.from)]);
+		const params = Object.entries(track.graphParams ?? {})
+			.filter(([k]) => readers.has(k.slice(0, k.indexOf('.'))))
+			.sort(([a], [b]) => (a < b ? -1 : 1));
+		const waves = Object.entries(track.graphWaves ?? {}).filter(([k]) =>
+			readers.has(k.slice(0, k.indexOf('.')))
+		);
+		return JSON.stringify([
+			graph.nodes.filter((n) => readers.has(n.id)).map((n) => [n.id, n.type]),
+			cables,
+			params,
+			waves,
+			track.pan,
+			track.presetGain ?? 1
+		]);
+	}
+
+	private static paramsOf(id: string, params: Record<string, number>): Record<string, number> {
+		const own: Record<string, number> = {};
+		const prefix = `${id}.`;
+		for (const [k, v] of Object.entries(params)) if (k.startsWith(prefix)) own[k.slice(prefix.length)] = v;
+		return own;
+	}
+
+	/** Let a chain ring for `after` seconds more, then take it down. */
+	private retireChain(ctx: BaseAudioContext, chains: Map<number, TrackChain>, trackId: number, after: number) {
+		const chain = chains.get(trackId);
+		if (!chain) return;
+		chains.delete(trackId);
+		const now = ctx.currentTime;
+		const end = now + Math.max(0.02, after);
+		try {
+			chain.out.gain.cancelScheduledValues(now);
+			chain.out.gain.setValueAtTime(chain.out.gain.value, Math.max(now, end - Math.min(0.5, after)));
+			chain.out.gain.linearRampToValueAtTime(0, end);
+			for (const src of chain.sources) src.stop(end + 0.01);
+		} catch {
+			/* a source already stopped */
+		}
+		if (!this.renderCtx) setTimeout(() => chain.out.disconnect(), (end - now) * 1000 + 100);
+	}
+
+	/**
+	 * Take down a live chain once its track has been quiet for its tail, or
+	 * has stopped playing the patch it was built from.
+	 *
+	 * Once a second is plenty: the question is whether a reverb has been
+	 * silent long enough to stop computing it, and the answer is in seconds.
+	 */
+	private watchChains() {
+		if (this.chainWatch) return;
+		this.chainWatch = setInterval(() => {
+			const ctx = this.chainCtx;
+			const chains = ctx ? this.trackChains.get(ctx) : undefined;
+			if (!ctx || !chains || !chains.size) {
+				if (this.chainWatch) clearInterval(this.chainWatch);
+				this.chainWatch = null;
+				return;
+			}
+			const now = ctx.currentTime;
+			for (const [trackId, chain] of [...chains]) {
+				const track = this.tracks[trackId];
+				const graph = track?.advanced && track.rackGraph?.nodes?.length ? graphOf(track) : undefined;
+				const stale =
+					!graph || ModularSynth.chainSig(graph, trackScope(graph, EXEC_PORT_IDS), track) !== chain.sig;
+				if (stale) {
+					this.retireChain(ctx, chains, trackId, chain.tail);
+					continue;
+				}
+				let busy = false;
+				for (const v of this.activeVoices.values()) if (v.trackId === trackId) busy = true;
+				if (busy) chain.quietSince = undefined;
+				else if (chain.quietSince === undefined) chain.quietSince = now;
+				else if (now - chain.quietSince > chain.tail + 0.5) this.retireChain(ctx, chains, trackId, 0.05);
+			}
+		}, 1000);
+	}
+
+	/** Every live chain, gone in a moment: STOP means silence, a shared room included. */
+	private retireAllChains() {
+		const ctx = this.chainCtx;
+		const chains = ctx ? this.trackChains.get(ctx) : undefined;
+		if (!ctx || !chains) return;
+		for (const trackId of [...chains.keys()]) this.retireChain(ctx, chains, trackId, 0.05);
+	}
+
+	/**
 	 * One exec outlet's activation: the audio network it reaches, built and
 	 * started as of `t`.
 	 *
@@ -954,7 +1175,12 @@ class ModularSynth {
        caller already knows which one fired; asking the catalogue again per
        call would only be answering a question this parameter already
        settles. */
-		entryType = 'in'
+		entryType = 'in',
+		/* Which half of the patch this build is: a note's own nodes, or the
+		   track's shared chain behind a TRTN (see `trackScope`). A note leaves
+		   the chain out -- it is built once, in `ensureTrackChain` -- and the
+		   chain takes only its own nodes and the values that set its knobs. */
+		part: 'voice' | 'track' = 'voice'
 	): {
 		out: AudioNode;
 		sources: AudioScheduledSourceNode[];
@@ -1094,8 +1320,20 @@ class ModularSynth {
        listens to is an output. That rule needs the whole graph in `order`,
        so this keeps the whole graph rather than pruning to an empty ancestry
        and building nothing. */
+		const shared = trackScope(graph, EXEC_PORT_IDS);
+		/* In the chain, a node outside it is built only if it settles to a
+		   number or is a controller: a note's pitch or envelope has no single
+		   value on a track many notes share, so a cable from one is dropped. */
+		const partHas = (n: { id: string; type: string }) =>
+			part === 'voice'
+				? !shared.has(n.id)
+				: shared.has(n.id) || isValueNode(n.type) || n.type === 'ctrl' || n.type === entryType;
 		const activatedOuts = graph.nodes.filter(
-			(n) => ACTIVATION_TYPES.has(n.type) && runs(reach, n.id)
+			(n) =>
+				ACTIVATION_TYPES.has(n.type) &&
+				runs(reach, n.id) &&
+				partHas(n) &&
+				(part === 'voice' || (shared.has(n.id) && n.type === 'out'))
 		);
 		/* SEND feeds RTN with no cable to say so -- see `fbBuses` and the
        `fbsend`/`fbrtn` case below. An ancestor walk that only followed
@@ -1159,8 +1397,10 @@ class ModularSynth {
        activation would need to clean up later, so there is nothing here for
        the REL-rebuilds-THEN's-OSC bug to reach through it -- unlike an OSC,
        ENV or NODE.CV, which do build something with a lifetime of its own. */
-		const probes = graph.nodes.filter((n) => PROBE_TYPES.has(n.type));
-		const hasAnyOut = graph.nodes.some((n) => ACTIVATION_TYPES.has(n.type));
+		const probes = graph.nodes.filter(
+			(n) => PROBE_TYPES.has(n.type) && (part === 'voice' ? !shared.has(n.id) : shared.has(n.id))
+		);
+		const hasAnyOut = graph.nodes.some((n) => ACTIVATION_TYPES.has(n.type) && partHas(n));
 		const outIds = activatedOuts.map((n) => n.id);
 		const outOnlyAncestry = hasAnyOut
 			? audioAncestors(graph, audioCables, modCables, outIds, fbEdges)
@@ -1181,7 +1421,9 @@ class ModularSynth {
 			: null;
 		const inScope = (id: string) =>
 			!ancestry || ancestry.has(id) || roots.includes(id);
-		const scopedNodes = ancestry ? graph.nodes.filter((n) => inScope(n.id)) : graph.nodes;
+		const scopedNodes = (ancestry ? graph.nodes.filter((n) => inScope(n.id)) : graph.nodes).filter(
+			partHas
+		);
 
 		// Kahn's algorithm; a cycle here means a hand-edited patch file, since the
 		// editor refuses to draw one.
@@ -1221,6 +1463,7 @@ class ModularSynth {
 				mod: Map<string, AudioNode | AudioParam>;
 				isOutput?: boolean;
 				outs?: Map<string, AudioNode>;
+				sendTo?: AudioNode | null;
 			}
 		>();
 		/**
@@ -1273,7 +1516,7 @@ class ModularSynth {
        with nothing in `PURE_NODES` to answer for them structurally, and each
        needs the same exemption from the master mix an unwired CONST does. */
 		const isModOnly = (type: string) =>
-			isValueNode(type) || type === 'env' || type === 'tocv';
+			isValueNode(type) || type === 'env' || type === 'tocv' || type === 'ctrl';
 
 		for (const node of order) {
 			/* A value node carrying no signal is pulled as a number by everything
@@ -1513,7 +1756,13 @@ class ModularSynth {
 				if (!outputRuns(id)) continue;
 				const og = ctx.createGain();
 				m.out.connect(og);
-				og.connect(sink);
+				/* A TSND's note goes to the track's chain instead of this voice's
+				   sink, still through its own gain, so a release fades it the same
+				   way it fades an OUT. With no TRTN on its bus it goes nowhere,
+				   which is what half a bus is while it is being wired. */
+				if (m.sendTo !== undefined) {
+					if (m.sendTo) og.connect(m.sendTo);
+				} else og.connect(sink);
 				outGains.set(id, og);
 				any = true;
 			}
@@ -1699,6 +1948,8 @@ class ModularSynth {
 		mod: Map<string, AudioNode | AudioParam>;
 		/** The patch's output; when present, only what reaches it is heard. */
 		isOutput?: boolean;
+		/** Where a TSND delivers instead of the voice's sink: its bus, or null for none. */
+		sendTo?: AudioNode | null;
 		/**
 		 * Outlets that carry a signal under their own name.
 		 *
@@ -2832,6 +3083,45 @@ class ModularSynth {
 				l.connect(merger, 0, 0);
 				r.connect(merger, 0, 1);
 				return { in: l, in2: r, out: merger, mod };
+			}
+
+			case 'tsend': {
+				const g = ctx.createGain();
+				const bus = Math.round(p('bus', 0));
+				return { in: g, out: g, mod, isOutput: true, sendTo: this.trackBusSends?.get(bus) ?? null };
+			}
+
+			case 'trtn': {
+				/* Built only in the track's own chain; `ensureTrackChain` collects
+				   the bus it opens so every note's TSND can find it. */
+				const g = ctx.createGain();
+				const bus = Math.round(p('bus', 0));
+				const opened = this.trackBusReturns;
+				if (opened && !opened.has(bus)) opened.set(bus, g);
+				return { in: null, out: opened?.get(bus) ?? g, mod };
+			}
+
+			case 'ctrl': {
+				/* One constant source per outlet, set to where the controller is now
+				   and moved by `setController` while it sounds. Sources rather than
+				   gains fed from one shared node: a shared source would hold every
+				   voice's graph alive after the voice ended, and a source of the
+				   voice's own is stopped with the rest of it. */
+				const cc = Math.max(0, Math.min(127, Math.round(p('cc', 11))));
+				const live = !this.renderCtx;
+				const outs = new Map<string, AudioNode>();
+				for (const port of ['ped', 'bend', 'mod', 'pres', 'cc']) {
+					const src = ctx.createConstantSource();
+					src.offset.value = live ? this.controllerValue(port, cc) : 0;
+					sources.push(src);
+					if (live) {
+						const entry = { port, cc, node: src };
+						this.ctrlSources.add(entry);
+						src.addEventListener('ended', () => this.ctrlSources.delete(entry));
+					}
+					outs.set(port, src);
+				}
+				return { in: null, out: outs.get('ped')!, mod, outs };
 			}
 
 			case 'out': {
@@ -5039,6 +5329,7 @@ class ModularSynth {
 		// A build that threw last time must not hand its collector to this one.
 		this.noteGates = null;
 		this.deferredGates = null;
+		this.trackBusSends = null;
 		// Muting silences live playback, but must not silence an offline render.
 		if (!trackRow || (!this.renderCtx && soundEngine.isMuted())) return;
 		/* A note played by hand while a render is running has nowhere to go.
@@ -5986,6 +6277,13 @@ class ModularSynth {
 			const graphParams = track.graphParams ?? {};
 			const graphWaves = track.graphWaves ?? {};
 			const presetGain = track.presetGain ?? 1;
+			this.trackBusSends = this.ensureTrackChain(
+				ctx,
+				trackId,
+				track,
+				graph,
+				this.trackBuses[track.id]?.input ?? this.masterBusIn ?? masterGain
+			);
 			this.noteGates = { list: voiceGates, openEnded: isContinuousHold };
 			const built = this.buildRackGraph(
 				ctx,
@@ -6001,6 +6299,7 @@ class ModularSynth {
 				graphWaves
 			);
 			this.noteGates = null;
+			this.trackBusSends = null;
 			if (built) {
 				/* The graph is the whole voice, and answers to none of racks 1-7.
 
@@ -6349,7 +6648,56 @@ class ModularSynth {
 	}
 
 	// Set Sustain Pedal (CC 64) State
+	/* What CTRL hands a patch: pedal, bend, wheel, pressure, and every CC by
+	   number. One set for the engine, the way the pedal already is -- a
+	   controller belongs to the player, not to a key. */
+	private ctrlValues: Record<'ped' | 'bend' | 'mod' | 'pres', number> = { ped: 0, bend: 0, mod: 0, pres: 0 };
+	private ccValues = new Float32Array(128);
+	/* Every CTRL outlet sounding right now, so a controller that moves reaches
+	   the voices already ringing. Each leaves when its source ends. */
+	private ctrlSources = new Set<{ port: string; cc: number; node: ConstantSourceNode }>();
+
+	private controllerValue(port: string, cc: number): number {
+		if (port === 'cc') return this.ccValues[cc] ?? 0;
+		return this.ctrlValues[port as keyof ModularSynth['ctrlValues']] ?? 0;
+	}
+
+	/**
+	 * A controller moved. `kind` is one of CTRL's own outlets, or `cc` with the
+	 * controller's number; values are 0..1 (BEND -1..1).
+	 *
+	 * CC 1 is the mod wheel and CC 64 the pedal, so a CC on either number moves
+	 * that outlet too -- the pedal continuously, which is what a half-pedal is.
+	 * A few milliseconds of glide, because a controller arrives in steps and a
+	 * step on a gain is a click.
+	 */
+	public setController(kind: 'ped' | 'bend' | 'mod' | 'pres' | 'cc', value: number, cc = 0) {
+		const v = Number.isFinite(value) ? value : 0;
+		if (kind === 'cc') {
+			const n = Math.max(0, Math.min(127, Math.round(cc)));
+			this.ccValues[n] = v;
+			if (n === 1) this.ctrlValues.mod = v;
+			if (n === 64) this.ctrlValues.ped = v;
+		} else {
+			this.ctrlValues[kind] = v;
+		}
+		// Nothing sounding, nothing to move -- and no reason to wake a context.
+		if (!this.ctrlSources.size || this.renderCtx) return;
+		const ctx = this.audioCtx();
+		if (!ctx) return;
+		for (const s of this.ctrlSources) {
+			const now = this.controllerValue(s.port, s.cc);
+			try {
+				s.node.offset.cancelScheduledValues(ctx.currentTime);
+				s.node.offset.setTargetAtTime(now, ctx.currentTime, 0.004);
+			} catch {
+				this.ctrlSources.delete(s);
+			}
+		}
+	}
+
 	public setSustainPedal(down: boolean) {
+		this.setController('ped', down ? 1 : 0);
 		if (this.isSustainPedalDown !== down) {
 			this.isSustainPedalDown = down;
 			this.onSustainListeners.forEach((fn) => fn(down));
@@ -6631,13 +6979,18 @@ class ModularSynth {
 	) {
 		const deferred = this.deferredGates;
 		const collecting = this.noteGates;
+		const sends = this.trackBusSends;
 		this.deferredGates = null;
 		this.noteGates = null;
+		// A release sound can go to the track's chain too: a damper's thud in the body.
+		this.trackBusSends =
+			voice.trackId !== undefined ? (this.trackChains.get(ctx)?.get(voice.trackId)?.buses ?? null) : null;
 		try {
 			this.fireVoiceInterruptNow(voice, ctx, now, contextKey, entryType, entryPort, sourcesKey);
 		} finally {
 			this.deferredGates = deferred;
 			this.noteGates = collecting;
+			this.trackBusSends = sends;
 		}
 	}
 
@@ -7135,6 +7488,7 @@ class ModularSynth {
 	}
 
 	public stopAll() {
+		this.retireAllChains();
 		this.trackHeldVoices.clear();
 		this.sustainedVoiceKeys.clear();
 		Array.from(this.activeVoices.keys()).forEach((k) => this.stopVoice(k));

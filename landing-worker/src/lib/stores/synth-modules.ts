@@ -857,6 +857,45 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [{ key: 'bus', label: 'BUS', min: 0, max: 7, step: 1, def: 0, field: true, fixed: true }]
 	},
 	{
+		/* Where a note leaves for the track's shared chain.
+		 *
+		 * SEND and RTN are a loop inside one note; these two are the opposite
+		 * reach, out of every note into one place. Each voice's TSND lands on the
+		 * TRTN with the same BUS, which is built once for the track and heard
+		 * once: the soundboard every string on a piano shares, a room the whole
+		 * part plays into. Built per voice, one of those costs a reverb a key and
+		 * never hears two notes at once, which is most of what a shared body is.
+		 *
+		 * An exec inlet like OUT's, because it is an output: execution reaching it
+		 * is what lets this note's signal through, and a release fades it the
+		 * way it fades an OUT. */
+		id: 'tsend',
+		label: 'TSND',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.tsend',
+		inputs: [EXEC_IN, AUDIO_IN],
+		outputs: [],
+		params: [{ key: 'bus', label: 'BUS', min: 0, max: 7, step: 1, def: 0, field: true, fixed: true }]
+	},
+	{
+		/* The track's end of TSND: every note on the bus, summed.
+		 *
+		 * Whatever this feeds belongs to the track and not to a note -- see
+		 * `trackScope` -- so it is built once, runs while the track is sounding,
+		 * and reaches the mixer through an OUT of its own. A note's pitch and
+		 * velocity mean nothing here, since there is no one note; CTRL does, since
+		 * a pedal is the whole instrument's. */
+		id: 'trtn',
+		label: 'TRTN',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.trtn',
+		inputs: [],
+		outputs: [AUDIO_OUT],
+		params: [{ key: 'bus', label: 'BUS', min: 0, max: 7, step: 1, def: 0, field: true, fixed: true }]
+	},
+	{
 		id: 'delay',
 		label: 'DELAY',
 		group: 'SHAPE',
@@ -901,6 +940,30 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ key: 'resp', label: 'RESP', min: 1, max: 200, step: 0.1, def: 20, unit: 'Hz', scale: 'log' },
 			{ key: 'sens', label: 'SENS', min: 0.1, max: 10, step: 0.01, def: 1.5708, scale: 'log' }
 		]
+	},
+	{
+		/* What the player's hands and feet are doing, apart from the keys.
+		 *
+		 * KEY-EVENT says what one key did. The pedal, the bend and mod wheels,
+		 * pressure and any other controller belong to the whole instrument and
+		 * move while notes sound, so they are live signals rather than values
+		 * read at the note: a pedal pressed under a held chord reaches every voice
+		 * already ringing. 0..1, BEND -1..1; CC is whichever number the knob
+		 * names. A render has no hands on it and reads every one at rest. */
+		id: 'ctrl',
+		label: 'CTRL',
+		group: 'MODULATE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.ctrl',
+		inputs: [],
+		outputs: [
+			{ id: 'ped', label: 'PED', kind: 'mod', role: 'unit' },
+			{ id: 'bend', label: 'BEND', kind: 'mod', role: 'cv' },
+			{ id: 'mod', label: 'MOD', kind: 'mod', role: 'unit' },
+			{ id: 'pres', label: 'PRES', kind: 'mod', role: 'unit' },
+			{ id: 'cc', label: 'CC', kind: 'mod', role: 'unit' }
+		],
+		params: [{ key: 'cc', label: 'CC#', min: 0, max: 127, step: 1, def: 11, field: true, fixed: true }]
 	},
 	{
 		/* A shape over the note, as a value.

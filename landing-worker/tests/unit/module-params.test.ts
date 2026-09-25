@@ -249,7 +249,9 @@ describe('the node contract', () => {
 		   out here, which meant every module added to the catalogue had to be
 		   added to a second place -- and while the catalogue is being rebuilt
 		   from primitives the roster would be wrong on every commit. */
-		const LOGIC = new Set(['act', 'in', 'onchoke', 'out', 'wait', 'when']);
+		/* TSND is an output, like OUT: execution reaching it is what lets the
+		   note's signal through to the track's chain, and a release fades it. */
+		const LOGIC = new Set(['act', 'in', 'onchoke', 'out', 'tsend', 'wait', 'when']);
 		const withExec = MODULE_SPECS.filter(
 			(m) => m.inputs.some((p) => p.kind === 'exec') || m.outputs.some((p) => p.kind === 'exec')
 		).map((m) => m.id);
@@ -349,7 +351,7 @@ describe('the node contract', () => {
 				   the RTN on its bus -- it just is not a port, because a cable
 				   between the two ends is the cycle the editor refuses. It shapes
 				   the signal path, so it files with what shapes it. */
-				const sends = m.id === 'fbsend';
+				const sends = m.id === 'fbsend' || m.id === 'tsend';
 				/* OUT is the fifth way and the one true meter-shaped exception:
 				   it takes audio and ends the signal path exactly like a probe,
 				   but it is not a module you patch in to look at something -- it

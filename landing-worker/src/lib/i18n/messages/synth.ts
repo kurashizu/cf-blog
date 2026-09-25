@@ -277,6 +277,12 @@ export default {
 		'synthPatch.mod.fbsend': 'Sends into a feedback loop. Pair it with RTN on the same BUS.',
 		'synthPatch.mod.fbrtn':
 			'Returns what SEND was given, one block ago. Cable it onward to close the loop.',
+		'synthPatch.mod.tsend':
+			"Sends this note to the track's shared chain on BUS: every note on the track meets at the TRTN with the same number.",
+		'synthPatch.mod.trtn':
+			'Every note sent to BUS, summed. What it feeds is built once for the track, not once per key: a soundboard, a room.',
+		'synthPatch.mod.ctrl':
+			'The pedal, bend, mod wheel, pressure and any CC, live while notes sound. 0..1, BEND -1..1. At rest in an export.',
 		'synthPatch.mod.delay': 'A tap with feedback. Inside a voice, not just on the output.',
 		'synthPatch.mod.pan': 'Places the sound across the stereo field.',
 		'synthPatch.mod.in':
@@ -302,6 +308,8 @@ export default {
 		'synthPatch.mod.seq':
 			'Runs what follows a moment later. GAP apart makes a flam rather than one strike.',
 		'synthPatch.mod.when': 'A branch. Execution carries on out of TRUE only when the test passes.',
+		'synthPatch.mod.onchoke':
+			'Fires when this voice is cut off from outside: another key stealing its slot, or an ACT reaching over from a different note.',
 		'synthPatch.mod.act':
 			'What to do when the WHEN before it says yes: CUT stops the others, SOLO stops everything but this group.',
 		'synthPatch.mod.split': 'Takes a stereo signal apart so L and R can be processed separately.',
@@ -823,6 +831,12 @@ export default {
 		'synthPatch.mod.space': '房间。所有原声乐器都是在某个空间里被听到的。',
 		'synthPatch.mod.fbsend': '把信号送进反馈环。与同一 BUS 的 RTN 配对。',
 		'synthPatch.mod.fbrtn': '取回 SEND 上一个音频块收到的信号。把它接回去就闭合了环路。',
+		'synthPatch.mod.tsend':
+			'把这个音送到本轨道共享链路的 BUS 上：轨道里所有的音都在同号的 TRTN 汇合。',
+		'synthPatch.mod.trtn':
+			'所有送到 BUS 的音的总和。它后面接的东西整条轨道只建一份，而不是每个键一份：比如音板、房间。',
+		'synthPatch.mod.ctrl':
+			'踏板、弯音、调制轮、触后和任意 CC，在音符发声期间实时变化。0..1，BEND 为 -1..1。导出时取静止值。',
 		'synthPatch.mod.delay': '带反馈的延时。可以放进音色内部，而不只是挂在输出上。',
 		'synthPatch.mod.pan': '把声音放到立体声场的某个位置。',
 		'synthPatch.mod.in': '音符本身。THEN 触发整张图，PITCH VEL NOTE GATE 是这一次按键的信息。',
@@ -843,6 +857,8 @@ export default {
 		'synthPatch.mod.curve': '弯曲一个 0-1 的值。大于 1 起步慢,小于 1 起步快。',
 		'synthPatch.mod.seq': '让后面的模块晚一点执行。间隔 GAP 毫秒，两次击打就成了装饰音而不是一下。',
 		'synthPatch.mod.when': '一个分支。判断成立时，执行流才会从 TRUE 继续往下走。',
+		'synthPatch.mod.onchoke':
+			'这个音被外部掐断时触发：别的键抢走了它的发声位，或者另一个音的 ACT 把它切掉。',
 		'synthPatch.mod.act': '前面的 WHEN 成立时要做的事：CUT 掐断其他音，SOLO 只留下本组。',
 		'synthPatch.mod.split': '把立体声拆开，左右两路可以各自处理。',
 		'synthPatch.mod.merge': '把两路单声道合回立体声。',
@@ -1312,6 +1328,12 @@ export default {
 		'synthPatch.mod.space': '房間。所有原聲樂器都是在某個空間裡被聽到的。',
 		'synthPatch.mod.fbsend': '把訊號送進回授環。與同一 BUS 的 RTN 配對。',
 		'synthPatch.mod.fbrtn': '取回 SEND 上一個音訊區塊收到的訊號。把它接回去就閉合了環路。',
+		'synthPatch.mod.tsend':
+			'把這個音送到本軌道共用鏈路的 BUS 上：軌道裡所有的音都在同號的 TRTN 匯合。',
+		'synthPatch.mod.trtn':
+			'所有送到 BUS 的音的總和。它後面接的東西整條軌道只建一份，而不是每個鍵一份：例如音板、房間。',
+		'synthPatch.mod.ctrl':
+			'踏板、彎音、調變輪、觸後和任意 CC，在音符發聲期間即時變化。0..1，BEND 為 -1..1。匯出時取靜止值。',
 		'synthPatch.mod.delay': '帶回授的延時。可以放進音色內部，而不只是掛在輸出上。',
 		'synthPatch.mod.pan': '把聲音放到立體聲場的某個位置。',
 		'synthPatch.mod.in': '音符本身。THEN 觸發整張圖，PITCH VEL NOTE GATE 是這一次按鍵的資訊。',
@@ -1332,6 +1354,8 @@ export default {
 		'synthPatch.mod.curve': '彎曲一個 0-1 的值。大於 1 起步慢,小於 1 起步快。',
 		'synthPatch.mod.seq': '讓後面的模組晚一點執行。間隔 GAP 毫秒，兩次擊打就成了裝飾音而不是一下。',
 		'synthPatch.mod.when': '一個分支。判斷成立時，執行流才會從 TRUE 繼續往下走。',
+		'synthPatch.mod.onchoke':
+			'這個音被外部掐斷時觸發：別的鍵搶走了它的發聲位，或者另一個音的 ACT 把它切掉。',
 		'synthPatch.mod.act': '前面的 WHEN 成立時要做的事：CUT 掐斷其他音，SOLO 只留下本組。',
 		'synthPatch.mod.split': '把立體聲拆開，左右兩路可以各自處理。',
 		'synthPatch.mod.merge': '把兩路單聲道合回立體聲。',
@@ -1830,6 +1854,12 @@ export default {
 		'synthPatch.mod.fbsend': 'フィードバックループへ送ります。同じ BUS の RTN と対で使います。',
 		'synthPatch.mod.fbrtn':
 			'1 ブロック前に SEND が受け取った音を返します。配線で戻すとループが閉じます。',
+		'synthPatch.mod.tsend':
+			'この音をトラック共有チェーンの BUS に送ります。トラックのすべての音が同じ番号の TRTN で合流します。',
+		'synthPatch.mod.trtn':
+			'BUS に送られたすべての音の合計。この先はキーごとではなくトラックに一つだけ作られます：響板、部屋。',
+		'synthPatch.mod.ctrl':
+			'ペダル、ベンド、モジュレーション、プレッシャー、任意の CC。発音中もリアルタイムに動きます。0..1、BEND は -1..1。書き出しでは静止値です。',
 		'synthPatch.mod.delay': 'フィードバック付きのディレイ。出力だけでなく音色の内側にも置けます。',
 		'synthPatch.mod.pan': '音をステレオ空間のどこに置くかを決めます。',
 		'synthPatch.mod.in':
@@ -1855,6 +1885,8 @@ export default {
 		'synthPatch.mod.seq':
 			'続くモジュールを少し遅らせて実行します。GAP だけずらすと一打ではなくフラムになります。',
 		'synthPatch.mod.when': '分岐です。条件を満たしたときだけ TRUE から実行が続きます。',
+		'synthPatch.mod.onchoke':
+			'このボイスが外から止められたときに発火します：別のキーに枠を奪われたとき、または別の音の ACT に切られたとき。',
 		'synthPatch.mod.act':
 			'手前の WHEN が成立したときの動作：CUT は他の音を止め、SOLO はこのグループ以外を止めます。',
 		'synthPatch.mod.split': 'ステレオ信号を分け、LとRを別々に処理できるようにします。',
@@ -2383,6 +2415,12 @@ export default {
 		'synthPatch.mod.fbsend': '피드백 루프로 보냅니다. 같은 BUS의 RTN과 짝을 이룹니다.',
 		'synthPatch.mod.fbrtn':
 			'SEND가 한 블록 전에 받은 소리를 돌려줍니다. 다시 연결하면 루프가 닫힙니다.',
+		'synthPatch.mod.tsend':
+			'이 음을 트랙 공유 체인의 BUS로 보냅니다. 트랙의 모든 음이 같은 번호의 TRTN에서 만납니다.',
+		'synthPatch.mod.trtn':
+			'BUS로 보내진 모든 음의 합. 그 뒤는 키마다가 아니라 트랙에 하나만 만들어집니다: 향판, 방.',
+		'synthPatch.mod.ctrl':
+			'페달, 벤드, 모듈레이션 휠, 프레셔, 임의의 CC. 음이 울리는 동안 실시간으로 움직입니다. 0..1, BEND는 -1..1. 내보내기에서는 정지값입니다.',
 		'synthPatch.mod.delay': '피드백이 있는 딜레이. 출력뿐 아니라 음색 안에도 놓을 수 있습니다.',
 		'synthPatch.mod.pan': '소리를 스테레오 공간 어디에 둘지 정합니다.',
 		'synthPatch.mod.in':
@@ -2408,6 +2446,8 @@ export default {
 		'synthPatch.mod.seq':
 			'이어지는 모듈을 조금 늦게 실행합니다. GAP 만큼 벌리면 한 번이 아니라 플램이 됩니다.',
 		'synthPatch.mod.when': '분기입니다. 조건이 맞을 때만 TRUE로 실행이 이어집니다.',
+		'synthPatch.mod.onchoke':
+			'이 보이스가 밖에서 끊겼을 때 발화합니다: 다른 키가 자리를 빼앗았거나, 다른 음의 ACT가 잘라냈을 때.',
 		'synthPatch.mod.act':
 			'앞의 WHEN이 참일 때 할 일: CUT은 다른 음을 끊고, SOLO는 이 그룹만 남깁니다.',
 		'synthPatch.mod.split': '스테레오 신호를 나눠 L과 R을 따로 처리합니다.',

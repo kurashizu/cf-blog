@@ -366,7 +366,8 @@ describe('execution flow', () => {
 		   The roster named nine modules and had to be edited every time one was
 		   added or removed, which during a rebuild is every commit -- and a name
 		   that no longer resolves reads the same as a module with no exec pin. */
-		const LOGIC = new Set(['in', 'out', 'wait', 'when', 'act', 'onchoke']);
+		// TSND is an output like OUT, gated by execution the same way.
+		const LOGIC = new Set(['in', 'out', 'tsend', 'wait', 'when', 'act', 'onchoke']);
 		const sound = MODULE_SPECS.filter((m) => !LOGIC.has(m.id));
 		for (const m of sound) {
 			expect(

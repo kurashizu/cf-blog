@@ -498,6 +498,10 @@ describe('what the renders proved', () => {
 			'onchoke',
 			'out',
 			'scope',
+			/* TSND is SEND's shape one level up: its outlet is the TRTN on its
+			   bus, in the track's chain, which no port reaches. Rendered through
+			   the chain in `tests/audio/track-bus.test.ts`. */
+			'tsend',
 			'wait',
 			'when'
 		]);
