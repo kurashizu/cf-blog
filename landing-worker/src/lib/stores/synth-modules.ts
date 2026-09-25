@@ -966,6 +966,64 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [{ key: 'cc', label: 'CC#', min: 0, max: 127, step: 1, def: 11, field: true, fixed: true }]
 	},
 	{
+		/* A number drawn once per note, between MIN and MAX.
+		 *
+		 * A real instrument never plays the same note twice: the hammer lands a
+		 * little differently, the bow a little sooner. Into a detune, a phase or
+		 * a brightness this is that. Drawn from the note's own seed, so the
+		 * note's release reads the same draw and an export renders the same
+		 * every time. */
+		id: 'rand',
+		label: 'RAND',
+		group: 'MODULATE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.rand',
+		inputs: [
+			{ id: 'lo', label: 'MIN', kind: 'mod' },
+			{ id: 'hi', label: 'MAX', kind: 'mod' }
+		],
+		outputs: [CV_OUT],
+		params: [
+			{ key: 'lo', label: 'MIN', min: -3.4e38, max: 3.4e38, step: 0.001, def: 0, field: true },
+			{ key: 'hi', label: 'MAX', min: -3.4e38, max: 3.4e38, step: 0.001, def: 1, field: true }
+		]
+	},
+	{
+		/* Sample and hold: IN as it was when TRIG last rose through 0.5, held.
+		 *
+		 * An LFO into TRIG steps any signal into a staircase; nothing on TRIG
+		 * takes one sample at the key and keeps it, which is "where the LFO was
+		 * when this note started". */
+		id: 'sh',
+		label: 'S&H',
+		group: 'MODULATE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.sh',
+		inputs: [
+			{ id: 'a', label: 'IN', kind: 'mod' },
+			{ id: 'trig', label: 'TRIG', kind: 'mod' }
+		],
+		outputs: [CV_OUT],
+		params: []
+	},
+	{
+		/* A control signal slowed down: a step arrives as a curve, RISE seconds
+		 * up and FALL down (to within 1 %). Takes the zipper out of a stepped
+		 * S&H, gives a pedal or a gate the lag a mechanism has, and turns a
+		 * jump in a knob into a glide. */
+		id: 'slew',
+		label: 'SLEW',
+		group: 'MODULATE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.slew',
+		inputs: [{ id: 'a', label: 'IN', kind: 'mod' }],
+		outputs: [CV_OUT],
+		params: [
+			{ key: 'rise', label: 'RISE', min: 0, max: 10, step: 0.001, def: 0.05, unit: 's', field: true },
+			{ key: 'fall', label: 'FALL', min: 0, max: 10, step: 0.001, def: 0.05, unit: 's', field: true }
+		]
+	},
+	{
 		/* A shape over the note, as a value.
 		 *
 		 * The other half of what makes a note a note: an oscillator gives it a

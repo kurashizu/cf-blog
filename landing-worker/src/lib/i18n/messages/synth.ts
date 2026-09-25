@@ -249,7 +249,6 @@ export default {
 		'synthPatch.mod.noise': 'White noise. Colour it with a FILTER after it.',
 		'synthPatch.mod.vca': 'A voltage-controlled amplifier: level, driven by CV.',
 		'synthPatch.mod.env': 'An envelope. Sends CV, not sound.',
-		'synthPatch.mod.lfo': 'A slow oscillator for modulation.',
 		'synthPatch.mod.mix': 'Adds two signals.',
 		'synthPatch.mod.excite':
 			'The strike, pluck or breath that starts the sound. Every acoustic instrument begins with one.',
@@ -281,6 +280,12 @@ export default {
 			"Sends this note to the track's shared chain on BUS: every note on the track meets at the TRTN with the same number.",
 		'synthPatch.mod.trtn':
 			'Every note sent to BUS, summed. What it feeds is built once for the track, not once per key: a soundboard, a room.',
+		'synthPatch.mod.rand':
+			"A number drawn per note between MIN and MAX: no two keys alike. The same draw on the note's release, and in every export.",
+		'synthPatch.mod.sh':
+			'Sample and hold: IN as it was when TRIG last rose, held. Nothing on TRIG: IN at the key.',
+		'synthPatch.mod.slew':
+			'Slows a control down: a step arrives over RISE seconds going up and FALL going down.',
 		'synthPatch.mod.ctrl':
 			'The pedal, bend, mod wheel, pressure and any CC, live while notes sound. 0..1, BEND -1..1. At rest in an export.',
 		'synthPatch.mod.delay': 'A tap with feedback. Inside a voice, not just on the output.',
@@ -811,7 +816,6 @@ export default {
 		'synthPatch.mod.noise': '白噪声。要别的颜色就在后面接一个 FILTER。',
 		'synthPatch.mod.vca': '压控放大器：由 CV 控制的音量。',
 		'synthPatch.mod.env': '包络。输出 CV，不是声音。',
-		'synthPatch.mod.lfo': '低频振荡器，用于调制。',
 		'synthPatch.mod.mix': '把两路信号相加。',
 		'synthPatch.mod.excite': '起振：敲击、拨弦或吹气。所有原声乐器都从这里开始。',
 		'synthPatch.mod.string':
@@ -835,6 +839,11 @@ export default {
 			'把这个音送到本轨道共享链路的 BUS 上：轨道里所有的音都在同号的 TRTN 汇合。',
 		'synthPatch.mod.trtn':
 			'所有送到 BUS 的音的总和。它后面接的东西整条轨道只建一份，而不是每个键一份：比如音板、房间。',
+		'synthPatch.mod.rand':
+			'每个音在 MIN 和 MAX 之间随机取一个数：没有两个键完全相同。同一个音松键时取值相同，每次导出也相同。',
+		'synthPatch.mod.sh':
+			'采样保持：取 TRIG 上次上升时 IN 的值并保持。TRIG 未接：取按键那一刻的 IN。',
+		'synthPatch.mod.slew': '让控制信号变慢：上升用 RISE 秒，下降用 FALL 秒。',
 		'synthPatch.mod.ctrl':
 			'踏板、弯音、调制轮、触后和任意 CC，在音符发声期间实时变化。0..1，BEND 为 -1..1。导出时取静止值。',
 		'synthPatch.mod.delay': '带反馈的延时。可以放进音色内部，而不只是挂在输出上。',
@@ -1308,7 +1317,6 @@ export default {
 		'synthPatch.mod.noise': '白雜訊。要別的顏色就在後面接一個 FILTER。',
 		'synthPatch.mod.vca': '壓控放大器：由 CV 控制的音量。',
 		'synthPatch.mod.env': '包絡。輸出 CV，不是聲音。',
-		'synthPatch.mod.lfo': '低頻振盪器，用於調變。',
 		'synthPatch.mod.mix': '把兩路訊號相加。',
 		'synthPatch.mod.excite': '起振：敲擊、撥弦或吹氣。所有原聲樂器都從這裡開始。',
 		'synthPatch.mod.string':
@@ -1332,6 +1340,11 @@ export default {
 			'把這個音送到本軌道共用鏈路的 BUS 上：軌道裡所有的音都在同號的 TRTN 匯合。',
 		'synthPatch.mod.trtn':
 			'所有送到 BUS 的音的總和。它後面接的東西整條軌道只建一份，而不是每個鍵一份：例如音板、房間。',
+		'synthPatch.mod.rand':
+			'每個音在 MIN 和 MAX 之間隨機取一個數：沒有兩個鍵完全相同。同一個音放鍵時取值相同，每次匯出也相同。',
+		'synthPatch.mod.sh':
+			'取樣保持：取 TRIG 上次上升時 IN 的值並保持。TRIG 未接：取按鍵那一刻的 IN。',
+		'synthPatch.mod.slew': '讓控制訊號變慢：上升用 RISE 秒，下降用 FALL 秒。',
 		'synthPatch.mod.ctrl':
 			'踏板、彎音、調變輪、觸後和任意 CC，在音符發聲期間即時變化。0..1，BEND 為 -1..1。匯出時取靜止值。',
 		'synthPatch.mod.delay': '帶回授的延時。可以放進音色內部，而不只是掛在輸出上。',
@@ -1829,7 +1842,6 @@ export default {
 		'synthPatch.mod.noise': 'ホワイトノイズ。色を付けるなら後ろに FILTER を置きます。',
 		'synthPatch.mod.vca': '電圧制御アンプ：CVで動く音量。',
 		'synthPatch.mod.env': 'エンベロープ。音ではなくCVを出します。',
-		'synthPatch.mod.lfo': '変調用の低周波オシレーター。',
 		'synthPatch.mod.mix': '2つの信号を足します。',
 		'synthPatch.mod.excite':
 			'音の始まりとなる打撃・撥弦・息。すべてのアコースティック楽器はここから始まります。',
@@ -1858,6 +1870,11 @@ export default {
 			'この音をトラック共有チェーンの BUS に送ります。トラックのすべての音が同じ番号の TRTN で合流します。',
 		'synthPatch.mod.trtn':
 			'BUS に送られたすべての音の合計。この先はキーごとではなくトラックに一つだけ作られます：響板、部屋。',
+		'synthPatch.mod.rand':
+			'ノートごとに MIN と MAX の間で引く数。同じキーは二度とありません。リリースでも書き出しでも同じ値です。',
+		'synthPatch.mod.sh':
+			'サンプル＆ホールド：TRIG が最後に立ち上がった時の IN を保持します。TRIG 未接続なら打鍵時の IN。',
+		'synthPatch.mod.slew': '制御信号を遅くします：上りは RISE 秒、下りは FALL 秒かけて届きます。',
 		'synthPatch.mod.ctrl':
 			'ペダル、ベンド、モジュレーション、プレッシャー、任意の CC。発音中もリアルタイムに動きます。0..1、BEND は -1..1。書き出しでは静止値です。',
 		'synthPatch.mod.delay': 'フィードバック付きのディレイ。出力だけでなく音色の内側にも置けます。',
@@ -2391,7 +2408,6 @@ export default {
 		'synthPatch.mod.noise': '화이트 노이즈. 색을 입히려면 뒤에 FILTER를 두세요.',
 		'synthPatch.mod.vca': '전압 제어 증폭기: CV로 움직이는 음량.',
 		'synthPatch.mod.env': '엔벨로프. 소리가 아니라 CV를 보냅니다.',
-		'synthPatch.mod.lfo': '변조용 저주파 오실레이터.',
 		'synthPatch.mod.mix': '두 신호를 더합니다.',
 		'synthPatch.mod.excite':
 			'소리를 시작하는 타격, 뜯기, 숨. 모든 어쿠스틱 악기는 여기서 시작합니다.',
@@ -2419,6 +2435,12 @@ export default {
 			'이 음을 트랙 공유 체인의 BUS로 보냅니다. 트랙의 모든 음이 같은 번호의 TRTN에서 만납니다.',
 		'synthPatch.mod.trtn':
 			'BUS로 보내진 모든 음의 합. 그 뒤는 키마다가 아니라 트랙에 하나만 만들어집니다: 향판, 방.',
+		'synthPatch.mod.rand':
+			'음마다 MIN과 MAX 사이에서 뽑는 수: 같은 키는 두 번 없습니다. 릴리스와 내보내기에서도 같은 값입니다.',
+		'synthPatch.mod.sh':
+			'샘플 앤 홀드: TRIG가 마지막으로 올라갈 때의 IN을 유지합니다. TRIG가 없으면 누른 순간의 IN.',
+		'synthPatch.mod.slew':
+			'제어 신호를 느리게: 올라갈 때 RISE초, 내려갈 때 FALL초에 걸쳐 도달합니다.',
 		'synthPatch.mod.ctrl':
 			'페달, 벤드, 모듈레이션 휠, 프레셔, 임의의 CC. 음이 울리는 동안 실시간으로 움직입니다. 0..1, BEND는 -1..1. 내보내기에서는 정지값입니다.',
 		'synthPatch.mod.delay': '피드백이 있는 딜레이. 출력뿐 아니라 음색 안에도 놓을 수 있습니다.',

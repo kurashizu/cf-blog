@@ -56,7 +56,9 @@ export type PureFn = (
 	param: (key: string, def: number) => number,
 	/* The note being played, for the few nodes whose default depends on the
 	   instrument rather than on their own knobs -- the tuning reference. */
-	note?: NoteEvent
+	note?: NoteEvent,
+	/* Which node this is, for RAND, whose value differs card to card. */
+	nodeId?: string
 ) => number;
 
 /**
@@ -78,6 +80,21 @@ const MIDI_A4 = 69;
 /** Semitones above the reference as a frequency. */
 const hzOf = (semis: number, a4: number) => a4 * Math.pow(2, semis / 12);
 
+/**
+ * A number in [0, 1) from a note's seed and a node's id: the same note and
+ * card always give the same draw, two cards on one note give two.
+ */
+export function noteRandom(seed: number, nodeId: string): number {
+	let h = (Math.floor(seed * 4294967296) ^ 0x9e3779b9) >>> 0;
+	for (let k = 0; k < nodeId.length; k++) {
+		h = Math.imul(h ^ nodeId.charCodeAt(k), 0x85ebca6b) >>> 0;
+		h ^= h >>> 13;
+	}
+	h = Math.imul(h ^ (h >>> 16), 0xc2b2ae35) >>> 0;
+	h ^= h >>> 16;
+	return (h >>> 0) / 4294967296;
+}
+
 export const PURE_NODES: Record<string, PureFn> = {
 	/* Pitch to frequency: exact, and the direction nearly every patch wants. */
 	tofreq: (i, p, note) => hzOf(i.get('a', 0), p('tuning', note?.tuning ?? 440)),
@@ -95,6 +112,14 @@ export const PURE_NODES: Record<string, PureFn> = {
 	   fifth" is a bare number on the card rather than a CONST and a cable
 	   for the single most common use of this module. */
 	trsp: (i, p) => i.get('a', 0) + i.get('b', p('b', 0)),
+	/* A number drawn per note, between MIN and MAX: no two keys alike, which
+	   is what a real instrument never is. Drawn from the note's seed, so the
+	   note's release reads the same draw and an export renders identically. */
+	rand: (i, p, note, id) => {
+		const lo = i.get('lo', p('lo', 0));
+		const hi = i.get('hi', p('hi', 1));
+		return lo + noteRandom(note?.seed ?? 0.5, id ?? '') * (hi - lo);
+	},
 	/* A control wire with a name on it: whatever arrives, unchanged.
 
 	   Dual like MAP, and for the same reason. Pulled as a number it resolves a
@@ -381,7 +406,8 @@ const NOT_PURE = new Set([
 	'not',
 	'clamp',
 	'tofreq',
-	'topitch'
+	'topitch',
+	'rand'
 ]);
 
 /**
@@ -431,6 +457,12 @@ export interface NoteEvent {
 	noteIndex: number;
 	/** One value per lane the track carries, keyed by lane id. */
 	lanes: Record<string, number>;
+	/**
+	 * This note's own random seed, so a RAND reads the same number however
+	 * many times the note is resolved -- its THEN and its REL agree -- and a
+	 * render, which derives it from the note, comes out the same every time.
+	 */
+	seed?: number;
 }
 
 /**
@@ -533,7 +565,7 @@ export function createResolver(
 		const inputs: ResolvedInputs = {
 			get: (port, fallback) => read(nodeId, port, fallback)
 		};
-		const v = fn(inputs, p, note);
+		const v = fn(inputs, p, note, nodeId);
 		onPath.delete(nodeId);
 		const out = Number.isFinite(v) ? v : 0;
 		// Only settled if no cycle was met anywhere beneath this pull.

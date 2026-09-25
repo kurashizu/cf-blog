@@ -28,6 +28,10 @@ import {
 	WIRE_PROCESSOR,
 	LOOP_PARAMS,
 	LOOP_PROCESSOR,
+	SH_PARAMS,
+	SH_PROCESSOR,
+	SLEW_PARAMS,
+	SLEW_PROCESSOR,
 	type LoopProgram,
 	type MapOptions
 } from './live-dsp-params';
@@ -1209,3 +1213,72 @@ class LoopProcessor extends StoppableProcessor {
 }
 
 registerProcessor(LOOP_PROCESSOR, LoopProcessor);
+
+/* ── S&H ────────────────────────────────────────────────────────────────── */
+
+/**
+ * Sample and hold: what IN reads at the moment TRIG rises through 0.5, held
+ * until the next rise. It takes one sample at the note's start as well, so
+ * with nothing on TRIG it is "IN, as it was when the key went down".
+ */
+class SampleHoldProcessor extends StoppableProcessor {
+	static get parameterDescriptors() {
+		return SH_PARAMS;
+	}
+	private held = NaN;
+	private high = false;
+	process(_inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const out = outputs[0]?.[0];
+		if (!out) return !this.finished();
+		const dt = 1 / sampleRate;
+		for (let i = 0; i < out.length; i++) {
+			if (currentTime + i * dt >= this.stopAt) {
+				out[i] = 0;
+				continue;
+			}
+			const trig = at(p.trig, i) > 0.5;
+			if (Number.isNaN(this.held) || (trig && !this.high)) this.held = at(p.in, i);
+			this.high = trig;
+			out[i] = this.held;
+		}
+		return !this.finished();
+	}
+}
+
+registerProcessor(SH_PROCESSOR, SampleHoldProcessor);
+
+/* ── SLEW ───────────────────────────────────────────────────────────────── */
+
+/**
+ * A control signal slowed down: it follows IN, taking RISE seconds to climb
+ * and FALL to drop -- to within 1 %, on an exponential, so a step arrives as
+ * the curve a real knob or a lagging mechanism would draw. Starts where IN
+ * is, rather than rising from zero into the first note.
+ */
+class SlewProcessor extends StoppableProcessor {
+	static get parameterDescriptors() {
+		return SLEW_PARAMS;
+	}
+	private y = NaN;
+	process(_inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const out = outputs[0]?.[0];
+		if (!out) return !this.finished();
+		const dt = 1 / sampleRate;
+		for (let i = 0; i < out.length; i++) {
+			if (currentTime + i * dt >= this.stopAt) {
+				out[i] = 0;
+				continue;
+			}
+			const x = at(p.in, i);
+			if (Number.isNaN(this.y)) this.y = x;
+			const time = Math.max(0, x > this.y ? at(p.rise, i) : at(p.fall, i));
+			// ln(100) = 4.6 time constants to within 1 %.
+			const k = time > 0 ? 1 - Math.exp(-4.605 / (time * sampleRate)) : 1;
+			this.y += (x - this.y) * k;
+			out[i] = this.y;
+		}
+		return !this.finished();
+	}
+}
+
+registerProcessor(SLEW_PROCESSOR, SlewProcessor);

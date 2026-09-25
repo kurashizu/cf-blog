@@ -39,6 +39,9 @@
 		// MODULATE
 		env: 'M1 13L5 3l3 6v4M8 9h3l3 4',
 		ctrl: 'M2 14V9h3v5M7 14V5h3v9M12 14V2h3v12',
+		rand: 'M2 2h12v12H2zM5 5h.01M11 5h.01M8 8h.01M5 11h.01M11 11h.01',
+		sh: 'M1 12h4V7h4V4h4v6h2',
+		slew: 'M1 13h3c3 0 4-10 8-10h3',
 		// UTILITY
 		delay: 'M2 4v8M6 5v6M10 7v2M14 8v0M2 8h12',
 		/* An arrow into the loop, and one coming back out of it: the two ends of

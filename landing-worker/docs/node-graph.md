@@ -452,6 +452,24 @@ Anything else on the loop (a PAN, a WIRE, a SPACE), a loop over 24 modules or
 sounds as it always did. An open SEND to RTN -- no path back -- is a delay
 line, not a loop, and is not compiled either.
 
+## Modulation primitives: RAND, S&H, SLEW
+
+There is still no LFO module, on purpose: an oscillator at a low frequency
+through TO-CV *is* one (see `family-bridges.test.ts`). What was missing were
+the pieces an OSC cannot be:
+
+- **RAND** -- a number per note between MIN and MAX. Drawn from the note's seed
+  and the card's id (`noteRandom`), so the note's REL reads the same draw as
+  its THEN, two RANDs on one note draw independently, and a render derives the
+  seed from the note so an export is identical every time. A value node; built
+  as nodes only if a moving signal reaches MIN or MAX.
+- **S&H** -- IN as it was when TRIG last rose through 0.5, held. It samples once
+  at the note too, so with nothing on TRIG it is "IN at the key". NOISE into IN
+  and an OSC LFO into TRIG is a stepped random LFO.
+- **SLEW** -- a control signal slowed to an exponential, RISE seconds up and
+  FALL down, each to within 1 %. It starts where IN is. S&H through SLEW is a
+  smooth random LFO; a pedal or gate through it gets a mechanism's lag.
+
 ## What the notes share: TSND and TRTN
 
 Every node in a patch is built per note -- except what a **TRTN** feeds.

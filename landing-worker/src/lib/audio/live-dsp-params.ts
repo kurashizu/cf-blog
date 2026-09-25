@@ -182,6 +182,16 @@ export interface LoopProgram {
 	inputs: number;
 }
 
+export const SH_PROCESSOR = 'krsz-sh';
+
+/** S&H: what it samples and the trigger it samples on, both live. */
+export const SH_PARAMS: LiveParamDescriptor[] = [a('in', 0), a('trig', 0)];
+
+export const SLEW_PROCESSOR = 'krsz-slew';
+
+/** SLEW: what it follows, and how long a rise and a fall take, in seconds. */
+export const SLEW_PARAMS: LiveParamDescriptor[] = [a('in', 0), a('rise', 0.05), a('fall', 0.05)];
+
 export const LIVE_PARAMS: Record<string, LiveParamDescriptor[]> = {
 	[SPACE_PROCESSOR]: SPACE_PARAMS,
 	[ENV_PROCESSOR]: ENV_PARAMS,
@@ -190,5 +200,7 @@ export const LIVE_PARAMS: Record<string, LiveParamDescriptor[]> = {
 	[STRINGS_PROCESSOR]: STRINGS_PARAMS,
 	[MODES_PROCESSOR]: MODES_PARAMS,
 	[WIRE_PROCESSOR]: WIRE_PARAMS,
-	[LOOP_PROCESSOR]: LOOP_PARAMS
+	[LOOP_PROCESSOR]: LOOP_PARAMS,
+	[SH_PROCESSOR]: SH_PARAMS,
+	[SLEW_PROCESSOR]: SLEW_PARAMS
 };

@@ -23,6 +23,7 @@ import {
 	isValueNode,
 	audioAncestors,
 	trackScope,
+	noteRandom,
 	PURE_NODES,
 	type NoteEvent
 } from './stores/node-graph';
@@ -41,6 +42,8 @@ import {
 	WIRE_PROCESSOR,
 	LOOP_PROCESSOR,
 	LOOP_SLOTS,
+	SH_PROCESSOR,
+	SLEW_PROCESSOR,
 	type LoopOp
 } from './audio/live-dsp-params';
 import { UNDERWATER_TRACKS } from './songs/underwater';
@@ -134,7 +137,7 @@ interface AdvBuildContext {
 	baseFreq: number;
 	laneValues: Record<string, number>;
 	presetGain: number;
-	note: { velocity: number; noteIndex: number };
+	note: { velocity: number; noteIndex: number; seed?: number };
 	trackId?: number;
 	waves: Record<string, string>;
 	/** Where a second activation's own sound should land -- the track's mix
@@ -913,7 +916,7 @@ class ModularSynth {
 		heldSec: number,
 		laneValues: Record<string, number> = {},
 		presetGain = 1,
-		note: { velocity: number; noteIndex: number } = { velocity: 1, noteIndex: 48 },
+		note: { velocity: number; noteIndex: number; seed?: number } = { velocity: 1, noteIndex: 48 },
 		trackId?: number,
 		waves: Record<string, string> = {}
 	): {
@@ -1250,7 +1253,7 @@ class ModularSynth {
 		/* What the key press itself was. ENTRY publishes these as pins, so a patch
        can wire velocity to brightness the way a real drum has it rather than
        only to level. */
-		note: { velocity: number; noteIndex: number } = { velocity: 1, noteIndex: 48 },
+		note: { velocity: number; noteIndex: number; seed?: number } = { velocity: 1, noteIndex: 48 },
 		/* Whose voice this is. WHEN's "ANY VOICE" test asks what is sounding on
        this track, so the audio side needs it to answer the same question the
        action side does. */
@@ -1361,7 +1364,8 @@ class ModularSynth {
 			tuning: this.masterTuningFreq,
 			velocity: note.velocity,
 			noteIndex: note.noteIndex,
-			lanes: laneValues
+			lanes: laneValues,
+			seed: note.seed
 		};
 		const resolver = createResolver(graph, params, noteEvent);
 		const cvIn = (nodeId: string, port: string, fallback: number) =>
@@ -1618,7 +1622,8 @@ class ModularSynth {
        with nothing in `PURE_NODES` to answer for them structurally, and each
        needs the same exemption from the master mix an unwired CONST does. */
 		const isModOnly = (type: string) =>
-			isValueNode(type) || type === 'env' || type === 'tocv' || type === 'ctrl';
+			isValueNode(type) ||
+			['env', 'tocv', 'ctrl', 'sh', 'slew'].includes(type);
 
 		for (const node of order) {
 			/* A value node carrying no signal is pulled as a number by everything
@@ -2025,7 +2030,7 @@ class ModularSynth {
 		cvIn: (nodeId: string, port: string, fallback: number) => number = (_n, _p, f) => f,
 		/* The event's own data, for ENTRY's output pins and for the converters,
        which read the master tuning off it. */
-		note: { velocity: number; noteIndex: number; tuning?: number } = { velocity: 1, noteIndex: 48 },
+		note: { velocity: number; noteIndex: number; tuning?: number; seed?: number } = { velocity: 1, noteIndex: 48 },
 		/* The waveform this node is set to, if it has a picker. A name rather
        than an index, so a drawn table keeps its identity when its neighbours
        are deleted. */
@@ -3196,6 +3201,50 @@ class ModularSynth {
 				l.connect(merger, 0, 0);
 				r.connect(merger, 0, 1);
 				return { in: l, in2: r, out: merger, mod };
+			}
+
+			case 'rand': {
+				/* Built only when a moving signal reaches MIN or MAX -- a number
+				   there is pulled, and the draw is one number per note. The same
+				   draw as the pulled one, so the two paths cannot disagree. */
+				const r = noteRandom(note.seed ?? 0.5, probeKey);
+				const lo = ctx.createConstantSource();
+				const hi = ctx.createConstantSource();
+				lo.offset.value = p('lo', 0);
+				hi.offset.value = p('hi', 1);
+				const out = ctx.createGain();
+				const wLo = ctx.createGain();
+				const wHi = ctx.createGain();
+				wLo.gain.value = 1 - r;
+				wHi.gain.value = r;
+				lo.connect(wLo).connect(out);
+				hi.connect(wHi).connect(out);
+				sources.push(lo, hi);
+				mod.set('lo', lo.offset);
+				mod.set('hi', hi.offset);
+				return { in: null, out, mod };
+			}
+
+			case 'sh':
+			case 'slew': {
+				const dsp = createLiveDsp(ctx, type === 'sh' ? SH_PROCESSOR : SLEW_PROCESSOR, {
+					numberOfInputs: 0,
+					numberOfOutputs: 1,
+					outputChannelCount: [1]
+				});
+				if (!dsp) return null;
+				// IN is a socket with no knob: a number arriving is its value, a signal adds to it.
+				dsp.param('in').value = p('a', 0);
+				mod.set('a', dsp.param('in'));
+				if (type === 'sh') {
+					dsp.param('trig').value = p('trig', 0);
+					mod.set('trig', dsp.param('trig'));
+				} else {
+					knob(dsp.param('rise'), 'rise', 0.05);
+					knob(dsp.param('fall'), 'fall', 0.05);
+				}
+				sources.push(dsp.source);
+				return { in: null, out: dsp.node, mod };
 			}
 
 			case 'tsend': {
@@ -6394,6 +6443,11 @@ class ModularSynth {
 			const graphParams = track.graphParams ?? {};
 			const graphWaves = track.graphWaves ?? {};
 			const presetGain = track.presetGain ?? 1;
+			/* RAND's draw for this note. Live, a fresh one; in a render, derived
+			   from the note itself, so an export sounds the same every time. */
+			const noteSeed = this.renderCtx
+				? ((trackId * 131 + noteIndex * 7919 + Math.round(t * 48000)) % 1000003) / 1000003
+				: Math.random();
 			this.trackBusSends = this.ensureTrackChain(
 				ctx,
 				trackId,
@@ -6411,7 +6465,7 @@ class ModularSynth {
 				heldSec,
 				laneValues,
 				presetGain,
-				{ velocity: velocityUnit, noteIndex },
+				{ velocity: velocityUnit, noteIndex, seed: noteSeed },
 				trackId,
 				graphWaves
 			);
@@ -6444,7 +6498,7 @@ class ModularSynth {
 				baseFreq,
 				laneValues,
 				presetGain,
-				note: { velocity: velocityUnit, noteIndex },
+				note: { velocity: velocityUnit, noteIndex, seed: noteSeed },
 				trackId,
 				waves: graphWaves
 			};

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ensureLiveDsp } from '$lib/audio/live-dsp';
+	import { ensureLiveDsp, createLiveDsp } from '$lib/audio/live-dsp';
 	/**
 	 * A bench for hearing whether a patch does what it says.
 	 *
@@ -639,6 +639,11 @@
 			renderNote,
 			renderPhrase,
 			renderLive,
+			/* The worklet loader itself, so a test can drive one processor on a
+			   context of its own and read its curve sample by sample. Here for the
+			   same reason as `addCable`: an import inside `page.evaluate` does not
+			   survive Vitest's transform. */
+			liveDsp: { ensureLiveDsp, createLiveDsp },
 			// The live engine itself, for driving a realtime context the way a key does.
 			engine: modularSynth,
 			sound: soundEngine,
