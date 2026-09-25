@@ -136,6 +136,52 @@ export const SPACE_PROCESSOR = 'krsz-space';
  */
 export const SPACE_PARAMS: LiveParamDescriptor[] = [a('size', 40), a('decay', 50)];
 
+export const LOOP_PROCESSOR = 'krsz-loop';
+
+/**
+ * A feedback loop compiled into one processor, so it closes in one sample.
+ *
+ * Web Audio breaks every cycle with a render quantum of delay (128 samples),
+ * which put a floor of 2.9 ms under any loop a patch drew with SEND and RTN:
+ * no comb shorter than that, no Karplus string above ~340 Hz, no allpass
+ * diffuser at all. When every module on the loop is one the processor knows,
+ * the engine hands it the loop as a program and runs it sample by sample.
+ *
+ * Its knobs arrive on numbered slots rather than named parameters, because a
+ * processor's parameters are declared once for the class and a loop can hold
+ * any mix of modules. The program says which slot is which.
+ */
+export const LOOP_SLOTS = 32;
+export const LOOP_PARAMS: LiveParamDescriptor[] = Array.from({ length: LOOP_SLOTS }, (_, i) =>
+	a(`p${i}`, 0)
+);
+
+/** One module of a compiled loop, in the order the processor runs them. */
+export interface LoopOp {
+	/** The module's type: gain, filter, delay, sum, diff, ring, shape, fbsend, fbrtn. */
+	type: string;
+	/** Members feeding its first inlet, by index in the program, and the input channel carrying what arrives from outside. */
+	a: number[];
+	aExt: number;
+	/** The same for a second inlet (DIFF's and RING's B); -1 where there is none. */
+	b: number[];
+	bExt: number;
+	/** Knob name to slot. */
+	slots: Record<string, number>;
+	/** FILTER's type or SHAPE's curve; fixed per note, like the card's picker. */
+	kind: number;
+	/** SEND's and RTN's bus. */
+	bus: number;
+	/** Samples a DELAY gives back, so the loop it sits in has the period its TIME says. */
+	lend: number;
+}
+
+export interface LoopProgram {
+	ops: LoopOp[];
+	/** How many input channels carry signal from outside the loop. */
+	inputs: number;
+}
+
 export const LIVE_PARAMS: Record<string, LiveParamDescriptor[]> = {
 	[SPACE_PROCESSOR]: SPACE_PARAMS,
 	[ENV_PROCESSOR]: ENV_PARAMS,
@@ -143,5 +189,6 @@ export const LIVE_PARAMS: Record<string, LiveParamDescriptor[]> = {
 	[SHAPE_PROCESSOR]: SHAPE_PARAMS,
 	[STRINGS_PROCESSOR]: STRINGS_PARAMS,
 	[MODES_PROCESSOR]: MODES_PARAMS,
-	[WIRE_PROCESSOR]: WIRE_PARAMS
+	[WIRE_PROCESSOR]: WIRE_PARAMS,
+	[LOOP_PROCESSOR]: LOOP_PARAMS
 };

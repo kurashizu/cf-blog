@@ -26,6 +26,9 @@ import {
 	SPACE_PROCESSOR,
 	WIRE_PARAMS,
 	WIRE_PROCESSOR,
+	LOOP_PARAMS,
+	LOOP_PROCESSOR,
+	type LoopProgram,
 	type MapOptions
 } from './live-dsp-params';
 
@@ -231,6 +234,24 @@ registerProcessor(MAP_PROCESSOR, MapProcessor);
 
 /* ── SHAPE ──────────────────────────────────────────────────────────────── */
 
+/** SHAPE's three curves, shared with a compiled loop so a SHAPE sounds the same in one. */
+function shapeCurve(kind: number, x: number, d: number): number {
+	const v = Math.max(-1, Math.min(1, x));
+	if (kind === 1) {
+		// HARD: flat above the threshold, the knee a limiter has.
+		const lim = 1 - d * 0.9;
+		return Math.max(-lim, Math.min(lim, v)) / (lim || 1);
+	}
+	if (kind === 2) {
+		// FOLD: past the limit it turns back rather than flattening.
+		const g = v * (1 + d * 4);
+		return Math.asin(Math.sin(g * Math.PI * 0.5)) / (Math.PI * 0.5);
+	}
+	// SOFT: tanh, normalised so the ends stay at the ends whatever the drive.
+	const k = 1 + d * 40;
+	return Math.tanh(v * k) / Math.tanh(k);
+}
+
 /**
  * Distortion, saturation, wavefolding: one curve applied per sample, bent
  * harder the more DRIVE there is.
@@ -255,20 +276,7 @@ class ShapeProcessor extends StoppableProcessor {
 		this.kind = options?.processorOptions?.kind ?? 0;
 	}
 	private curve(x: number, d: number): number {
-		const v = Math.max(-1, Math.min(1, x));
-		if (this.kind === 1) {
-			// HARD: flat above the threshold, the knee a limiter has.
-			const lim = 1 - d * 0.9;
-			return Math.max(-lim, Math.min(lim, v)) / (lim || 1);
-		}
-		if (this.kind === 2) {
-			// FOLD: past the limit it turns back rather than flattening.
-			const g = v * (1 + d * 4);
-			return Math.asin(Math.sin(g * Math.PI * 0.5)) / (Math.PI * 0.5);
-		}
-		// SOFT: tanh, normalised so the ends stay at the ends whatever the drive.
-		const k = 1 + d * 40;
-		return Math.tanh(v * k) / Math.tanh(k);
+		return shapeCurve(this.kind, x, d);
 	}
 	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
 		const out = outputs[0]?.[0];
@@ -923,3 +931,281 @@ class SpaceProcessor extends StoppableProcessor {
 }
 
 registerProcessor(SPACE_PROCESSOR, SpaceProcessor);
+
+/* ── LOOP ───────────────────────────────────────────────────────────────── */
+
+/* The filter types in FILTER_TYPES order. */
+const LOOP_LP = 0;
+const LOOP_HP = 1;
+const LOOP_BP = 2;
+const LOOP_NOTCH = 3;
+const LOOP_LSHELF = 4;
+const LOOP_HSHELF = 5;
+const LOOP_PEAK = 6;
+const LOOP_AP = 7;
+
+/** DELAY's own ceiling, as the native node was built with. */
+const LOOP_DELAY_MAX = 4;
+
+/**
+ * A biquad with BiquadFilterNode's coefficients -- the formulas the Web Audio
+ * spec gives, Q in dB for the low- and highpass as there -- so a FILTER sounds
+ * the same inside a compiled loop as outside one. Transposed direct form II.
+ */
+class LoopBiquad {
+	private b0 = 1;
+	private b1 = 0;
+	private b2 = 0;
+	private a1 = 0;
+	private a2 = 0;
+	private z1 = 0;
+	private z2 = 0;
+	private f = NaN;
+	private q = NaN;
+	private g = NaN;
+	constructor(private type: number) {}
+	private plan(f: number, q: number, g: number) {
+		this.f = f;
+		this.q = q;
+		this.g = g;
+		const nyq = sampleRate / 2;
+		const w0 = (2 * Math.PI * Math.max(1, Math.min(nyq * 0.999, f))) / sampleRate;
+		const cw = Math.cos(w0);
+		const sw = Math.sin(w0);
+		const A = Math.pow(10, g / 40);
+		let b0 = 1;
+		let b1 = 0;
+		let b2 = 0;
+		let a0 = 1;
+		let a1 = 0;
+		let a2 = 0;
+		switch (this.type) {
+			case LOOP_LP:
+			case LOOP_HP: {
+				const alpha = sw / (2 * Math.pow(10, q / 20));
+				const k = this.type === LOOP_LP ? 1 - cw : 1 + cw;
+				b0 = k / 2;
+				b1 = this.type === LOOP_LP ? k : -k;
+				b2 = k / 2;
+				a0 = 1 + alpha;
+				a1 = -2 * cw;
+				a2 = 1 - alpha;
+				break;
+			}
+			case LOOP_BP:
+			case LOOP_NOTCH:
+			case LOOP_AP:
+			case LOOP_PEAK: {
+				const alpha = sw / (2 * Math.max(1e-4, q));
+				a1 = -2 * cw;
+				if (this.type === LOOP_BP) {
+					b0 = alpha;
+					b2 = -alpha;
+				} else if (this.type === LOOP_NOTCH) {
+					b0 = 1;
+					b1 = -2 * cw;
+					b2 = 1;
+				} else if (this.type === LOOP_AP) {
+					b0 = 1 - alpha;
+					b1 = -2 * cw;
+					b2 = 1 + alpha;
+				}
+				if (this.type === LOOP_PEAK) {
+					b0 = 1 + alpha * A;
+					b1 = -2 * cw;
+					b2 = 1 - alpha * A;
+					a0 = 1 + alpha / A;
+					a2 = 1 - alpha / A;
+				} else {
+					a0 = 1 + alpha;
+					a2 = 1 - alpha;
+				}
+				break;
+			}
+			case LOOP_LSHELF:
+			case LOOP_HSHELF: {
+				const alpha = (sw / 2) * Math.SQRT2;
+				const r = 2 * Math.sqrt(A) * alpha;
+				if (this.type === LOOP_LSHELF) {
+					b0 = A * (A + 1 - (A - 1) * cw + r);
+					b1 = 2 * A * (A - 1 - (A + 1) * cw);
+					b2 = A * (A + 1 - (A - 1) * cw - r);
+					a0 = A + 1 + (A - 1) * cw + r;
+					a1 = -2 * (A - 1 + (A + 1) * cw);
+					a2 = A + 1 + (A - 1) * cw - r;
+				} else {
+					b0 = A * (A + 1 + (A - 1) * cw + r);
+					b1 = -2 * A * (A - 1 + (A + 1) * cw);
+					b2 = A * (A + 1 + (A - 1) * cw - r);
+					a0 = A + 1 - (A - 1) * cw + r;
+					a1 = 2 * (A - 1 - (A + 1) * cw);
+					a2 = A + 1 - (A - 1) * cw - r;
+				}
+				break;
+			}
+		}
+		this.b0 = b0 / a0;
+		this.b1 = b1 / a0;
+		this.b2 = b2 / a0;
+		this.a1 = a1 / a0;
+		this.a2 = a2 / a0;
+	}
+	run(x: number, f: number, q: number, g: number): number {
+		if (f !== this.f || q !== this.q || g !== this.g) this.plan(f, q, g);
+		const y = this.b0 * x + this.z1;
+		this.z1 = this.b1 * x - this.a1 * y + this.z2;
+		this.z2 = this.b2 * x - this.a2 * y;
+		return y;
+	}
+}
+
+/**
+ * DELAY's line, read between samples with a cubic, as WIRE reads its string.
+ *
+ * Grown as the time asks rather than allocated at DELAY's 4 s ceiling: a comb
+ * of a few milliseconds is the common case, and 768 KB a note for it was
+ * garbage on every key.
+ */
+class LoopDelay {
+	private buf = new Float32Array(1024);
+	private w = 0;
+	private grow(need: number) {
+		const n = this.buf.length;
+		const size = Math.min(Math.ceil(LOOP_DELAY_MAX * sampleRate) + 8, Math.max(n * 2, need));
+		if (size <= n) return;
+		const next = new Float32Array(size);
+		// Oldest first, so the newest sample lands at the end and the taps still read back from it.
+		for (let k = 0; k < n; k++) next[size - n + k] = this.buf[(this.w + 1 + k) % n];
+		this.buf = next;
+		this.w = size - 1;
+	}
+	run(x: number, samples: number): number {
+		if (samples + 8 > this.buf.length) this.grow(Math.ceil(samples) + 16);
+		const buf = this.buf;
+		const n = buf.length;
+		this.w = (this.w + 1) % n;
+		buf[this.w] = x;
+		const D = Math.max(0, Math.min(n - 8, samples));
+		const i = Math.floor(D);
+		const f = D - i;
+		const tap = (k: number) => buf[(this.w - k + n * 2) % n];
+		// Under one sample there is nothing ahead to fit a cubic to.
+		if (i < 1) return tap(0) + (tap(1) - tap(0)) * f;
+		const d = f + 1;
+		const h0 = (-(d - 1) * (d - 2) * (d - 3)) / 6;
+		const h1 = (d * (d - 2) * (d - 3)) / 2;
+		const h2 = (-d * (d - 1) * (d - 3)) / 2;
+		const h3 = (d * (d - 1) * (d - 2)) / 6;
+		return h0 * tap(i - 1) + h1 * tap(i) + h2 * tap(i + 1) + h3 * tap(i + 2);
+	}
+}
+
+/**
+ * A feedback loop run one sample at a time.
+ *
+ * The engine hands over the loop's modules in an order where every module
+ * comes after what feeds it -- RTN first, since what feeds RTN is the SEND of
+ * the sample before. Each sample runs them in that order, then passes each
+ * bus's SEND total to its RTN for the next sample through SEND's tanh guard,
+ * the same curve the block-delayed loop saturates with. Every module's output
+ * is also an output channel, so whatever outside the loop listens to one of
+ * them can.
+ */
+class LoopProcessor extends StoppableProcessor {
+	static get parameterDescriptors() {
+		return LOOP_PARAMS;
+	}
+	private prog: LoopProgram;
+	private reg: Float64Array;
+	private sendNext = new Float64Array(8);
+	private sendPrev = new Float64Array(8);
+	private filters: (LoopBiquad | null)[];
+	private delays: (LoopDelay | null)[];
+	private shapePrev: Float64Array;
+	private slotArrays: Float32Array[] = [];
+	constructor(options?: { processorOptions?: { program?: LoopProgram } }) {
+		super(options);
+		this.prog = options?.processorOptions?.program ?? { ops: [], inputs: 0 };
+		const n = this.prog.ops.length;
+		this.reg = new Float64Array(n);
+		this.shapePrev = new Float64Array(n);
+		this.filters = this.prog.ops.map((o) => (o.type === 'filter' ? new LoopBiquad(o.kind) : null));
+		this.delays = this.prog.ops.map((o) => (o.type === 'delay' ? new LoopDelay() : null));
+	}
+	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const ops = this.prog.ops;
+		const reg = this.reg;
+		const len = outputs[0]?.[0]?.length ?? 128;
+		const slots = this.slotArrays;
+		for (let s = 0; s < LOOP_PARAMS.length; s++) slots[s] = p[`p${s}`];
+		const dt = 1 / sampleRate;
+		const ext = (ch: number, i: number) => (ch >= 0 ? (inputs[ch]?.[0]?.[i] ?? 0) : 0);
+		for (let i = 0; i < len; i++) {
+			if (currentTime + i * dt >= this.stopAt) {
+				for (let k = 0; k < ops.length; k++) {
+					const out = outputs[k]?.[0];
+					if (out) out[i] = 0;
+				}
+				continue;
+			}
+			this.sendNext.fill(0);
+			for (let k = 0; k < ops.length; k++) {
+				const o = ops[k];
+				let a = ext(o.aExt, i);
+				for (const m of o.a) a += reg[m];
+				let y = 0;
+				switch (o.type) {
+					case 'fbrtn':
+						y = this.sendPrev[o.bus];
+						break;
+					case 'fbsend':
+						this.sendNext[o.bus] += a;
+						y = a;
+						break;
+					case 'sum':
+						y = a;
+						break;
+					case 'gain':
+						y = a * at(slots[o.slots.level], i);
+						break;
+					case 'diff':
+					case 'ring': {
+						let b = ext(o.bExt, i);
+						for (const m of o.b) b += reg[m];
+						y = o.type === 'diff' ? a - b : a * b * (at(slots[o.slots.ringDepth], i) / 100);
+						break;
+					}
+					case 'shape': {
+						const d = Math.max(0, at(slots[o.slots.shapeDrive], i) / 100);
+						y =
+							0.5 * (shapeCurve(o.kind, a, d) + shapeCurve(o.kind, (a + this.shapePrev[k]) / 2, d));
+						this.shapePrev[k] = a;
+						break;
+					}
+					case 'filter':
+						y = this.filters[k]!.run(
+							a,
+							at(slots[o.slots.cutoff], i),
+							at(slots[o.slots.q], i),
+							at(slots[o.slots.filterGain], i)
+						);
+						break;
+					case 'delay':
+						y = this.delays[k]!.run(a, at(slots[o.slots.delayTime], i) * sampleRate - o.lend);
+						break;
+				}
+				// A NaN reaching the master silences every track; a loop is where one would breed.
+				reg[k] = Number.isFinite(y) ? y : 0;
+				const out = outputs[k]?.[0];
+				if (out) out[i] = reg[k];
+			}
+			for (let b = 0; b < 8; b++) {
+				const v = Math.max(-1, Math.min(1, this.sendNext[b]));
+				this.sendPrev[b] = Math.tanh(v);
+			}
+		}
+		return !this.finished();
+	}
+}
+
+registerProcessor(LOOP_PROCESSOR, LoopProcessor);

@@ -1456,6 +1456,13 @@ describe('TUBE: which of its knobs actually reach the sound', () => {
 /* ──────────────────────────────────────────────────────────────────────────
    SEND and RTN -- the one loop the graph cannot draw
 
+   (Most loops here are now compiled into one sample-accurate processor --
+   see "Loops that close in one sample" in docs/node-graph.md and
+   tests/audio/loop.test.ts. What this block pins -- the guard's small-signal
+   gain, silence below unity, the bound above it, buses kept apart -- holds for
+   both, and the open pair below, which is not a loop, is still the native
+   one-block line.)
+
    `addCable` refuses any audio cable that closes a loop, because a delay fed
    its own output was measured stable only to about g = 0.90 and screamed past
    it. That refusal cost the catalogue a comb filter, a resonant flanger and

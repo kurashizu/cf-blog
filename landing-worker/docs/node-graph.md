@@ -421,6 +421,37 @@ comes up) is separate and unchanged. PED is what a patch does *with* the
 pedal besides that -- a piano's lifted dampers letting the whole instrument
 ring, say.
 
+## Loops that close in one sample
+
+Web Audio breaks every cycle with a render quantum of delay, so a loop drawn
+with SEND and RTN used to take its DELAY's time plus two blocks (256 samples,
+about 5.3 ms): no comb, Karplus string or allpass could be shorter, and a
+comb's "1.7 ms" (KOTO's bridge) was really 7.5.
+
+A loop is now compiled when every module on it is one the loop processor
+knows -- GAIN, SUM, DIFF, RING, SHAPE, FILTER, DELAY, and SEND and RTN
+themselves (`planLoops` in `src/lib/audio/loop-plan.ts`). The loop on a bus is
+every node on a path from one of its RTNs to one of its SENDs over audio
+cables, plus every SEND and RTN on the bus; loops sharing a node are one
+island. The island is one `krsz-loop` worklet running the modules in order,
+one sample at a time:
+
+- RTN reads its bus's SEND total from the sample before, through the same
+  tanh guard the native pair saturates with.
+- The loop's first DELAY gives that sample back, so a loop is exactly as long
+  as its DELAY's TIME -- measured to the sample at 1, 2, 3.5 and 100 ms.
+- FILTER computes BiquadFilterNode's own coefficients (the spec's formulas, Q
+  in dB for LP/HP); all eight types measured within 2 % of the native node.
+- Each module is a stand-in to the rest of the build: its IN is an input
+  channel, its OUT an output channel, its knobs numbered slots on the worklet.
+  A cable from outside lands on them as it would on the native module, in the
+  same units -- a moving signal still moves a knob inside the loop.
+
+Anything else on the loop (a PAN, a WIRE, a SPACE), a loop over 24 modules or
+32 knobs, or a context without the worklet, keeps the block-delayed pair, which
+sounds as it always did. An open SEND to RTN -- no path back -- is a delay
+line, not a loop, and is not compiled either.
+
 ## What the notes share: TSND and TRTN
 
 Every node in a patch is built per note -- except what a **TRTN** feeds.

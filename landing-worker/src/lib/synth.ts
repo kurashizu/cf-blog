@@ -30,6 +30,7 @@ import { graphOf, type GraphCable, type RackGraph } from './stores/graph-model';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { createLiveDsp, ensureLiveDsp, type LiveDsp } from './audio/live-dsp';
+import { planLoops, LOOP_KNOBS, type LoopIsland } from './audio/loop-plan';
 import {
 	ENV_PROCESSOR,
 	MAP_PROCESSOR,
@@ -37,7 +38,10 @@ import {
 	STRINGS_PROCESSOR,
 	MODES_PROCESSOR,
 	SPACE_PROCESSOR,
-	WIRE_PROCESSOR
+	WIRE_PROCESSOR,
+	LOOP_PROCESSOR,
+	LOOP_SLOTS,
+	type LoopOp
 } from './audio/live-dsp-params';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
@@ -938,6 +942,93 @@ class ModularSynth {
 	}
 
 	/**
+	 * One compiled loop, as stand-ins for each of its modules.
+	 *
+	 * The program lists the loop's modules in `isl.members` order with the
+	 * members feeding each inlet, and gives every inlet fed from outside the
+	 * loop its own input channel and every module its own output channel. Each
+	 * stand-in's IN (and B) is a gain into that module's channel, its OUT a
+	 * gain on its output, and its knobs the slots holding them -- so a cable
+	 * from outside lands where it would on the native module, in the same
+	 * units. Null when the loop needs more slots than there are, or the
+	 * context has no worklet, and the caller builds the modules one by one.
+	 */
+	private buildLoopIsland(
+		ctx: BaseAudioContext,
+		isl: LoopIsland,
+		typeById: Map<string, string>,
+		audioCables: { from: string; fromPort: string; to: string; toPort: string }[],
+		sources: AudioScheduledSourceNode[],
+		p: (id: string, key: string, def: number) => number
+	): Map<string, ReturnType<ModularSynth['buildGraphNode']>> | null {
+		const index = new Map(isl.members.map((id, k) => [id, k]));
+		const second = (port: string) => port === 'b' || port === 'r';
+		let inputs = 0;
+		let slot = 0;
+		const slotValues: number[] = [];
+		const ops: LoopOp[] = [];
+		for (const id of isl.members) {
+			const type = typeById.get(id) ?? '';
+			const feeds = audioCables.filter((c) => c.to === id);
+			const twoInlets = type === 'diff' || type === 'ring';
+			const side = (b: boolean) => feeds.filter((c) => (twoInlets && second(c.toPort)) === b);
+			const inner = (list: typeof feeds) =>
+				list.filter((c) => index.has(c.from)).map((c) => index.get(c.from)!);
+			const outer = (list: typeof feeds) => list.some((c) => !index.has(c.from));
+			const slots: Record<string, number> = {};
+			for (const [key, def] of LOOP_KNOBS[type] ?? []) {
+				if (slot >= LOOP_SLOTS) return null;
+				slots[key] = slot;
+				slotValues.push(p(id, key, def));
+				slot++;
+			}
+			ops.push({
+				type,
+				a: inner(side(false)),
+				aExt: outer(side(false)) ? inputs++ : -1,
+				b: inner(side(true)),
+				bExt: twoInlets && outer(side(true)) ? inputs++ : -1,
+				slots,
+				kind: Math.round(p(id, type === 'shape' ? 'shapeKind' : 'type', 0)),
+				bus: Math.max(0, Math.min(7, Math.round(p(id, 'bus', 0)))),
+				lend: isl.lenders.has(id) ? 1 : 0
+			});
+		}
+		const dsp = createLiveDsp(ctx, LOOP_PROCESSOR, {
+			numberOfInputs: inputs,
+			numberOfOutputs: ops.length,
+			outputChannelCount: ops.map(() => 1),
+			channelCount: 1,
+			channelCountMode: 'explicit',
+			processorOptions: { program: { ops, inputs } }
+		});
+		if (!dsp) return null;
+		slotValues.forEach((v, s) => (dsp.param(`p${s}`).value = v));
+		sources.push(dsp.source);
+
+		const stands = new Map<string, ReturnType<ModularSynth['buildGraphNode']>>();
+		ops.forEach((op, k) => {
+			const id = isl.members[k];
+			const inlet = (ch: number) => {
+				const g = ctx.createGain();
+				if (ch >= 0) g.connect(dsp.node, 0, ch);
+				return g;
+			};
+			const out = ctx.createGain();
+			dsp.node.connect(out, k);
+			const mod = new Map<string, AudioNode | AudioParam>();
+			for (const [key, s] of Object.entries(op.slots)) mod.set(key, dsp.param(`p${s}`));
+			stands.set(id, {
+				in: inlet(op.aExt),
+				in2: op.type === 'diff' || op.type === 'ring' ? inlet(op.bExt) : undefined,
+				out,
+				mod
+			});
+		});
+		return stands;
+	}
+
+	/**
 	 * The track's shared chain for this patch, built if it is not already
 	 * running, and the buses a note's TSND can reach. Null when the patch has
 	 * no TRTN.
@@ -1453,6 +1544,17 @@ class ModularSynth {
 		/* One feedback bus map per voice. See the `fbBuses` parameter. */
 		const fbBuses = new Map<number, { send: GainNode; rtn: GainNode }>();
 
+		/* Loops that close in one sample. A SEND/RTN loop whose every module the
+		   loop processor knows is built as one worklet (see `planLoops`); each of
+		   its modules is then a stand-in whose inlets, outlet and knobs are that
+		   worklet's, so every cable below connects the way it always has. A loop
+		   that cannot be compiled -- or a context without the worklet -- builds
+		   the block-delayed pair as before. */
+		const islands = planLoops(order, audioCables, (id) => Math.round(cvIn(id, 'bus', 0)));
+		const islandOf = new Map<string, LoopIsland>();
+		for (const isl of islands) for (const id of isl.members) islandOf.set(id, isl);
+		const islandBuilt = new Map<LoopIsland, Map<string, ReturnType<ModularSynth['buildGraphNode']>> | null>();
+
 		const built = new Map<
 			string,
 			{
@@ -1569,7 +1671,16 @@ class ModularSynth {
 				resolver.isDrivenBySignal(node.id, key) ? 0 : cvIn(node.id, key, def);
 			const runAt = t + (delays.get(node.id) ?? 0);
 			const madeBefore = sources.length;
-			const made = this.buildGraphNode(
+			const isl = islandOf.get(node.id);
+			if (isl && !islandBuilt.has(isl))
+				islandBuilt.set(
+					isl,
+					this.buildLoopIsland(ctx, isl, typeById, audioCables, sources, (id, key, def) =>
+						resolver.isDrivenBySignal(id, key) ? 0 : cvIn(id, key, def)
+					)
+				);
+			const stand = isl ? islandBuilt.get(isl)?.get(node.id) : undefined;
+			const made = stand ?? this.buildGraphNode(
 				ctx,
 				node.type,
 				p,
@@ -1610,6 +1721,8 @@ class ModularSynth {
 			if (made.in) {
 				if (feeds.length) {
 					for (const c of feeds) {
+						// Inside a compiled loop the processor carries it already.
+						if (isl && islandBuilt.get(isl) && islandOf.get(c.from) === isl) continue;
 						// A module with two inlets takes its second signal on 'b' (or 'r').
 						const dest = (c.toPort === 'b' || c.toPort === 'r') && made.in2 ? made.in2 : made.in;
 						const src = built.get(c.from);
@@ -3260,6 +3373,10 @@ class ModularSynth {
            changes. But it is not load-bearing for correctness, and a test that
            removes it entirely still passes, which is recorded in
            `tests/audio/ports.test.ts` rather than papered over.
+
+           This pair is what a loop falls back to. A loop whose modules the loop
+           processor knows never reaches here: it is compiled whole and closes
+           in one sample (`buildLoopIsland`, docs/node-graph.md).
 
            Created by whichever end is built first, since the topological order
            is over audio cables and these two are not connected by one. */
