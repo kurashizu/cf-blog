@@ -567,6 +567,12 @@ export interface TrackData {
 	 * Glide is not here: rack 2's glideTime already slides the pitch from the
 	 * last note, and it applies to all three modes. One knob, one meaning. */
 	voiceMode?: 'poly' | 'mono' | 'legato';
+	/* How many notes this sound can hold at once, over the synth's own setting.
+	 *
+	 * A property of the instrument rather than the player: a piano's released
+	 * notes ring for seconds and a chord with the pedal down is a dozen strings,
+	 * where a bass line is one voice. Undefined follows the VOICE tab. */
+	polyphony?: number;
 	/* Which keys silence which, in K.MAP. Keys sharing a group number cut each
 	 * other off -- the closed hi-hat stopping the open one is the reason this
 	 * exists, and a triangle or a cuica needs the same. 0 means no group. */
@@ -806,7 +812,8 @@ export const KEY_TIMBRE_KEYS = [
 	'advanced',
 	'presetGain',
 	// Per key: which sounds cannot coexist is a property of the sound, not the track.
-	'muteGroup'
+	'muteGroup',
+	'polyphony'
 ] as const satisfies readonly (keyof TrackData)[];
 
 export type KeyTimbreKey = (typeof KEY_TIMBRE_KEYS)[number];

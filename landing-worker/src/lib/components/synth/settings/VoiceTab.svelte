@@ -10,9 +10,13 @@
 		voiceStealingSetting,
 		setVoiceStealing
 	} from '../../../stores/synth-settings';
+	import { activeTrackRow, updateActiveTrack } from '../../../stores/synth-tracks';
 
 	const TUNING_PRESETS = [432, 440, 442, 444];
 	const POLYPHONY_PRESETS = [4, 6, 8, 12, 16];
+	/* A sound can ask for more than the global limit -- a piano with the pedal
+	   down is a dozen strings ringing -- so its own list goes past 16. */
+	const TRACK_POLYPHONY_PRESETS = [4, 8, 12, 16, 24, 32];
 	const VOICE_STEALING_MODES = [
 		{ id: 'oldest', label: 'OLDEST', descKey: 'synthPanels.voice.stealOldestDesc' },
 		{ id: 'quietest', label: 'QUIETEST', descKey: 'synthPanels.voice.stealQuietestDesc' },
@@ -86,6 +90,44 @@
 		</div>
 	</div>
 
+	<!-- This track's own voice count, saved with its sound -->
+	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2">
+		<div class="flex items-center justify-between border-b border-white/10 pb-1">
+			<span class="text-[#98c379] font-black"
+				>{$t('synthPanels.voice.trackPolyTitle', { name: $activeTrackRow?.name ?? '' })}</span
+			>
+		</div>
+		<p class="text-white/40 text-[10px]">{$t('synthPanels.voice.trackPolyDesc')}</p>
+		<div class="flex items-center gap-1 flex-wrap">
+			<button
+				onclick={() => {
+					updateActiveTrack({ polyphony: undefined });
+					playSound('click');
+				}}
+				class="press px-2 py-1 rounded-xs border text-xs font-bold transition-all {$activeTrackRow?.polyphony ===
+				undefined
+					? 'border-[#98c379] bg-[#98c379] text-black font-black'
+					: 'border-white/15 bg-white/5 text-white/60 hover:text-white'} cursor-pointer"
+			>
+				{$t('synthPanels.voice.trackPolyGlobal')}
+			</button>
+			{#each TRACK_POLYPHONY_PRESETS as p (p)}
+				<button
+					onclick={() => {
+						updateActiveTrack({ polyphony: p });
+						playSound('click');
+					}}
+					class="press px-2 py-1 rounded-xs border text-xs font-bold transition-all {$activeTrackRow?.polyphony ===
+					p
+						? 'border-[#98c379] bg-[#98c379] text-black font-black'
+						: 'border-white/15 bg-white/5 text-white/60 hover:text-white'} cursor-pointer"
+				>
+					{p}
+				</button>
+			{/each}
+		</div>
+	</div>
+
 	<!-- Voice Stealing Algorithm -->
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
@@ -116,6 +158,7 @@
 				</button>
 			{/each}
 		</div>
+		<p class="text-white/40 text-[10px]">{$t('synthPanels.voice.stealReleasedNote')}</p>
 	</div>
 
 	<!-- Editing layout, not a voice parameter -- but this is the tab about how a

@@ -348,6 +348,12 @@ export default {
 		'synthPanels.voice.stealOldestDesc': 'Steals oldest active voice',
 		'synthPanels.voice.stealQuietestDesc': 'Steals lowest amplitude voice',
 		'synthPanels.voice.stealLowestDesc': 'Preserves high melody notes',
+		'synthPanels.voice.trackPolyTitle': 'THIS TRACK: {name}',
+		'synthPanels.voice.trackPolyDesc':
+			'Voices for this sound alone, saved with it. GLOBAL follows the limit above.',
+		'synthPanels.voice.trackPolyGlobal': 'GLOBAL',
+		'synthPanels.voice.stealReleasedNote':
+			'A note whose key is already up always goes before one still held.',
 
 		// Preset category hints (synth-presets.ts) — category names themselves stay English
 		'synthPanels.presets.hintBass': 'Low end — subs, acid, FM; play them under C3',
@@ -634,6 +640,11 @@ export default {
 		'synthPanels.voice.stealOldestDesc': '抢占最早触发的活跃声部',
 		'synthPanels.voice.stealQuietestDesc': '抢占振幅最低的声部',
 		'synthPanels.voice.stealLowestDesc': '保留高音旋律音符',
+		'synthPanels.voice.trackPolyTitle': '本轨道：{name}',
+		'synthPanels.voice.trackPolyDesc':
+			'只属于这个音色的声部数，随音色保存。GLOBAL 跟随上面的上限。',
+		'synthPanels.voice.trackPolyGlobal': 'GLOBAL',
+		'synthPanels.voice.stealReleasedNote': '已经松键的音，总是比还按着的音先被回收。',
 
 		'synthPanels.presets.hintBass': '低音——次贝斯、酸性、FM；建议在 C3 以下弹奏',
 		'synthPanels.presets.hintLead': '主奏音色——脉冲波、失谐锯齿波、同步、铜管',
@@ -919,6 +930,11 @@ export default {
 		'synthPanels.voice.stealOldestDesc': '搶占最早觸發的作用中聲部',
 		'synthPanels.voice.stealQuietestDesc': '搶占振幅最低的聲部',
 		'synthPanels.voice.stealLowestDesc': '保留高音旋律音符',
+		'synthPanels.voice.trackPolyTitle': '本軌道：{name}',
+		'synthPanels.voice.trackPolyDesc':
+			'只屬於這個音色的聲部數，隨音色儲存。GLOBAL 跟隨上面的上限。',
+		'synthPanels.voice.trackPolyGlobal': 'GLOBAL',
+		'synthPanels.voice.stealReleasedNote': '已經放鍵的音，總是比還按著的音先被回收。',
 
 		'synthPanels.presets.hintBass': '低音——次貝斯、酸性、FM；建議在 C3 以下彈奏',
 		'synthPanels.presets.hintLead': '主奏音色——脈衝波、失諧鋸齒波、同步、銅管',
@@ -1255,6 +1271,12 @@ export default {
 		'synthPanels.voice.stealOldestDesc': '最も古いアクティブなボイスを奪う',
 		'synthPanels.voice.stealQuietestDesc': '振幅が最も小さいボイスを奪う',
 		'synthPanels.voice.stealLowestDesc': '高音のメロディノートを優先的に保持',
+		'synthPanels.voice.trackPolyTitle': 'このトラック：{name}',
+		'synthPanels.voice.trackPolyDesc':
+			'この音色だけの発音数。音色と一緒に保存されます。GLOBAL は上の上限に従います。',
+		'synthPanels.voice.trackPolyGlobal': 'GLOBAL',
+		'synthPanels.voice.stealReleasedNote':
+			'鍵盤が上がったノートは、押さえているノートより必ず先に回収されます。',
 
 		'synthPanels.presets.hintBass':
 			'低域 — サブベース、アシッド、FM。C3より下で演奏するのがおすすめ',
@@ -1579,6 +1601,12 @@ export default {
 		'synthPanels.voice.stealOldestDesc': '가장 오래된 활성 보이스를 빼앗음',
 		'synthPanels.voice.stealQuietestDesc': '가장 작은 진폭의 보이스를 빼앗음',
 		'synthPanels.voice.stealLowestDesc': '높은 멜로디 음을 우선 보존',
+		'synthPanels.voice.trackPolyTitle': '이 트랙: {name}',
+		'synthPanels.voice.trackPolyDesc':
+			'이 음색만의 발음 수로, 음색과 함께 저장됩니다. GLOBAL은 위의 한도를 따릅니다.',
+		'synthPanels.voice.trackPolyGlobal': 'GLOBAL',
+		'synthPanels.voice.stealReleasedNote':
+			'건반이 이미 올라간 음은 누르고 있는 음보다 항상 먼저 회수됩니다.',
 
 		'synthPanels.presets.hintBass': '저음역 — 서브베이스, 애시드, FM; C3 아래에서 연주하세요',
 		'synthPanels.presets.hintLead': '멜로디 보이스 — 펄스, 디튠된 톱니파, 싱크, 브라스',

@@ -185,6 +185,10 @@ interface ActiveVoice {
 	gates?: AudioParam[];
 	/** When those gates rose -- later than `startTime` for a key played live (see `deferredGates`). */
 	gatesRise?: number;
+	/** When the key came up: a live key at its release, a timed note at its end. Undefined while held. */
+	releasedAt?: number;
+	/** What the voice is putting out, read when one has to be taken. Live voices only. */
+	meter?: AnalyserNode;
 	/** The ON-CHOKE counterpart of `advRelContext`: set only when this voice's
 	    graph has something wired to ON-CHOKE. Fired by `chokeVoice` and
 	    `stopVoice`, never by `releaseVoice` -- being cut off from outside is
@@ -5605,7 +5609,8 @@ class ModularSynth {
 		if (!this.renderCtx) {
 			const onThisTrack: string[] = [];
 			for (const [k, v] of this.activeVoices) if (v.trackId === trackId) onThisTrack.push(k);
-			while (onThisTrack.length >= this.maxPolyphony) {
+			const limit = Math.max(1, Math.min(32, Math.round(trackRow.polyphony ?? this.maxPolyphony)));
+			while (onThisTrack.length >= limit) {
 				const victim = this.pickVictim(onThisTrack);
 				if (!victim) break;
 				this.stopVoice(victim);
@@ -6673,6 +6678,17 @@ class ModularSynth {
 			if (this.reverbConvolver && this.reverbMix > 0) finalVoiceNode.connect(this.reverbConvolver);
 		}
 
+		/* A tap on what the voice puts out, so QUIETEST can take the one that is
+		   actually quietest. The amp envelope it read before is racks 1-7's, and
+		   an ADV voice does not pass through it at all. Disconnected with the
+		   rest of the tail. */
+		let meter: AnalyserNode | undefined;
+		if (!this.renderCtx) {
+			meter = ctx.createAnalyser();
+			meter.fftSize = 256;
+			finalVoiceNode.connect(meter);
+		}
+
 		// The voice map lets held notes be released and stolen live, and lets
 		// onended reap a finished voice's nodes in either context.
 		const gatesRise = this.raiseDeferredGates(ctx, t);
@@ -6703,7 +6719,9 @@ class ModularSynth {
 				advGraphOut,
 				advGraphOuts,
 				gates: voiceGates,
-				gatesRise
+				gatesRise,
+				releasedAt: isContinuousHold ? undefined : t + heldSec,
+				meter
 			});
 			/* A timed note's key comes up at a moment known now: its end. REL used
 			   to fire only from `releaseVoice`, which a sequenced or rendered note
@@ -6915,6 +6933,7 @@ class ModularSynth {
 		if (!ctx) return;
 
 		const now = ctx.currentTime;
+		voice.releasedAt = now;
 		const { gain, filter, ampRel, vcfRel, baseCutoff, osc1, osc2, noise, lfo, extras, advGraphOut, advGraphOuts } =
 			voice;
 
@@ -7388,22 +7407,48 @@ class ModularSynth {
 	 */
 	private pickVictim(keys: string[]): string | undefined {
 		if (!keys.length) return undefined;
-		if (this.voiceStealingMode === 'oldest') return keys[0];
-		let best = keys[0];
+		const now = this.renderCtx?.currentTime ?? this.audioCtx()?.currentTime ?? 0;
+		/* A note whose key is up is only ringing out, and goes before any that is
+		   still held: a piano's tails were cut from under the chord being played
+		   because the oldest voice was usually a held bass note. The pedal keeps
+		   a note held -- its release has not happened yet. */
+		const released = keys.filter((k) => {
+			const at = this.activeVoices.get(k)?.releasedAt;
+			return at !== undefined && at <= now;
+		});
+		const pool = released.length ? released : keys;
+		let best = pool[0];
 		let bestScore = Infinity;
-		for (const k of keys) {
+		for (const k of pool) {
 			const v = this.activeVoices.get(k);
 			if (!v) continue;
-			/* QUIETEST takes the one contributing least, which is the least missed.
-         LOWEST takes the bottom note, which in a dense chord is the one whose
-         absence changes the harmony least. */
-			const score = this.voiceStealingMode === 'quietest' ? v.gain.gain.value : v.noteIndex;
+			/* LOWEST: the piano roll counts down from C8, so the lowest pitch is
+			   the *largest* index -- this used to take the smallest, the top note.
+			   OLDEST: the earliest let go, or among held keys the earliest struck. */
+			const score =
+				this.voiceStealingMode === 'quietest'
+					? this.voiceLevel(v)
+					: this.voiceStealingMode === 'lowest'
+						? -v.noteIndex
+						: pool === released
+							? (v.releasedAt ?? 0)
+							: v.startTime;
 			if (score < bestScore) {
 				bestScore = score;
 				best = k;
 			}
 		}
 		return best;
+	}
+
+	/** How loud a voice is right now, from its meter; the amp envelope where there is none. */
+	private voiceLevel(v: ActiveVoice): number {
+		if (!v.meter) return v.gain.gain.value;
+		const buf = new Float32Array(v.meter.fftSize);
+		v.meter.getFloatTimeDomainData(buf);
+		let sum = 0;
+		for (const x of buf) sum += x * x;
+		return Math.sqrt(sum / buf.length);
 	}
 
 	/**

@@ -168,7 +168,8 @@ export function trackResetDefaults(): Partial<TrackData> {
 		waveParams: undefined,
 		modRoutes: undefined,
 		voiceMode: undefined,
-		muteGroup: undefined
+		muteGroup: undefined,
+		polyphony: undefined
 	};
 }
 
