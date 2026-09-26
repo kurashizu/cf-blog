@@ -4,7 +4,7 @@ from body import load, midi_of
 from ear import hear, top
 SR = 48000
 def phrase(pattern, base, held=1.0, step=1.25, rel=0.25, steps=(0, 2, 4, 5, 7, 9, 11, 12)):
-    files = {midi_of(f.split('/')[-1]): f for f in sorted(glob.glob(pattern))}
+    files = {m: f for f in sorted(glob.glob(pattern)) if (m := midi_of(f.split('/')[-1])) is not None}
     out = np.zeros(int(10.3 * SR))
     for i, s in enumerate(steps):
         m = min(files, key=lambda k: abs(k - (base + s)))

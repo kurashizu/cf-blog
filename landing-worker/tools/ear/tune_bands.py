@@ -39,12 +39,53 @@ BAND_SPECS = {
                   's1.wireDamp|s2.wireDamp': 4, 's1.wirePos|s2.wirePos': 3.1, 's1.wireStiff|s2.wireStiff': 13.5, 's4.wireDamp': 16,
                   'g4.level': 0.37, 'dk.value': 1.0026, 'dec.outLo': 2.0, 'dec.outHi': 2.9, 'board.irMix': 1.3, 'rm.spaceMix': 25},
     },
+    'KOTO': {
+        'refs': 'vcsl/Chordophones/Zithers/Dan Tranh/Normal/*_mf_1.wav', 'keys': [47, 55, 62, 69, 76], 'vel': 96,
+        'space': [
+            ('pe.envA', 0.0003, 0.01, True), ('pe.envD', 0.005, 0.3, True), ('pkg.level', 0.02, 2, True), ('pick.exTone', 1500, 12000, True),
+            ('str.wireDamp', 0.5, 60, True), ('str.wirePos', 3, 35), ('str.wireStiff', 0, 40),
+            ('dec.outLo', 1, 12, True), ('dec.outHi', 0.3, 6, True), ('bod.irMix', 0, 100), ('rm.spaceMix', 3, 40), ('dmp.envR', 0.05, 1, True),
+        ],
+        'start': {'pe.envA': 0.001, 'pe.envD': 0.03, 'pkg.level': 0.4, 'pick.exTone': 6000, 'str.wireDamp': 12, 'str.wirePos': 12, 'str.wireStiff': 10,
+                  'dec.outLo': 5, 'dec.outHi': 1.2, 'bod.irMix': 80, 'rm.spaceMix': 18, 'dmp.envR': 0.3},
+    },
+    'DULCIMER': {
+        'refs': 'vcsl/Chordophones/Zithers/Psaltery, Bowed and Plucked/Pluck/*rr1.wav', 'keys': [58, 62, 67, 72, 76], 'vel': 96,
+        'space': [
+            ('pe.envA', 0.0002, 0.005, True), ('pe.envD', 0.001, 0.2, True), ('hg.level', 0.02, 2, True), ('ham.exTone', 1500, 12000, True),
+            ('c1.wireDamp|c2.wireDamp', 0.5, 60, True), ('c1.wirePos|c2.wirePos', 3, 35), ('c1.wireStiff|c2.wireStiff', 0, 40), ('dk.value', 1.0, 1.006),
+            ('dec.outLo', 1, 12, True), ('dec.outHi', 0.5, 8, True), ('bod.irMix', 0, 100), ('rm.spaceMix', 3, 40),
+        ],
+        'start': {'pe.envA': 0.0005, 'pe.envD': 0.004, 'hg.level': 0.5, 'ham.exTone': 5000, 'c1.wireDamp|c2.wireDamp': 8, 'c1.wirePos|c2.wirePos': 10,
+                  'c1.wireStiff|c2.wireStiff': 12, 'dk.value': 1.0023, 'dec.outLo': 6, 'dec.outHi': 2, 'bod.irMix': 80, 'rm.spaceMix': 20},
+    },
+    'VIBRAPHONE': {
+        'refs': 'vcsl/Idiophones/Struck Idiophones/Vibraphone/Soft Mallets/*v2_rr1_Main.wav', 'keys': [55, 62, 69, 76, 84], 'vel': 96,
+        'space': [
+            ('mal.hardness', 5, 90), ('mal.exLength', 1, 20, True), ('mal.exTone', 500, 10000, True),
+            ('bar.mode2', 3.5, 4.5), ('bar.mode3', 8, 11), ('bar.modeQ', 50, 1000, True),
+            ('shn.modeQ', 2, 60, True), ('sv.outHi', 0.02, 1.5, True), ('tg.level', 0.005, 0.5, True),
+            ('fan.lfoAmt', 0, 60), ('dmp.envR', 0.1, 2, True), ('rm.spaceMix', 3, 40),
+        ],
+        'start': {'mal.hardness': 45, 'mal.exLength': 3, 'mal.exTone': 6000, 'bar.mode2': 3.98, 'bar.mode3': 9.13, 'bar.modeQ': 300,
+                  'shn.modeQ': 10, 'sv.outHi': 0.9, 'tg.level': 0.12, 'fan.lfoAmt': 35, 'dmp.envR': 0.5, 'rm.spaceMix': 20},
+    },
+    'MARIMBA': {
+        'refs': 'vcsl/Idiophones/Struck Idiophones/Marimba/*_med_01.wav', 'keys': [48, 55, 60, 67, 72], 'vel': 96,
+        'space': [
+            ('mal.hardness', 5, 90), ('mal.exLength', 1, 30, True), ('mal.exTone', 300, 8000, True),
+            ('bar.mode2', 3.5, 4.5), ('bar.mode3', 8, 11), ('bar.modeQ', 5, 120, True),
+            ('tub.tubeDecay', 0.1, 3, True), ('tub.tubeDamp', 5, 95),
+        ],
+        'start': {'mal.hardness': 30, 'mal.exLength': 11, 'mal.exTone': 2200, 'bar.mode2': 3.9, 'bar.mode3': 8.5, 'bar.modeQ': 22,
+                  'tub.tubeDecay': 0.5, 'tub.tubeDamp': 55},
+    },
 }
 
 
 def run(name, evals):
     spec = BAND_SPECS[name]
-    files = {midi_of(f.split('/')[-1]): f for f in glob.glob(os.path.join(C, 'refs', spec['refs']))}
+    files = {m: f for f in glob.glob(os.path.join(C, 'refs', spec['refs'])) if (m := midi_of(f.split('/')[-1])) is not None}
     keys = [min(files, key=lambda k: abs(k - m)) for m in spec['keys']]
     real = {m: table(load(files[m])) for m in keys}
     render = Renderer()

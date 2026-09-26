@@ -141,3 +141,25 @@ SPECS['UPRIGHT BASS'] = {
     ],
     'start': {'fin.hardness': 25, 'fin.exLength': 14, 'fin.exTone': 900, 'str.wireDamp': 45, 'str.wirePos': 18, 'str.wireStiff': 4, 'dec.outLo': 3.5, 'dec.outHi': 1.2, 'sng.level': 0.05, 'bod.irMix': 85, 'cmp.compThresh': -22, 'rm.spaceMix': 10, 'dmp.envR': 0.12},
 }
+
+SPECS['KOTO'] = {
+    'name': 'KOTO', 'labels': ['Zither'],
+    'avoid': ['Synthesizer', 'Ukulele', 'Guitar', 'Harp', 'Ringtone', 'Electronic tuner'],
+    'ref': 'vcsl/Chordophones/Zithers/Dan Tranh/Normal/*_mf_1.wav', 'ref_midi': 60, 'base': 48, 'space': [], 'start': {},
+}
+SPECS['DULCIMER'] = {
+    'name': 'DULCIMER', 'labels': ['Zither'],
+    'avoid': ['Synthesizer', 'Ukulele', 'Guitar', 'Harp', 'Ringtone', 'Electronic tuner', 'Glockenspiel'],
+    'ref': 'vcsl/Chordophones/Zithers/Psaltery, Bowed and Plucked/Pluck/*rr1.wav', 'ref_midi': 60, 'base': 48, 'space': [], 'start': {},
+}
+
+SPECS['VIBRAPHONE'] = {
+    'name': 'VIBRAPHONE', 'labels': ['Vibraphone'],
+    'avoid': ['Synthesizer', 'Organ', 'Flute', 'Electronic tuner', 'Sine wave', 'Ringtone'],
+    'ref': 'vcsl/Idiophones/Struck Idiophones/Vibraphone/Soft Mallets/*v2_rr1_Main.wav', 'ref_midi': 60, 'base': 48, 'space': [], 'start': {},
+}
+SPECS['MARIMBA'] = {
+    'name': 'MARIMBA', 'labels': ['Marimba, xylophone'],
+    'avoid': ['Synthesizer', 'Ding', 'Glockenspiel', 'Electronic tuner', 'Sine wave', 'Wood block'],
+    'ref': 'vcsl/Idiophones/Struck Idiophones/Marimba/*_med_01.wav', 'ref_midi': 60, 'base': 48, 'space': [], 'start': {},
+}

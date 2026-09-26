@@ -18,7 +18,7 @@ VSCO_OCTAVE = 12
 
 
 def midi_of(name):
-    m = re.search(r'_([A-G])(b|#)?(-?\d)_', name + '_')
+    m = re.search(r'(?:^|_)([A-G])(b|#)?(-?\d)_', name + '_')
     if not m: return None
     n = NOTE[m.group(1)] + (-1 if m.group(2) == 'b' else 1 if m.group(2) == '#' else 0)
     return 12 * (int(m.group(3)) + 1) + n + VSCO_OCTAVE
