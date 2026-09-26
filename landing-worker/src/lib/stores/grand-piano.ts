@@ -57,16 +57,16 @@ const VOICING = {
 	detune3: [0.9999, 0.9999, 0.9995, 0.9995, 0.9995] as ByKey,
 	third: 0.6,
 	/** T60 of the long strings, seconds. */
-	dec: [50, 42.37, 18, 14, 0.8] as ByKey,
+	dec: [29.3, 24.8, 10.6, 8.2, 0.47] as ByKey,
 	/** The prompt string's decay, as a share of `dec`. */
 	prompt: [0.1715, 0.272, 0.05, 0.05, 0.1552] as ByKey,
 	/** And its level against the long pair. */
-	promptLevel: [4, 3.276, 7, 5, 3.5] as ByKey,
+	promptLevel: [1.31, 1.07, 2.29, 1.64, 1.15] as ByKey,
 	/* A little more loss in the bass's upper partials: C2's tenth to twelfth
 	   are 15-30 dB under its seventh by 2 s. Not much more -- the 4th to 9th
 	   carry the bass note once its lowest partials have drained, and at DAMP
 	   30 they died with them. */
-	damp: [6, 4, 2, 5, 2] as ByKey,
+	damp: [11.8, 0.08, 4.2, 13.7, 2] as ByKey,
 	/** Strike point, % of the string from its end. */
 	pos: [5, 2.681, 8.138, 6.697, 12] as ByKey,
 	/* Fitted to B of 1.5e-4 at C2, 3.1e-4 at C4 and 2.4e-3 at C6 (the
@@ -81,32 +81,32 @@ const VOICING = {
 	   under the note, not a hiss between its harmonics (a 3 kHz knock filled
 	   those at -30 and the treble clicked like a plectrum). Five gains'
 	   worth, since one stops at 2. */
-	thump: [0.1, 0.1, 0.25, 1, 1] as ByKey,
+	thump: [0.058, 0.058, 0.145, 0.58, 0.58] as ByKey,
 	/** Low shelf on the long pair's fundamental, dB. */
-	cutLong: [-4.5, -3.697, -4.276, -1.791, -4] as ByKey,
+	cutLong: [-19.3, -15.2, -2.1, -0.1, -4] as ByKey,
 	/** And on the prompt string's. */
-	cutPrompt: [-6, -5.128, 0, 0, 0] as ByKey,
+	cutPrompt: [-0.06, -1.1, -3.6, 0, 0] as ByKey,
 	/* The bass's low partials drain into the board: dB the long pair's first
 	   three partials have lost by `drainTime`, seconds. C2 at 2 s is led by
 	   its 4th to 7th partials in the recordings, the 2nd 20 dB and the 3rd 40
 	   dB under them -- where a string alone keeps its lowest partials longest
 	   and rings like a bass guitar. */
-	drain: [-24, -20, 0, 0, 0] as ByKey,
+	drain: [-17.7, -0.05, -3.5, 0, 0] as ByKey,
 	drainTime: 1.2,
 	/** The voice's level by key: the treble's short strings are quiet. */
 	key: [0.825, 0.8277, 0.9492, 1.671, 3.9] as ByKey,
 	/** The hammer's contact, ms: heavier and longer in the bass. */
 	exLen: [4, 3.081, 2.566, 2.343, 0.8] as ByKey,
-	radiate: 120,
+	radiate: 90,
 	/** The case's middle: where its one broad dip or lift sits, and how deep. */
-	caseMidHz: 500,
-	caseMidDb: -2,
+	caseMidHz: 889,
+	caseMidDb: -6.3,
 	/** And the top, above 6 kHz. */
-	caseHiDb: -2,
-	feltSoft: 600,
-	feltHard: 2500,
+	caseHiDb: -2.6,
+	feltSoft: 1255,
+	feltHard: 3902,
 	board: { spaceSize: 12, spaceDecay: 12, spaceMix: 100 },
-	boardLevel: 1.5,
+	boardLevel: 1.03,
 	boardPedal: 3,
 	decayPedal: 60,
 	dryLevel: 0.8,
@@ -116,12 +116,12 @@ const VOICING = {
 	/* A longer blow than the felt's cutoff alone implies: at 1.1 ms the
 	   attack's upper partials stood 15-25 dB over the recordings', the
 	   bright pluck that made the piano a koto. */
-	contactHard: 0.002,
-	contactSoft: 0.004,
+	contactHard: 0.0038,
+	contactSoft: 0.0045,
 	damperRel: 0.3,
 	relLevel: 0.05,
 	/** How much of the voice goes through the measured board (IR: PNO), %. */
-	pnoMix: 0,
+	pnoMix: 81,
 	/** The felt's cutoff by key, as a share of what the blow asks. */
 	feltKey: [1, 1, 1, 0.8, 0.8] as ByKey
 };
