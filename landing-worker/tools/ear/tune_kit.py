@@ -44,7 +44,14 @@ def main(kit, gm, evals):
     base = {k: v for k, v in info['params'].items() if isinstance(v, (int, float)) and v > 0 and not DISCRETE.match(k.split('.', 1)[1])}
     names = sorted(base)
     print(f'GM {gm} {label}: {len(names)} knobs; recording hears {label} {ref_s[label]:.2f}', flush=True)
-    lo = np.array([base[k] / 3 for k in names]); hi = np.array([base[k] * 3 for k in names])
+    def rng(k):
+        nid, key = k.split('.', 1)
+        return (info.get('ranges') or {}).get((info.get('types') or {}).get(nid, ''), {}).get(key, [0, 1e9])
+    # A third to three times the value, inside the knob's own range.
+    lo = np.array([max(base[k] / 3, max(rng(k)[0], 1e-6)) for k in names])
+    hi = np.array([min(base[k] * 3, rng(k)[1]) for k in names])
+    keep = hi > lo * 1.01
+    names = [k for k, ok in zip(names, keep) if ok]; lo = lo[keep]; hi = hi[keep]
     to = lambda u: {k: float(v) for k, v in zip(names, lo * (hi / lo) ** np.clip(u, 0, 1))}
 
     def loss(p):
@@ -60,7 +67,7 @@ def main(kit, gm, evals):
         pen = max(0.0, b['peak'] - 0.95) * 10 + max(0.0, 0.03 - b['peak']) * 30
         return band - 6 * min(lab / max(ref_s[label], 0.05), 1.5) + 2 * bad - 4 * float(e @ ref_e) + pen, {'band': round(band, 2), 'label': round(lab, 3), 'avoid': round(bad, 3), 'sim': round(float(e @ ref_e), 3), 'peak': round(b['peak'], 3)}
 
-    x0 = np.full(len(names), 0.5)
+    x0 = np.clip(np.log(np.array([base[k] for k in names]) / lo) / np.log(hi / lo), 0, 1)
     f0, i0 = loss(to(x0)); best = (f0, to(x0), i0); print('start', round(f0, 2), i0, flush=True)
     es = cma.CMAEvolutionStrategy(x0, 0.2, {'bounds': [0, 1], 'maxfevals': evals, 'popsize': 8, 'verbose': -9, 'seed': 11})
     n = 0

@@ -21,7 +21,14 @@ const readline = require('readline');
         const kit = a.presets.BUILTIN_KITS.find((k) => k.name === q.kit);
         const t = kit?.keys[q.key];
         if (!t) return { ok: false, error: 'no kit key ' + q.kit + ' ' + q.key };
-        if (q.getParams) return { ok: true, params: t.graphParams ?? {}, types: Object.fromEntries((t.rackGraph?.nodes ?? []).map((n) => [n.id, n.type])) };
+        if (q.getParams) {
+          // And each knob's range, from the catalogue, so a tuner stays inside what the card can say.
+          const urls = performance.getEntriesByType('resource').map((e) => e.name);
+          const mods = await import(urls.find((x) => x.includes('/src/lib/stores/synth-modules.ts')));
+          const ranges = {};
+          for (const m of mods.MODULE_SPECS) ranges[m.id] = Object.fromEntries((m.params ?? []).map((p) => [p.key, [p.min, p.max]]));
+          return { ok: true, params: t.graphParams ?? {}, types: Object.fromEntries((t.rackGraph?.nodes ?? []).map((n) => [n.id, n.type])), ranges };
+        }
         a.setTrack({ ...t, graphParams: { ...(t.graphParams ?? {}), ...(q.params ?? {}) }, advanced: true });
         return a.renderPhrase(q.notes, q.seconds ?? 10.3);
       }
@@ -50,7 +57,7 @@ const readline = require('readline');
       }
     }
     if (r.ok && r.wav) fs.writeFileSync(q.out, Buffer.from(r.wav, 'base64'));
-    console.log(JSON.stringify({ ok: r.ok, peak: r.peak, error: r.error, params: r.params, types: r.types }));
+    console.log(JSON.stringify({ ok: r.ok, peak: r.peak, error: r.error, params: r.params, types: r.types, ranges: r.ranges }));
   }
   await br.close();
 })();
