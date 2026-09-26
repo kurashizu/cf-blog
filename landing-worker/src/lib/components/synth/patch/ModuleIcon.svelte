@@ -36,6 +36,8 @@
 		tube: 'M2 4h12M2 12h12M2 4v8M14 4v8M6 8h4',
 		modes: 'M3 13V5M8 13V2M13 13V7M3 5l5-3 5 5',
 		space: 'M8 8m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M8 8m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
+		// A fiddle's outline: upper and lower bouts, the waist between, two f-holes.
+		ir: 'M8 1c-3 0-4 2-2.5 4.5C3 6 2.5 8 3 10c.5 3 3 5 5 5s4.5-2 5-5c.5-2 0-4-2.5-5.5C12 3 11 1 8 1M6 8v3M10 8v3',
 		// MODULATE
 		env: 'M1 13L5 3l3 6v4M8 9h3l3 4',
 		ctrl: 'M2 14V9h3v5M7 14V5h3v9M12 14V2h3v12',

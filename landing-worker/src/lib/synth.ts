@@ -32,7 +32,8 @@ import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { createLiveDsp, ensureLiveDsp, type LiveDsp } from './audio/live-dsp';
 import { planLoops, LOOP_KNOBS, type LoopIsland } from './audio/loop-plan';
-import { flattenMacros } from './stores/macros';
+import { flattenMacros, throughTerminals } from './stores/macros';
+import { BODY_IRS } from './audio/body-irs';
 import {
 	ENV_PROCESSOR,
 	MAP_PROCESSOR,
@@ -45,6 +46,7 @@ import {
 	LOOP_SLOTS,
 	SH_PROCESSOR,
 	SLEW_PROCESSOR,
+	GUARD_PROCESSOR,
 	type LoopOp
 } from './audio/live-dsp-params';
 import { UNDERWATER_TRACKS } from './songs/underwater';
@@ -611,6 +613,48 @@ class ModularSynth {
 
 		this.reverbConvolver.connect(this.reverbWetGain);
 		this.reverbWetGain.connect(this.masterBusIn);
+		this.sharedGuardsCtx = null;
+		this.ensureSharedGuards(ctx);
+	}
+
+	private sharedGuardsCtx: BaseAudioContext | null = null;
+
+	/**
+	 * GUARDs where notes meet: each track bus's input, and the outputs of the
+	 * master delay and reverb.
+	 *
+	 * Everything a note sends meets every other track on the master bus, and
+	 * the reverb and the delay hold what they are given. One non-finite sample
+	 * from one resonator made the sum NaN and sat in the reverb for its whole
+	 * tail -- every track silent for seconds, then back as the tail ran out:
+	 * the "global mute" the complex patches set off now and then. A guard at
+	 * each of these keeps a fault on the track that made it, and says so in
+	 * the console. At the shared points rather than on every note: a guard per
+	 * note was two more worklets a voice, and on a twelve-voice piano that was
+	 * enough to underrun the audio thread on its own.
+	 *
+	 * The worklet loads when the context is made and the master chain is built
+	 * at the first note, so this is asked again at each note until it has run.
+	 */
+	private ensureSharedGuards(ctx: BaseAudioContext) {
+		if (this.sharedGuardsCtx === ctx || this.masterFXCtx !== ctx) return;
+		const made: LiveDsp[] = [];
+		const insert = (from: AudioNode, to: AudioNode[], what: string, trackId?: number) => {
+			const g = this.guard(ctx, trackId, what);
+			if (!g) return false;
+			from.disconnect();
+			from.connect(g.node);
+			for (const t of to) g.node.connect(t);
+			made.push(g);
+			return true;
+		};
+		if (!this.trackBuses.length || !this.delayNode || !this.delayFeedbackGain || !this.delayWetGain) return;
+		if (!this.reverbConvolver || !this.reverbWetGain) return;
+		for (const [i, bus] of this.trackBuses.entries()) if (!insert(bus.input, [bus.filters[0]], 'bus', i)) return;
+		// The delay's output feeds its own feedback as well as the mix: guarded, a fault cannot circulate.
+		insert(this.delayNode, [this.delayFeedbackGain, this.delayWetGain], 'master delay');
+		insert(this.reverbConvolver, [this.reverbWetGain], 'master reverb');
+		this.sharedGuardsCtx = ctx;
 	}
 
 	/**
@@ -663,6 +707,9 @@ class ModularSynth {
 				if (g <= 0.01) return time;
 				return Math.min(8, (time * 3) / -Math.log10(g));
 			}
+			// A body's impulse is under a tenth of a second.
+			case 'ir':
+				return 0.1;
 			// A convolver rings for exactly the length of its impulse.
 			case 'space':
 				return Math.min(4, Math.max(0.05, ((p.spaceSize ?? 40) / 100) * 3));
@@ -932,6 +979,8 @@ class ModularSynth {
 			string,
 			{ delay: number; durCap: number | undefined; gain: GainNode; sources: AudioScheduledSourceNode[] }
 		>;
+		/** The TSND gains, joined to the track's chain rather than to `out`. */
+		sends: AudioNode[];
 	} | null {
 		return this.buildActivation(
 			ctx,
@@ -964,7 +1013,12 @@ class ModularSynth {
 		const hit = this.flattened.get(track);
 		if (hit) return hit as T;
 		const flat = flattenMacros(track.rackGraph as RackGraph, track.graphParams ?? {}, track.graphWaves ?? {});
-		const out = { ...track, rackGraph: flat.graph, graphParams: flat.params, graphWaves: flat.waves };
+		const out = {
+			...track,
+			rackGraph: { ...flat.graph, ...throughTerminals(flat.graph.nodes, flat.graph.cables) },
+			graphParams: flat.params,
+			graphWaves: flat.waves
+		};
 		this.flattened.set(track, out);
 		return out as T;
 	}
@@ -1178,6 +1232,85 @@ class ModularSynth {
 		return own;
 	}
 
+	/** When each track last reported a fault, so a stream of them is one line a second. */
+	private guardReported = new Map<string, number>();
+
+	/**
+	 * A GUARD for one shared point of the mix: what passes is finite and within
+	 * +-8, or silence. Null where the worklet is not loaded yet.
+	 */
+	private guard(ctx: BaseAudioContext, trackId: number | undefined, what: string): LiveDsp | null {
+		/* No outputChannelCount: one in and one out, so the output takes the
+		   input's channels as they come -- a mono note stays mono, and the
+		   panner after it pans it the way it panned before the guard. */
+		const dsp = createLiveDsp(ctx, GUARD_PROCESSOR, {
+			numberOfInputs: 1,
+			numberOfOutputs: 1,
+			channelCountMode: 'max'
+		});
+		if (!dsp) return null;
+		dsp.node.port.onmessage = (e: MessageEvent) => {
+			const m = e.data as { nonFinite?: number; clipped?: number };
+			const key = `${trackId}:${what}`;
+			const now = Date.now();
+			if (now - (this.guardReported.get(key) ?? 0) < 1000) return;
+			this.guardReported.set(key, now);
+			const name = trackId !== undefined ? this.tracks[trackId]?.name : undefined;
+			console.warn(
+				`[synth] track ${trackId ?? '?'}${name ? ` (${name})` : ''}, ${what}: ` +
+					`${m.nonFinite ?? 0} non-finite samples silenced, ${m.clipped ?? 0} held at +-8`
+			);
+		};
+		return dsp;
+	}
+
+	private bodyIrs = new WeakMap<BaseAudioContext, Map<number, AudioBuffer>>();
+
+	/** Body `index` of BODY_IRS as a buffer on `ctx`, decoded the first time it is asked for. */
+	private bodyIr(ctx: BaseAudioContext, index: number): AudioBuffer {
+		let cache = this.bodyIrs.get(ctx);
+		if (!cache) {
+			cache = new Map();
+			this.bodyIrs.set(ctx, cache);
+		}
+		const i = Math.max(0, Math.min(BODY_IRS.length - 1, index));
+		const hit = cache.get(i);
+		if (hit) return hit;
+		const ir = BODY_IRS[i];
+		const bytes = Uint8Array.from(atob(ir.data), (c) => c.charCodeAt(0));
+		const samples = new Int16Array(bytes.buffer, 0, bytes.length >> 1);
+		/* At the context's own rate: a ConvolverNode refuses a buffer at any
+		   other, and a live context runs at the device's -- 44.1 kHz on most
+		   machines, where the 48 kHz impulse threw and every note of every
+		   patch using IR was built as nothing. Resampled (cubic), and scaled by
+		   the ratio of rates so a convolution sums to the same level with more
+		   or fewer taps. */
+		const rate = ctx.sampleRate;
+		const step = ir.rate / rate;
+		const length = Math.max(1, Math.floor((samples.length - 1) / step));
+		const buf = ctx.createBuffer(1, length, rate);
+		const ch = buf.getChannelData(0);
+		const k = (ir.scale / 32767) * step;
+		const at = (n: number) => samples[Math.max(0, Math.min(samples.length - 1, n))];
+		for (let n = 0; n < length; n++) {
+			const t = n * step;
+			const j = Math.floor(t);
+			const f = t - j;
+			const y0 = at(j - 1);
+			const y1 = at(j);
+			const y2 = at(j + 1);
+			const y3 = at(j + 2);
+			ch[n] =
+				k *
+				(y1 +
+					0.5 *
+						f *
+						(y2 - y0 + f * (2 * y0 - 5 * y1 + 4 * y2 - y3 + f * (3 * (y1 - y2) + y3 - y0))));
+		}
+		cache.set(i, buf);
+		return buf;
+	}
+
 	/** Let a chain ring for `after` seconds more, then take it down. */
 	private retireChain(ctx: BaseAudioContext, chains: Map<number, TrackChain>, trackId: number, after: number) {
 		const chain = chains.get(trackId);
@@ -1312,6 +1445,8 @@ class ModularSynth {
 			string,
 			{ delay: number; durCap: number | undefined; gain: GainNode; sources: AudioScheduledSourceNode[] }
 		>;
+		/** The TSND gains, joined to the track's chain rather than to `out`. */
+		sends: AudioNode[];
 	} | null {
 		/* Read from the catalogue rather than listed here. The list this replaces
        said ['fm','cv'] and had fallen behind the modules: pwm, trig and do are
@@ -1859,6 +1994,15 @@ class ModularSynth {
 			   a lane) are not value nodes by this table's own definition and keep
 			   the narrower, already-relied-on rule untouched. */
 			const settledValueSource = isValueNode(fromType) && !carriesSignal;
+			/* ENTRY's snapshot pins into a value node's leg: the leg's resting
+			   number is `p(leg)`, which the resolver already answers with the
+			   pin -- so connecting the pin too counted it twice. Unseen while
+			   ADD only ever settled; once an LFO on B made it build, PITCH on A
+			   arrived as the rest *and* as a signal, and a flute with vibrato
+			   played a ninth flat. */
+			const entryIntoValueLeg =
+				fromType === 'in' && !isEntryHeld && isValueNode(typeOfNode.get(c.to) ?? '');
+			if (entryIntoValueLeg) continue;
 			if (settledValueSource || (hasValuePath && !carriesSignal && !isEntryHeld && (isValueNode(fromType) || fromType === 'in')))
 				continue;
 			const from = outletOf(src, c.fromPort);
@@ -1893,6 +2037,11 @@ class ModularSynth {
        `outGains` and handed to the per-OUT stop-plan construction below,
        which is the only place that reads it. */
 		const outGains = new Map<string, GainNode>();
+		/* The chain outlives every note that feeds it, so a send left joined to
+		   it keeps the whole note behind it in the graph the audio thread
+		   walks: every string ever struck, each block. Played for a minute the
+		   PIANO underran its buffer and fell silent. Whoever ends the note cuts these. */
+		const sends: AudioNode[] = [];
 		if (outs.length) {
 			for (const [id, m] of outs) {
 				// An OUT execution never reached does not pass anything on.
@@ -1904,7 +2053,10 @@ class ModularSynth {
 				   way it fades an OUT. With no TRTN on its bus it goes nowhere,
 				   which is what half a bus is while it is being wired. */
 				if (m.sendTo !== undefined) {
-					if (m.sendTo) og.connect(m.sendTo);
+					if (m.sendTo) {
+						og.connect(m.sendTo);
+						sends.push(og);
+					}
 				} else og.connect(sink);
 				outGains.set(id, og);
 				any = true;
@@ -2010,7 +2162,7 @@ class ModularSynth {
 				});
 			}
 		}
-		return { out: level, sources, startAt, outs: outsMap };
+		return { out: level, sources, startAt, outs: outsMap, sends };
 	}
 
 	/**
@@ -2905,6 +3057,38 @@ class ModularSynth {
 				return { in: wire.node, out: wire.node, mod };
 			}
 
+			case 'ir': {
+				/* A body, convolved. The impulse is fixed data, decoded once per
+				   context and shared by every note: a ConvolverNode only reads its
+				   buffer, and a hundred notes each decoding 4096 samples would be
+				   the whole cost of the module. */
+				const input = ctx.createGain();
+				/* A mix nothing patches, at an end: at 0 there is no body to run
+				   -- a four-thousand-tap convolution per note, heard as nothing,
+				   which on a twelve-voice piano was a real share of the audio
+				   thread -- and at 100 no dry to keep. */
+				const mixed = !!wiredPorts?.has('irMix');
+				const mix = p('irMix', 100);
+				if (!mixed && mix <= 0) return { in: input, out: input, mod };
+				const conv = ctx.createConvolver();
+				conv.normalize = false;
+				conv.buffer = this.bodyIr(ctx, Math.round(p('irBody', 0)));
+				if (!mixed && mix >= 100) {
+					input.connect(conv);
+					return { in: input, out: conv, mod };
+				}
+				const out = ctx.createGain();
+				const wet = ctx.createGain();
+				const dry = ctx.createGain();
+				knobMix(wet, dry, 'irMix', 100);
+				input.connect(dry);
+				dry.connect(out);
+				input.connect(conv);
+				conv.connect(wet);
+				wet.connect(out);
+				return { in: input, out, mod };
+			}
+
 			case 'space': {
 				/* A room. Every acoustic instrument is heard in one, and a bare
            resonator sounds like a recording made inside a box of cotton wool.
@@ -3124,7 +3308,18 @@ class ModularSynth {
            Constant per note rather than swept: a lane is sampled when the note
            starts. A continuous lane still moves between notes, because the next
            note reads it again. */
-				const outs = new Map<string, AudioNode>();
+				const makers = new Map<string, () => AudioNode>();
+				const outs = new (class extends Map<string, AudioNode> {
+					get(k: string) {
+						const make = makers.get(k);
+						if (make && !super.has(k)) super.set(k, make());
+						return super.get(k);
+					}
+					has(k: string) {
+						return super.has(k) || makers.has(k);
+					}
+				})();
+				const lazy = (k: string, make: () => AudioNode) => makers.set(k, make);
 				for (const [laneId, v] of Object.entries(laneValues)) {
 					const src = ctx.createConstantSource();
 					src.offset.value = v;
@@ -3161,9 +3356,13 @@ class ModularSynth {
            resolver publishes for the same socket. It used to be `baseFreq`
            here and semitones there: one outlet, two different quantities,
            depending on whether it reached a knob or an audio param. */
-				outs.set('pitch', pin(12 * Math.log2(Math.max(1e-6, baseFreq) / this.masterTuningFreq)));
-				outs.set('vel', pin(note.velocity));
-				outs.set('note', pin(note.noteIndex));
+				/* Made when a signal cable asks for one, not before: a pin read as a
+				   value resolves through the pure nodes and never becomes a node,
+				   and four constant sources a note that nothing listened to were
+				   four more nodes a voice on the audio thread. */
+				lazy('pitch', () => pin(12 * Math.log2(Math.max(1e-6, baseFreq) / this.masterTuningFreq)));
+				lazy('vel', () => pin(note.velocity));
+				lazy('note', () => pin(note.noteIndex));
 
 				/* HELD: how long the key has been down, live -- the one outlet here
            that is not a snapshot. A `ConstantSourceNode` ramped from 0 at a
@@ -3192,11 +3391,13 @@ class ModularSynth {
            in advance rather than one that is true because it is still being
            measured. */
 				const HELD_CEILING_SEC = 600;
-				const held = ctx.createConstantSource();
-				held.offset.setValueAtTime(0, t);
-				held.offset.linearRampToValueAtTime(HELD_CEILING_SEC, t + HELD_CEILING_SEC);
-				sources.push(held);
-				outs.set('held', held);
+				lazy('held', () => {
+					const held = ctx.createConstantSource();
+					held.offset.setValueAtTime(0, t);
+					held.offset.linearRampToValueAtTime(HELD_CEILING_SEC, t + HELD_CEILING_SEC);
+					sources.push(held);
+					return held;
+				});
 
 				return { in: null, out: silent, mod, outs };
 			}
@@ -5554,6 +5755,7 @@ class ModularSynth {
 		if (!this.renderCtx && ctx.state === 'suspended') ctx.resume().catch(() => {});
 
 		this.initMasterFX(ctx);
+		this.ensureSharedGuards(ctx);
 
 		/* Voice allocation: what this note does to the ones already sounding.
     
@@ -6282,6 +6484,8 @@ class ModularSynth {
 		let advGraphOuts:
 			| Map<string, { delay: number; durCap: number | undefined; gain: GainNode; sources: AudioScheduledSourceNode[] }>
 			| undefined;
+		// The graph's TSND gains, cut from the track's chain with the voice.
+		let advSends: AudioNode[] = [];
 		/* FOLLOW's own release anchor for a timed note -- `releaseStartTime`,
        set inside the `!isContinuousHold` branch below, read again past
        the graph-build block for the same reason `advGraphExtrasStop` is:
@@ -6515,6 +6719,7 @@ class ModularSynth {
 				chainOut = built.out;
 				advGraphOut = built.out as GainNode;
 				advGraphOuts = built.outs;
+				advSends = built.sends;
 				for (const src of built.sources) {
 					src.start(built.startAt.get(src) ?? t);
 					extras.push(src);
@@ -6638,7 +6843,7 @@ class ModularSynth {
        a kit key with its own EQ left its filters connected to the shared
        convolver for the life of the page. Unreachable from upstream, so silent,
        but still alive on the audio thread. */
-		const tailNodes: AudioNode[] = [];
+		const tailNodes: AudioNode[] = [...advSends];
 		if (!advOwnsVoice && track.airGain !== undefined && Math.abs(track.airGain) > 0.01) {
 			const airFilter = ctx.createBiquadFilter();
 			airFilter.type = 'highshelf';
@@ -7341,35 +7546,34 @@ class ModularSynth {
 				}
 			}
 		}
+		const detach = () => {
+			for (const n of [built.out, ...built.sends]) {
+				try {
+					n.disconnect();
+				} catch {
+					/* already disconnected */
+				}
+			}
+		};
 		let remaining = built.sources.length;
 		if (remaining === 0) {
-			built.out.disconnect();
+			detach();
 			return;
 		}
 		for (const src of built.sources) {
 			src.onended = () => {
 				this.ringingTails.delete(src);
 				remaining--;
-				if (remaining <= 0) {
-					try {
-						built.out.disconnect();
-					} catch {
-						/* already disconnected */
-					}
-				}
+				if (remaining <= 0) detach();
 			};
 		}
 		if (anyDurCap) {
 			/* From the clock as it reads now, not from `now`: a timed note's REL is
 			   built at note-on for a moment still to come. */
 			const cleanupMs = Math.ceil((latestStop - ctx.currentTime) * 1000) + 50;
-			window.setTimeout(() => {
+			setTimeout(() => {
 				for (const src of built.sources) this.ringingTails.delete(src);
-				try {
-					built.out.disconnect();
-				} catch {
-					/* already disconnected */
-				}
+				detach();
 			}, cleanupMs);
 		}
 	}

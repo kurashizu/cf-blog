@@ -625,16 +625,28 @@ export function createResolver(
 		const type = nodeById.get(c.from)?.type ?? '';
 		// Anything with no value to pull is sound: an OSC, a FILTER, an ENV.
 		if (!isValueNode(type)) return true;
-		// A pure node is always a number, whatever reaches it.
-		if (isPureNode(type)) return false;
-		/* What is left is the dual kind -- MAP -- which is a signal only when it
-		   is carrying one. Ask its own inlets. */
+		/* A value node -- pure (ADD, MUL, ...) or dual (MAP) -- is a signal
+		   exactly when something reaching it is one. ADD and MUL build live now,
+		   so ENTRY's PITCH plus an LFO on ADD is a moving pitch; answering "a
+		   pure node is always a number" had TO-FREQ read that ADD's resting
+		   value *and* take its signal, the pitch counted twice -- a flute a
+		   ninth flat. Ask its own inlets. */
 		if (seen.has(c.from)) return false;
 		seen.add(c.from);
 		for (const [key, feed] of feeds) {
 			if (!key.startsWith(`${c.from}.`)) continue;
 			void feed;
 			if (emitsSignal(c.from, key.slice(c.from.length + 1), seen)) return true;
+		}
+		return false;
+	}
+
+	/** Is this value node's output live -- does any of its inlets carry a signal? */
+	function carries(nodeId: string): boolean {
+		const seen = new Set<string>([nodeId]);
+		for (const [key] of feeds) {
+			if (!key.startsWith(`${nodeId}.`)) continue;
+			if (emitsSignal(nodeId, key.slice(nodeId.length + 1), seen)) return true;
 		}
 		return false;
 	}
@@ -683,6 +695,13 @@ export function createResolver(
 				return own;
 			}
 			if (!isValueNode(nodeById.get(c.from)?.type ?? '')) return own;
+			/* A value node that is carrying a signal -- TO-FREQ under a vibrato,
+			   MAP over an LFO -- arrives whole on the signal path: its resting
+			   value is already inside what it emits. Pulling that value onto the
+			   knob as well counted it twice, which OSC's PITCH (the one knob that
+			   keeps its base under a signal, for FM) made audible as an octave
+			   up. The base under it is nothing. */
+			if (carries(c.from)) return 0;
 			return valueOf(c.from);
 		}
 		return own;
@@ -731,15 +750,7 @@ export function createResolver(
 		 * declares a feed for, the same recursive walk `emitsSignal` already
 		 * does for a dual node found *upstream* of the port being resolved,
 		 * just entered directly rather than as a step inside that walk. */
-		nodeCarriesSignal: (nodeId: string): boolean => {
-			const seen = new Set<string>();
-			seen.add(nodeId);
-			for (const [key] of feeds) {
-				if (!key.startsWith(`${nodeId}.`)) continue;
-				if (emitsSignal(nodeId, key.slice(nodeId.length + 1), seen)) return true;
-			}
-			return false;
-		},
+		nodeCarriesSignal: carries,
 		param
 	};
 }

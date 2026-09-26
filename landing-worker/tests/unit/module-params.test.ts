@@ -784,6 +784,10 @@ describe('presets match the catalogue', () => {
 					continue;
 				}
 				const spec = specOf(node.type);
+				/* MAP's drawn curve is stored as `drawN` and one key per point --
+				   what the curve editor writes and DRAW reads, not a knob, so not
+				   in the params list. The piano draws its key tracking this way. */
+				if (node.type === 'map' && /^(drawN|d\d+)$/.test(key.slice(dot + 1))) continue;
 				if (!spec?.params.some((q) => q.key === key.slice(dot + 1))) {
 					bad.push(`${label}: ${node.type}.${key.slice(dot + 1)}`);
 				}

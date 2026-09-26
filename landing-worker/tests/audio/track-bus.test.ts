@@ -327,6 +327,76 @@ describe('CTRL', () => {
 });
 
 describe('a live chain', () => {
+	it('lets go of every note that has ended', async () => {
+		/* The chain outlives the notes, so a TSND still joined to it holds its
+		   whole note in the graph the audio thread walks, every block. The
+		   PIANO sent every string it had ever struck to its board that way:
+		   underruns from about forty seconds of playing, then silence. Two
+		   voices and eight notes, so six are stolen; what is still joined to
+		   the bus afterwards is at most the two still sounding. */
+		const r = await page.evaluate(
+			async (t) => {
+				const w = window as never as {
+					__audit: {
+						setTrack(t: unknown): unknown;
+						sound: { init(resume: boolean): Promise<void> };
+						engine: {
+							audioCtx(): AudioContext;
+							noteOn(track: number, note: number, vel: number): void;
+							noteOff(track: number, note: number): void;
+							stopAll(): void;
+							trackChains: WeakMap<
+								BaseAudioContext,
+								Map<number, { buses: Map<number, AudioNode> }>
+							>;
+						};
+					};
+				};
+				const { engine, sound } = w.__audit;
+				w.__audit.setTrack(t);
+				await sound.init(true);
+				const into = new Map<AudioNode, Set<AudioNode>>();
+				const proto = AudioNode.prototype as unknown as {
+					connect: (...a: unknown[]) => unknown;
+					disconnect: (...a: unknown[]) => unknown;
+				};
+				const { connect, disconnect } = proto;
+				proto.connect = function (this: AudioNode, ...a: unknown[]) {
+					const to = a[0];
+					if (to instanceof AudioNode) {
+						if (!into.has(to)) into.set(to, new Set());
+						into.get(to)!.add(this);
+					}
+					return connect.apply(this, a);
+				};
+				proto.disconnect = function (this: AudioNode, ...a: unknown[]) {
+					const to = a[0];
+					if (to instanceof AudioNode) into.get(to)?.delete(this);
+					else if (to === undefined) for (const set of into.values()) set.delete(this);
+					return disconnect.apply(this, a);
+				};
+				const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+				try {
+					for (let i = 0; i < 8; i++) {
+						engine.noteOn(0, 40 + i, 100);
+						await wait(40);
+					}
+					await wait(300);
+					const bus = engine.trackChains.get(engine.audioCtx())?.get(0)?.buses.get(0);
+					return { joined: bus ? (into.get(bus)?.size ?? 0) : -1 };
+				} finally {
+					proto.connect = connect;
+					proto.disconnect = disconnect;
+					for (let i = 0; i < 8; i++) engine.noteOff(0, 40 + i);
+					engine.stopAll();
+				}
+			},
+			{ ...busRig({}), polyphony: 2 }
+		);
+		expect(r.joined).toBeGreaterThanOrEqual(1);
+		expect(r.joined).toBeLessThanOrEqual(2);
+	}, 60000);
+
 	it('is kept while it matches the patch, rebuilt after an edit, and gone on STOP', async () => {
 		const r = await page.evaluate(
 			async (t) => {

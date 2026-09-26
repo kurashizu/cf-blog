@@ -192,6 +192,11 @@ export const SLEW_PROCESSOR = 'krsz-slew';
 /** SLEW: what it follows, and how long a rise and a fall take, in seconds. */
 export const SLEW_PARAMS: LiveParamDescriptor[] = [a('in', 0), a('rise', 0.05), a('fall', 0.05)];
 
+/* GUARD: no parameters. What leaves a note is finite and within +-8, or it is
+   silence -- see the processor. */
+export const GUARD_PROCESSOR = 'krsz-guard';
+export const GUARD_PARAMS: LiveParamDescriptor[] = [];
+
 export const LIVE_PARAMS: Record<string, LiveParamDescriptor[]> = {
 	[SPACE_PROCESSOR]: SPACE_PARAMS,
 	[ENV_PROCESSOR]: ENV_PARAMS,
@@ -202,5 +207,6 @@ export const LIVE_PARAMS: Record<string, LiveParamDescriptor[]> = {
 	[WIRE_PROCESSOR]: WIRE_PARAMS,
 	[LOOP_PROCESSOR]: LOOP_PARAMS,
 	[SH_PROCESSOR]: SH_PARAMS,
-	[SLEW_PROCESSOR]: SLEW_PARAMS
+	[SLEW_PROCESSOR]: SLEW_PARAMS,
+	[GUARD_PROCESSOR]: GUARD_PARAMS
 };

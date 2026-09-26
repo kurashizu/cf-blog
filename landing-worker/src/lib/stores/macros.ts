@@ -172,6 +172,38 @@ export function flattenMacros(
 	return { graph: { ...rest, nodes, cables }, params: outParams, waves: outWaves };
 }
 
+/**
+ * The audio terminals flattening leaves behind, taken out of the path: every
+ * cable into a macro's socket joined to every cable out of it. For the
+ * engine, after `flattenMacros` -- which keeps them, since a flattened patch
+ * is also what the canvas and its tests read.
+ *
+ * A NODE is a unity gain, so this changes nothing heard -- and a socket is
+ * one per inlet per instance, per note: the piano's three strings and case
+ * were eight gains a voice doing nothing, on a twelve-voice patch whose
+ * audio thread was spent on how many nodes it walks rather than on what they
+ * do. Only the terminals flattening made (their ids carry the instance's
+ * `/`): a NODE placed on the canvas by hand stays, as a wire with a name.
+ * An inlet nothing feeds feeds nothing.
+ */
+export function throughTerminals(
+	nodes: GraphNode[],
+	cables: GraphCable[]
+): { nodes: GraphNode[]; cables: GraphCable[] } {
+	const gone = new Set(nodes.filter((n) => n.type === 'nodept' && n.id.includes('/')).map((n) => n.id));
+	if (!gone.size) return { nodes, cables };
+	let out = cables;
+	// One terminal at a time, so a terminal feeding another is joined through both.
+	for (const id of gone) {
+		const into = out.filter((c) => c.to === id);
+		const from = out.filter((c) => c.from === id);
+		out = out.filter((c) => c.to !== id && c.from !== id);
+		for (const a of into)
+			for (const b of from) out.push({ from: a.from, fromPort: a.fromPort, to: b.to, toPort: b.toPort });
+	}
+	return { nodes: nodes.filter((n) => !gone.has(n.id)), cables: out };
+}
+
 /** Every definition an instance in `graph` reaches, directly or through another definition. */
 export function macrosInUse(graph: {
 	nodes: GraphNode[];

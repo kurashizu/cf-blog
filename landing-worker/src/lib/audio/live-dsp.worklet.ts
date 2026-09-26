@@ -32,6 +32,8 @@ import {
 	SH_PROCESSOR,
 	SLEW_PARAMS,
 	SLEW_PROCESSOR,
+	GUARD_PARAMS,
+	GUARD_PROCESSOR,
 	type LoopProgram,
 	type MapOptions
 } from './live-dsp-params';
@@ -71,6 +73,27 @@ class StoppableProcessor extends AudioWorkletProcessor {
 	protected finished(): boolean {
 		return currentTime >= this.stopAt;
 	}
+}
+
+/**
+ * True, and the block silenced, if a resonator's output holds anything that is
+ * not a finite number. A feedback structure that once holds NaN holds it for
+ * good -- the delay lines feed it back to themselves -- so the caller also
+ * clears its state: the note loses a block of sound, not the rest of its life
+ * (and, before the mix had its guards, every track with it).
+ */
+function faulted(outputs: Float32Array[][]): boolean {
+	let bad = false;
+	for (const out of outputs[0] ?? []) {
+		let sum = 0;
+		for (let i = 0; i < out.length; i++) sum += out[i];
+		if (!Number.isFinite(sum)) {
+			bad = true;
+			break;
+		}
+	}
+	if (bad) for (const out of outputs[0] ?? []) out.fill(0);
+	return bad;
 }
 
 /* ── ENV ────────────────────────────────────────────────────────────────── */
@@ -121,6 +144,26 @@ class EnvProcessor extends StoppableProcessor {
 		const out = outputs[0]?.[0];
 		if (!out) return !this.finished();
 		const dt = 1 / sampleRate;
+		// Finished is finished: nothing left to step.
+		if (this.stage === DONE) {
+			out.fill(0);
+			return !this.finished();
+		}
+		/* Every setting still for the block -- the usual case, a knob nobody
+		   is patching -- so each stage's step is worked out once rather than a
+		   `Math.pow` a sample. Two envelopes a piano key made this a quarter
+		   of what a sustained chord cost. */
+		if (
+			p.gate.length === 1 &&
+			p.attack.length === 1 &&
+			p.decay.length === 1 &&
+			p.sustain.length === 1 &&
+			p.release.length === 1 &&
+			currentTime + out.length * dt < this.stopAt
+		) {
+			this.block(out, p, dt);
+			return !this.finished();
+		}
 		for (let i = 0; i < out.length; i++) {
 			if (currentTime + i * dt >= this.stopAt) {
 				out[i] = 0;
@@ -168,6 +211,68 @@ class EnvProcessor extends StoppableProcessor {
 			out[i] = this.stage === DONE ? 0 : this.level;
 		}
 		return !this.finished();
+	}
+	/** The per-sample loop above with every setting fixed for the block. Same arithmetic, same order. */
+	private block(out: Float32Array, p: Params, dt: number): void {
+		const gate = p.gate[0] >= 0.5;
+		const attack = Math.max(FLOOR, p.attack[0]);
+		const decay = Math.max(FLOOR, p.decay[0]);
+		const sustain = Math.max(EXP_FLOOR, Math.min(1, p.sustain[0]));
+		const release = Math.max(FLOOR, p.release[0]);
+		const curved = this.curved;
+		const expAttack = curved && !this.linearAttack;
+		const attackMul = expAttack ? Math.pow(1 / EXP_FLOOR, dt / attack) : 0;
+		const attackAdd = dt / attack;
+		const decayMul = curved ? Math.pow(sustain, dt / decay) : 0;
+		const decaySub = ((1 - sustain) * dt) / decay;
+		let releaseMul = 0;
+		let releaseSub = 0;
+		const planRelease = () => {
+			releaseMul = curved ? Math.pow(EXP_FLOOR / this.releaseFrom, dt / release) : 0;
+			releaseSub = ((this.releaseFrom - EXP_FLOOR) * dt) / release;
+		};
+		if (this.stage === RELEASE) planRelease();
+		let stage = this.stage;
+		let level = this.level;
+		for (let i = 0; i < out.length; i++) {
+			if (stage === IDLE && gate) {
+				stage = ATTACK;
+				level = curved ? EXP_FLOOR : 0;
+			}
+			if (stage === ATTACK) {
+				if (expAttack) level *= attackMul;
+				else level += attackAdd;
+				if (level >= 1) {
+					level = 1;
+					stage = DECAY;
+				}
+			} else if (stage === DECAY) {
+				if (curved) level *= decayMul;
+				else level -= decaySub;
+				if (level <= sustain) {
+					level = sustain;
+					stage = SUSTAIN;
+				}
+			} else if (stage === SUSTAIN) {
+				level = sustain;
+			}
+			if (stage === SUSTAIN && !gate) {
+				stage = RELEASE;
+				this.releaseFrom = Math.max(EXP_FLOOR, level);
+				planRelease();
+			}
+			if (stage === RELEASE) {
+				if (curved) level *= releaseMul;
+				else level -= releaseSub;
+				if (level <= EXP_FLOOR) {
+					level = 0;
+					stage = DONE;
+				}
+			}
+			out[i] = stage === DONE ? 0 : level;
+		}
+		this.stage = stage;
+		this.level = level;
 	}
 }
 
@@ -389,7 +494,17 @@ class StringsProcessor extends StoppableProcessor {
 			this.riseStep[n] = dt / rise;
 		}
 	}
+	private reset(): void {
+		this.re.fill(0);
+		this.im.fill(0);
+		this.env.fill(0);
+	}
 	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const alive = this.run(inputs, outputs, p);
+		if (faulted(outputs)) this.reset();
+		return alive;
+	}
+	private run(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
 		const out = outputs[0]?.[0];
 		if (!out) return !this.finished();
 		const input = inputs[0]?.[0];
@@ -552,6 +667,8 @@ class WireProcessor extends StoppableProcessor {
 	private apY = new Float64Array(WIRE_DISPERSION);
 	private dcX = 0;
 	private dcY = 0;
+	/** Samples in a row the line has written below silence. */
+	private quiet = 0;
 	// Worked out per block.
 	private delay = 100;
 	private gain = 0.99;
@@ -598,7 +715,21 @@ class WireProcessor extends StoppableProcessor {
 		this.gain = Math.min(0.99999, Math.pow(10, (-3 * (period / sr)) / t60));
 		this.strike = pos > 0 ? Math.max(1, Math.round(pos * period)) : 0;
 	}
+	private reset(): void {
+		this.line.fill(0);
+		this.hist.fill(0);
+		this.lp = 0;
+		this.apX.fill(0);
+		this.apY.fill(0);
+		this.dcX = 0;
+		this.dcY = 0;
+	}
 	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const alive = this.run(inputs, outputs, p);
+		if (faulted(outputs)) this.reset();
+		return alive;
+	}
+	private run(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
 		const out = outputs[0]?.[0];
 		if (!out) return !this.finished();
 		const input = inputs[0]?.[0];
@@ -618,37 +749,92 @@ class WireProcessor extends StoppableProcessor {
 		const h1 = (d * (d - 2) * (d - 3)) / 2;
 		const h2 = (-d * (d - 1) * (d - 3)) / 2;
 		const h3 = (d * (d - 1) * (d - 2)) / 6;
+		/* A string that has stopped ringing, with nothing striking it, is
+		   silence -- skip the block. A damped note waits out its whole DCAY
+		   before the engine reaps it, so a piano played with the pedal up kept
+		   every string it had touched computing zeros; three a key, that was
+		   half of what a sustained chord cost. -140 dB is below anything a
+		   16- or 24-bit output can carry.
+
+		   Silent for a whole trip round the line, not for a block: a low
+		   string's pulse is a few samples in a line of hundreds, so a block of
+		   zeros is usually just the gap behind it -- skipping there froze the
+		   pulse and played A0 a third of a semitone flat. */
+		let silentIn = true;
+		if (input) for (let i = 0; i < input.length; i++) if (input[i] !== 0) { silentIn = false; break; }
+		if (silentIn && this.quiet > delay + 8) {
+			out.fill(0);
+			return !this.finished();
+		}
+		/* Locals for the per-sample state: a field read and written every
+		   sample is what this loop spent most of its time on. */
+		let w = this.w;
+		let lp = this.lp;
+		let dcX = this.dcX;
+		let dcY = this.dcY;
+		const apX = this.apX;
+		const apY = this.apY;
+		let x0 = apX[0], x1 = apX[1], x2 = apX[2], x3 = apX[3];
+		let y0 = apY[0], y1 = apY[1], y2 = apY[2], y3 = apY[3];
+		const stopAt = this.stopAt;
+		let quiet = this.quiet;
 		for (let i = 0; i < out.length; i++) {
-			if (currentTime + i * dt >= this.stopAt) {
+			if (currentTime + i * dt >= stopAt) {
 				out[i] = 0;
 				continue;
 			}
 			const x = input ? input[i] : 0;
-			hist[this.w] = x;
-			const hit = strike ? x - hist[(this.w - strike) & mask] : x;
-			const r = this.w - whole;
+			hist[w] = x;
+			const hit = strike ? x - hist[(w - strike) & mask] : x;
+			const r = w - whole;
 			const y =
 				h0 * line[(r + 1) & mask] +
 				h1 * line[r & mask] +
 				h2 * line[(r - 1) & mask] +
 				h3 * line[(r - 2) & mask];
-			this.lp = (1 - a) * y + a * this.lp;
-			let v = this.lp;
-			for (let k = 0; k < WIRE_DISPERSION; k++) {
-				const yk = c * v + this.apX[k] - c * this.apY[k];
-				this.apX[k] = v;
-				this.apY[k] = yk;
-				v = yk;
-			}
+			lp = (1 - a) * y + a * lp;
+			// The four allpasses of the dispersion, unrolled.
+			let v = lp;
+			let yk = c * v + x0 - c * y0;
+			x0 = v;
+			y0 = yk;
+			v = yk;
+			yk = c * v + x1 - c * y1;
+			x1 = v;
+			y1 = yk;
+			v = yk;
+			yk = c * v + x2 - c * y2;
+			x2 = v;
+			y2 = yk;
+			v = yk;
+			yk = c * v + x3 - c * y3;
+			x3 = v;
+			y3 = yk;
+			v = yk;
 			const next = gain * v + hit;
-			line[this.w] = next;
-			this.w = (this.w + 1) & mask;
+			line[w] = next;
+			w = (w + 1) & mask;
 			// And one on the way out, for the strike's own offset.
-			const o = next - this.dcX + 0.995 * this.dcY;
-			this.dcX = next;
-			this.dcY = o;
+			const o = next - dcX + 0.995 * dcY;
+			dcX = next;
+			dcY = o;
 			out[i] = o;
+			if (next < 1e-7 && next > -1e-7) quiet++;
+			else quiet = 0;
 		}
+		this.w = w;
+		this.lp = lp;
+		this.dcX = dcX;
+		this.dcY = dcY;
+		apX[0] = x0;
+		apX[1] = x1;
+		apX[2] = x2;
+		apX[3] = x3;
+		apY[0] = y0;
+		apY[1] = y1;
+		apY[2] = y2;
+		apY[3] = y3;
+		this.quiet = quiet;
 		return !this.finished();
 	}
 }
@@ -657,6 +843,9 @@ registerProcessor(WIRE_PROCESSOR, WireProcessor);
 
 /** A bandpass biquad in direct form I, RBJ's constant-0-dB-peak form (Web Audio's own). */
 class Bandpass {
+	reset() {
+		this.x1 = this.x2 = this.y1 = this.y2 = 0;
+	}
 	private b0 = 0;
 	private b2 = 0;
 	private a1 = 0;
@@ -735,7 +924,16 @@ class ModesProcessor extends StoppableProcessor {
 		}
 		this.bandGain = (mix / 3) * Math.min(1.2, Math.sqrt(q) * 0.25);
 	}
+	private reset(): void {
+		this.env.fill(0);
+		for (const b of this.bands) b.reset();
+	}
 	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const alive = this.run(inputs, outputs, p);
+		if (faulted(outputs)) this.reset();
+		return alive;
+	}
+	private run(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
 		const out = outputs[0]?.[0];
 		if (!out) return !this.finished();
 		const input = inputs[0]?.[0];
@@ -797,6 +995,9 @@ registerProcessor(MODES_PROCESSOR, ModesProcessor);
 
 /** An allpass: smears a transient into a cluster without colouring it. */
 class Allpass {
+	reset() {
+		this.buf.fill(0);
+	}
 	private buf: Float32Array;
 	private pos = 0;
 	constructor(
@@ -897,7 +1098,16 @@ class SpaceProcessor extends StoppableProcessor {
 		const b = line[(i0 + 1) % len];
 		return a + (b - a) * frac;
 	}
+	private reset(): void {
+		for (const l of this.lines) l.fill(0);
+		for (const d of this.diffuse) d.reset();
+	}
 	process(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
+		const alive = this.run(inputs, outputs, p);
+		if (faulted(outputs)) this.reset();
+		return alive;
+	}
+	private run(inputs: Float32Array[][], outputs: Float32Array[][], p: Params): boolean {
 		const outL = outputs[0]?.[0];
 		const outR = outputs[0]?.[1] ?? outL;
 		if (!outL || !outR) return !this.finished();
@@ -1282,3 +1492,64 @@ class SlewProcessor extends StoppableProcessor {
 }
 
 registerProcessor(SLEW_PROCESSOR, SlewProcessor);
+
+/* ── GUARD ──────────────────────────────────────────────────────────────── */
+
+/** Beyond this a sample is a fault, not a loud note: 18 dB over full scale. */
+const GUARD_LIMIT = 8;
+
+/**
+ * The last thing on every note's way out: a sample that is not a finite
+ * number becomes silence, and one past +-8 is held there.
+ *
+ * Everything a note sends meets every other track on the master bus, and the
+ * bus feeds the master reverb. One NaN from one resonator went into that sum,
+ * made it NaN, and sat in the reverb's impulse for its whole tail: every track
+ * silent for seconds, then back as the tail ran out -- the "global mute" that
+ * the complex patches set off now and then. Here the fault stays with the
+ * note that made it, and the main thread is told (at most twice a second),
+ * so the next time it happens it has a name.
+ */
+class GuardProcessor extends StoppableProcessor {
+	static get parameterDescriptors() {
+		return GUARD_PARAMS;
+	}
+	private bad = 0;
+	private clipped = 0;
+	private lastReport = -1;
+	process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
+		const input = inputs[0];
+		const output = outputs[0];
+		if (!output) return !this.finished();
+		for (let c = 0; c < output.length; c++) {
+			const out = output[c];
+			const inp = input?.[c] ?? input?.[0];
+			if (!inp) {
+				out.fill(0);
+				continue;
+			}
+			for (let i = 0; i < out.length; i++) {
+				const x = inp[i];
+				if (x !== x || x === Infinity || x === -Infinity) {
+					this.bad++;
+					out[i] = 0;
+				} else if (x > GUARD_LIMIT) {
+					this.clipped++;
+					out[i] = GUARD_LIMIT;
+				} else if (x < -GUARD_LIMIT) {
+					this.clipped++;
+					out[i] = -GUARD_LIMIT;
+				} else out[i] = x;
+			}
+		}
+		if ((this.bad || this.clipped) && currentTime - this.lastReport > 0.5) {
+			this.port.postMessage({ nonFinite: this.bad, clipped: this.clipped, at: currentTime });
+			this.lastReport = currentTime;
+			this.bad = 0;
+			this.clipped = 0;
+		}
+		return !this.finished();
+	}
+}
+
+registerProcessor(GUARD_PROCESSOR, GuardProcessor);

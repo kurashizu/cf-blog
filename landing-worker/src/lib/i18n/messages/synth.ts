@@ -288,6 +288,7 @@ export default {
 		'synthPatch.mod.comb':
 			'Where the string is struck. Plucked at the bridge is thin, over the hole is round.',
 		'synthPatch.mod.space': 'A room. Every acoustic instrument is heard in one.',
+		'synthPatch.mod.ir': "An instrument's body, measured from recordings: its wood and air.",
 		'synthPatch.mod.fbsend': 'Sends into a feedback loop. Pair it with RTN on the same BUS.',
 		'synthPatch.mod.fbrtn':
 			'Returns what SEND was given, one block ago. Cable it onward to close the loop.',
@@ -861,6 +862,7 @@ export default {
 		'synthPatch.mod.comp': '压住瞬态。被敲击的共鸣体，其峰值远高于它自己的延音。',
 		'synthPatch.mod.comb': '弦被拨动的位置。靠近琴桥单薄，在音孔上方圆润。',
 		'synthPatch.mod.space': '房间。所有原声乐器都是在某个空间里被听到的。',
+		'synthPatch.mod.ir': '乐器的琴身，从录音里测出来的：它的木头和空气。',
 		'synthPatch.mod.fbsend': '把信号送进反馈环。与同一 BUS 的 RTN 配对。',
 		'synthPatch.mod.fbrtn': '取回 SEND 上一个音频块收到的信号。把它接回去就闭合了环路。',
 		'synthPatch.mod.tsend':
@@ -1375,6 +1377,7 @@ export default {
 		'synthPatch.mod.comp': '壓住瞬態。被敲擊的共鳴體，其峰值遠高於它自己的延音。',
 		'synthPatch.mod.comb': '弦被撥動的位置。靠近琴橋單薄，在音孔上方圓潤。',
 		'synthPatch.mod.space': '房間。所有原聲樂器都是在某個空間裡被聽到的。',
+		'synthPatch.mod.ir': '樂器的琴身，從錄音裡測出來的：它的木頭和空氣。',
 		'synthPatch.mod.fbsend': '把訊號送進回授環。與同一 BUS 的 RTN 配對。',
 		'synthPatch.mod.fbrtn': '取回 SEND 上一個音訊區塊收到的訊號。把它接回去就閉合了環路。',
 		'synthPatch.mod.tsend':
@@ -1919,6 +1922,7 @@ export default {
 			'トランジェントを抑えます。叩かれた胴は自身のサステインよりはるかに高く飛び出します。',
 		'synthPatch.mod.comb': '弦を弾く位置。駒の近くは細く、サウンドホールの上では丸くなります。',
 		'synthPatch.mod.space': '部屋。すべてのアコースティック楽器はどこかの空間で聴かれます。',
+		'synthPatch.mod.ir': '録音から測った楽器の胴体：木と空気の響き。',
 		'synthPatch.mod.fbsend': 'フィードバックループへ送ります。同じ BUS の RTN と対で使います。',
 		'synthPatch.mod.fbrtn':
 			'1 ブロック前に SEND が受け取った音を返します。配線で戻すとループが閉じます。',
@@ -2499,6 +2503,7 @@ export default {
 			'트랜지언트를 눌러 줍니다. 두드린 몸통은 자기 서스테인보다 훨씬 높이 솟습니다.',
 		'synthPatch.mod.comb': '현을 뜯는 위치. 브리지 쪽은 얇고, 사운드홀 위는 둥급니다.',
 		'synthPatch.mod.space': '방. 모든 어쿠스틱 악기는 어떤 공간 안에서 들립니다.',
+		'synthPatch.mod.ir': '녹음에서 측정한 악기의 몸통: 나무와 공기의 울림.',
 		'synthPatch.mod.fbsend': '피드백 루프로 보냅니다. 같은 BUS의 RTN과 짝을 이룹니다.',
 		'synthPatch.mod.fbrtn':
 			'SEND가 한 블록 전에 받은 소리를 돌려줍니다. 다시 연결하면 루프가 닫힙니다.',

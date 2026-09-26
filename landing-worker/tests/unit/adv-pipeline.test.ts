@@ -731,8 +731,10 @@ describe('regressions the string tests could not see', () => {
 		   it. */
 		expect(cvSources(100).gains.some((g) => g > 0)).toBe(true);
 		expect(cvSources(10).gains.join(',')).not.toBe(cvSources(127).gains.join(','));
-		// ENTRY still publishes its pins as sources, whoever reads them.
-		expect(cvSources(10).offsets.join(',')).not.toBe(cvSources(127).offsets.join(','));
+		/* And no source is built for it: a pin read as a value never becomes a
+		   node. ENTRY used to make all four whoever read them -- four constant
+		   sources a note that nothing listened to, on the audio thread. */
+		expect(cvSources(10).offsets).toEqual(cvSources(127).offsets);
 	});
 
 	it('does not call a mod cable a cycle', () => {

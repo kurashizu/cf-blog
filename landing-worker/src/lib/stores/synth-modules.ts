@@ -1,6 +1,7 @@
 import { macroPorts, MACRO_TYPE, type MacroDef } from './macros';
 import type { PortSpec, PortRole } from './graph-model';
 import type { NoteDurationDiv } from '../track-data';
+import { BODY_IRS } from '../audio/body-irs';
 
 /**
  * The module catalogue for the patch bay.
@@ -1437,10 +1438,13 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   print a frequency that is not one. So the difference stays, said out
 			   loud here rather than left for the next reader to find as drift. */
 			{ key: 'modeHz', label: 'BASE', min: 20, max: 8000, step: 1, def: 200, unit: 'Hz', scale: 'log' },
-			{ key: 'mode1', label: 'R1', min: 1, max: 8, step: 0.01, def: 1, field: true },
-			{ key: 'mode2', label: 'R2', min: 1, max: 8, step: 0.01, def: 2.4, field: true },
-			{ key: 'mode3', label: 'R3', min: 1, max: 8, step: 0.01, def: 4.1, field: true },
-			{ key: 'modeQ', label: 'Q', min: 1, max: 60, step: 0.1, def: 14, scale: 'log' },
+			{ key: 'mode1', label: 'R1', min: 1, max: 16, step: 0.01, def: 1, field: true },
+			{ key: 'mode2', label: 'R2', min: 1, max: 16, step: 0.01, def: 2.4, field: true },
+			{ key: 'mode3', label: 'R3', min: 1, max: 16, step: 0.01, def: 4.1, field: true },
+			/* To 16 and 200: a tuned bar's third mode sits nine or ten times over its
+			   note, and a vibraphone rings for many seconds -- at 8 and 60 neither
+			   could be said. */
+			{ key: 'modeQ', label: 'Q', min: 1, max: 200, step: 0.1, def: 14, scale: 'log' },
 			{ key: 'modeMix', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true }
 		]
 	},
@@ -1468,6 +1472,35 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   summed into the reverb's input. A space you cannot set the amount of
 			   is a space you cannot use. */
 			{ key: 'spaceMix', label: 'MIX', min: 0, max: 100, step: 1, def: 30, unit: '%', field: true }
+		]
+	},
+	{
+		/* A body, measured: the sound convolved with the response of an
+		 * instrument's wood and air, taken from recordings (see body-irs.ts).
+		 *
+		 * The resonances that make a bowed sawtooth a violin are dozens of
+		 * peaks and dips a few EQs cannot draw, and a vibrato moves every
+		 * partial across them -- which is most of what a listener hears as
+		 * wood rather than a synthesizer. SPACE is the room around the
+		 * instrument; this is the instrument. */
+		id: 'ir',
+		label: 'IR',
+		group: 'RESONATE',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.ir',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [
+			{
+				key: 'irBody',
+				label: 'BODY',
+				min: 0,
+				max: BODY_IRS.length - 1,
+				step: 1,
+				def: 0,
+				choices: BODY_IRS.map((b) => b.label)
+			},
+			{ key: 'irMix', label: 'MIX', min: 0, max: 100, step: 1, def: 100, unit: '%', field: true }
 		]
 	},
 	{
