@@ -168,7 +168,16 @@ describe('patch-bay presets', () => {
 		/* Nor DRAWBAR ORGAN, whose rotating speaker moves its pitch and level
 		   several times a second on purpose -- the same reason VIBRAPHONE's
 		   motor is excused. */
-		const inharmonic = new Set(['VIBRAPHONE', 'MARIMBA', 'FULL STRING', 'PIZZ', 'DRAWBAR ORGAN']);
+		/* Nor HARPSICHORD, whose two 8' choirs a cent apart and a 4' above them
+		   beat against each other, as a harpsichord's do. */
+		const inharmonic = new Set([
+			'VIBRAPHONE',
+			'MARIMBA',
+			'FULL STRING',
+			'PIZZ',
+			'DRAWBAR ORGAN',
+			'HARPSICHORD'
+		]);
 		for (const r of reads.filter((r) => !inharmonic.has(r.name)))
 			/* 18: the defects this guards read -0.8 dB (FLUTE's hiss) and 1.7 dB, and
 			   the Iowa flute recordings read 27 to 33 on this same bench. A flute

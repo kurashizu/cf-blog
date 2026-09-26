@@ -596,14 +596,14 @@ const SECTION: [number, number, number, number][] = [
 	[4, 5.5, 1.00463, 0.2]
 ];
 
-/* The drawbars a jazz organ is registered with, 888642000 less the top:
+/* The drawbars, as tuned by ear against Hammond recordings: 16' 8' 5 1/3'
+   and 2 2/3' (roughly 86 7 0 2 4 on the bars; the 4' came out at nothing).
    id, footage as a multiple of the key (16' is half), level. */
 const DRAWBARS: [string, number, number][] = [
-	['16', 0.5, 0.8],
-	['8', 1, 0.8],
-	['5', 1.5, 0.6],
-	['4', 2, 0.4],
-	['3', 3, 0.2]
+	['16', 0.5, 0.65],
+	['8', 1, 0.57],
+	['5', 1.5, 0.17],
+	['3', 3, 0.33]
 ];
 
 /* A section plucking together, which it never quite does: id, tuning
@@ -1168,15 +1168,16 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	},
 	{
 		/* A tonewheel organ through a rotating speaker, which is what the
-		   sound is: drawbars 16' 8' 5 1/3' 4' 2 2/3' (8 8 6 4 2), the third
-		   harmonic's percussion ringing out over the first quarter second, the
-		   key contacts' click, a little overdrive, and the Leslie -- a horn
-		   above 800 Hz and a drum below, each spinning (6.7 and 5.9 Hz) so the
-		   sound swings in level and pitch and across the room.
+		   sound is: four drawbars (DRAWBARS), the third harmonic's percussion
+		   ringing out over the first tenth of a second, the key contacts'
+		   click, and the Leslie -- a horn above 800 Hz and a drum below, each
+		   spinning (6.7 and 5.9 Hz) so the sound swings in level and pitch and
+		   across the room.
 
 		   The four sines this replaces were heard as a dial tone; everything
 		   a listener knows a Hammond by -- the click, the percussion, the
-		   rotor -- was missing. */
+		   rotor -- was missing. Tuned by ear (tools/ear) on held chords under
+		   a melody: Hammond organ 0.75, where Hammond recordings read 0.8. */
 		name: 'DRAWBAR ORGAN',
 		category: 'ORGAN',
 		kind: 'AC',
@@ -1207,28 +1208,27 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['rp', 'const', { kind: 6, value: 3 }],
 					['xp', 'mul'],
 					['wp', 'osc', { wave: 0 }],
-					['pe', 'env', { envA: 0.001, envD: 0.25, envS: 0, envR: 0.05, envCurve: 1 }],
+					['pe', 'env', { envA: 0.001, envD: 0.11, envS: 0, envR: 0.05, envCurve: 1 }],
 					['pv', 'vca', { gain: 100 }],
-					['pg', 'gain', { level: 0.5 }],
+					['pg', 'gain', { level: 0.65 }],
 					// The key contacts closing: a few milliseconds of bright noise.
 					['ck', 'noise'],
 					['ce', 'env', { envA: 0.0005, envD: 0.006, envS: 0, envR: 0.004, envCurve: 1 }],
 					['cv', 'vca', { gain: 100 }],
 					['cf', 'filter', { type: 2, cutoff: 2500, q: 0.7 }],
-					['cg', 'gain', { level: 0.15 }],
+					['cg', 'gain', { level: 0.08 }],
 					['tone', 'sum'],
 					['ke', 'env', { envA: 0.004, envD: 0.01, envS: 100, envR: 0.03 }],
 					['key', 'vca', { gain: 100 }],
-					['od', 'shape', { shapeKind: 0, shapeDrive: 30 }],
 					// The Leslie: horn and drum, each a moving delay (pitch) and a moving level.
 					['hp', 'filter', { type: 1, cutoff: 800, q: 0.7 }],
 					['lp', 'filter', { type: 0, cutoff: 800, q: 0.7 }],
-					['hr', 'lfo', { lfoWave: 0, lfoRate: 6.7, lfoAmt: 0.05 }],
+					['hr', 'lfo', { lfoWave: 0, lfoRate: 6.7, lfoAmt: 0.024 }],
 					['dr', 'lfo', { lfoWave: 0, lfoRate: 5.9, lfoAmt: 0.08 }],
 					['hd', 'delay', { delayTime: 0.001 }],
 					['dd', 'delay', { delayTime: 0.0015 }],
-					['ha', 'lfo', { lfoWave: 0, lfoRate: 6.7, lfoAmt: 40 }],
-					['da', 'lfo', { lfoWave: 0, lfoRate: 5.9, lfoAmt: 20 }],
+					['ha', 'lfo', { lfoWave: 0, lfoRate: 6.7, lfoAmt: 22 }],
+					['da', 'lfo', { lfoWave: 0, lfoRate: 5.9, lfoAmt: 9 }],
 					['one', 'const', { kind: 6, value: 1 }],
 					['hal', 'add'],
 					['dal', 'add'],
@@ -1237,8 +1237,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['hpn', 'pan', { panPos: 0.4 }],
 					['dpn', 'pan', { panPos: -0.25 }],
 					['les', 'sum'],
-					['lvl', 'gain', { level: 0.6 }],
-					['cab', 'space', { spaceSize: 22, spaceDecay: 40, spaceMix: 18 }]
+					['lvl', 'gain', { level: 0.5 }],
+					['cab', 'space', { spaceSize: 22, spaceDecay: 40, spaceMix: 24 }]
 				],
 				[
 					'entry.pitch>pf:a',
@@ -1263,10 +1263,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'pg>tone',
 					'tone>key',
 					'ke>key:level',
-					'key>od',
-					'cg>od',
-					'od>hp',
-					'od>lp',
+					'key>hp',
+					'key>lp',
+					'cg>hp',
+					'cg>lp',
 					'hp>hd',
 					'lp>dd',
 					'hr.cv>hd:delayTime',
@@ -1469,32 +1469,50 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   short and hard, so the string starts with every harmonic it has;
 			   long strings in the bass, 6 s to 1.5 s; a damper that stops the
 			   note at once, and the jack's click as it drops (REL). The
-			   soundboard is a measured wooden body (IR); the room is small.
+			   soundboard is the measured piano board (IR: PNO) -- a board is a
+			   board; a violin family body, tried first, radiates nothing under
+			   250 Hz, and the harpsichord's weight is all down there. The room
+			   is small.
 
-			   The string-and-drive it replaces was heard as a cowbell. */
+			   The string-and-drive it replaces was heard as a cowbell. Voiced
+			   (tools/ear) against the VCSL Flemish harpsichord (CC0): its notes
+			   band by band, then its notes playing the very passage this plays
+			   -- Harpsichord 0.38 to an AudioSet model, where the recording
+			   reads 0.87. */
 			...patch(
 				[
 					['fq', 'tofreq'],
-					['dk', 'const', { kind: 6, value: 1.0006 }],
+					['dk', 'const', { kind: 6, value: 1.00058 }],
 					['f2', 'mul'],
 					['ok', 'const', { kind: 6, value: 2 }],
 					['f4', 'mul'],
-					['qul', 'excite', { hardness: 90, exLength: 1.2, exTone: 7000 }],
-					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 6, outHi: 1.5 }],
+					/* The pluck: the string pushed aside and let go -- a step,
+					   rising over 3 ms and let go over 85, so the harmonics fall
+					   as 1/n from a strong fundamental. A click alone (EXCITE) carried none of the low
+					   end, the strings sounded only their top, and it was heard as
+					   a ringtone. The click stays, quieter: the quill's own tick. */
+					['one', 'const', { kind: 6, value: 1 }],
+					['dc', 'tosig'],
+					['pe', 'env', { envA: 0.0032, envD: 0.085, envS: 0, envR: 0.001, envCurve: 0 }],
+					['pls', 'gain', { level: 0 }],
+					['qul', 'excite', { hardness: 95, exLength: 1.2, exTone: 9800 }],
+					['qg', 'gain', { level: 0.83 }],
+					['pluck', 'sum'],
+					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 19.6, outHi: 0.5 }],
 					['d4k', 'const', { kind: 6, value: 0.6 }],
 					['dec4', 'mul'],
-					['s1', 'wire', { wireDecay: 4, wireDamp: 12, wireStiff: 6, wirePos: 8 }],
-					['s2', 'wire', { wireDecay: 4, wireDamp: 12, wireStiff: 6, wirePos: 9 }],
-					['s4', 'wire', { wireDecay: 2, wireDamp: 16, wireStiff: 8, wirePos: 11 }],
-					['g4', 'gain', { level: 0.45 }],
+					['s1', 'wire', { wireDecay: 4, wireDamp: 1.1, wireStiff: 27, wirePos: 16 }],
+					['s2', 'wire', { wireDecay: 4, wireDamp: 1.1, wireStiff: 27, wirePos: 16 }],
+					['s4', 'wire', { wireDecay: 2, wireDamp: 3, wireStiff: 8, wirePos: 11 }],
+					['g4', 'gain', { level: 0.4 }],
 					['strs', 'sum'],
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.07 }],
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.21 }],
 					['dv', 'vca', { gain: 100 }],
-					['board', 'ir', { irBody: 1, irMix: 60 }],
+					['board', 'ir', { irBody: 8, irMix: 24 }],
 					['jack', 'excite', { hardness: 60, exLength: 6, exTone: 1800 }],
-					['jg', 'gain', { level: 0.08 }],
+					['jg', 'gain', { level: 0.063 }],
 					['outRel', 'out'],
-					['rm', 'space', { spaceSize: 35, spaceDecay: 35, spaceMix: 14 }]
+					['rm', 'space', { spaceSize: 35, spaceDecay: 35, spaceMix: 40 }]
 				],
 				[
 					'entry.pitch>fq:a',
@@ -1511,9 +1529,15 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'dec>s1:wireDecay',
 					'dec>s2:wireDecay',
 					'dec4>s4:wireDecay',
-					'qul>s1',
-					'qul>s2',
-					'qul>s4',
+					'one>dc:level',
+					'dc>pls',
+					'pe>pls:level',
+					'qul>qg',
+					'pls>pluck',
+					'qg>pluck',
+					'pluck>s1',
+					'pluck>s2',
+					'pluck>s4',
 					's1>strs',
 					's2>strs',
 					's4>g4',
@@ -1811,25 +1835,68 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.06,
 			ampSustain: 0,
 			ampRelease: 0.03,
-			/* Pulled with the side of a finger, not picked: soft and slow, so the
-			   attack is long and dull. The COMP is the one an upright always goes
-			   through on a record, and it is what makes the note bloom after the
-			   pluck rather than just decay. */
+			/* Pulled with the side of a finger: a soft, slow pluck, so the
+			   attack is round; the finger leaving the string is a short snap
+			   of noise; one string, heavily damped above its first partials,
+			   ringing a few seconds in the low register. The body is measured
+			   from the VSCO double bass's own pizzicato (IR: BPZ) -- the wood a
+			   string-and-EQ model could not draw, which is what had it heard as
+			   a synth bass. The hand comes down at the key's release; the COMP
+			   is the one an upright always goes through on a record. */
 			...patch(
 				[
-					['fin', 'excite', { hardness: 18, exLength: 22, exTone: 1100 }],
+					['fq', 'tofreq'],
+					/* The finger pushing the string aside and letting go: a
+					   displacement, a step rather than a tap -- rising over 26 ms
+					   and let go over 130 -- which is where the note's low
+					   fundamental comes from (a step falls as 1/n, a tap is flat). EXCITE's click alone has
+					   no low end -- the string sounded only its top, 30 dB short
+					   at the fundamental, and read as a guitar. */
+					['one', 'const', { kind: 6, value: 1 }],
+					['dc', 'tosig'],
+					['fe', 'env', { envA: 0.026, envD: 0.127, envS: 0, envR: 0.004, envCurve: 0 }],
+					['fin', 'gain', { level: 0 }],
+					['flp', 'filter', { type: 0, cutoff: 930, q: 0.5 }],
+					['pv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.5, outHi: 1.6 }],
+					['pg', 'gain', { level: 1 }],
+					['snp', 'noise'],
+					['sne', 'env', { envA: 0.0005, envD: 0.03, envS: 0, envR: 0.01, envCurve: 1 }],
+					['snv', 'vca', { gain: 100 }],
+					['sng', 'gain', { level: 0.07 }],
+					['dec', 'map', { shape: 9, inLo: 84, inHi: 48, outLo: 0.63, outHi: 4.9 }],
+					['str', 'wire', { wireDecay: 3, wireDamp: 90, wireStiff: 20, wirePos: 42 }],
 					['ex', 'sum'],
-					['str', 'string', { decayTime: 3, damping: 52, stiffness: 3 }],
-					/* The player's hand coming down on the string: the note rings
-					   while the key is held and stops in a tenth of a second when it
-					   is not. Without it every note rang its whole three-second
-					   DCAY after the key was up. */
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.12 }],
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.25 }],
 					['dv', 'vca', { gain: 100 }],
-					['bod', 'body', { bodySize: 88, bodyDepth: 60, bodyMix: 60 }],
-					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }]
+					['bod', 'ir', { irBody: 7, irMix: 68 }],
+					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }],
+					['rm', 'space', { spaceSize: 30, spaceDecay: 30, spaceMix: 10 }]
 				],
-				['fin>ex', 'ex>str', 'str>dv', 'dmp>dv:level', 'dv>bod', 'bod>cmp', 'cmp>output'],
+				[
+					'entry.pitch>fq:a',
+					'entry.vel>pv:a',
+					'one>dc:level',
+					'dc>fin',
+					'fe>fin:level',
+					'fin>flp',
+					'flp>pg',
+					'pv>pg:level',
+					'pg>str',
+					'fq>str:pitch',
+					'entry.note>dec:a',
+					'dec>str:wireDecay',
+					'snp>snv',
+					'sne>snv:level',
+					'snv>sng',
+					'str>ex',
+					'sng>ex',
+					'ex>dv',
+					'dmp>dv:level',
+					'dv>bod',
+					'bod>cmp',
+					'cmp>rm',
+					'rm>output'
+				],
 				48
 			)
 		})
