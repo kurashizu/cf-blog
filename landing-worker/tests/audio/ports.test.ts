@@ -2296,10 +2296,10 @@ describe('the shipped ADV presets', () => {
 			}
 		}
 		expect(bad).toEqual([]);
-		/* Three still carry one -- the strings, the bass and the winds went to
-		   bodies measured from recordings (IR) -- so a rule that matched nothing
-		   would be green for the wrong reason. */
-		expect(bodies, 'the catalogue still has expanded bodies in it').toBeGreaterThanOrEqual(3);
+		/* One still carries one -- the strings, the bass, the winds and the
+		   zithers went to bodies measured from recordings (IR) -- so a rule
+		   that matched nothing would be green for the wrong reason. */
+		expect(bodies, 'the catalogue still has expanded bodies in it').toBeGreaterThanOrEqual(1);
 	});
 
 	it('keeps the per-leg balance each MIX was voiced with', () => {

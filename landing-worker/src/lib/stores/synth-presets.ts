@@ -1,3 +1,4 @@
+import { BODY_IRS } from '../audio/body-irs';
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { playSound } from '../sound';
@@ -615,6 +616,13 @@ const PIZZ_PLAYERS: [number, number, number, number][] = [
 	[4, 1.0012, 0.031, 0.2]
 ];
 
+/** A measured body (IR) by its label, so adding one never moves another. */
+function body(label: string): number {
+	const i = BODY_IRS.findIndex((b) => b.label === label);
+	if (i < 0) throw new Error(`no measured body "${label}"`);
+	return i;
+}
+
 const OSC_WAVE_NAMES = ['sine', 'square', 'sawtooth', 'triangle'];
 
 function patch(
@@ -1018,38 +1026,52 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.4,
 			ampSustain: 0,
 			ampRelease: 0.3,
-			/* Pluck -> string -> the bridge -> the paulownia box. The comb is the
-			   koto's signature: a short delay at the bridge gives the nasal buzz
-			   that a plain string-into-body cannot make. */
+			/* A long zither plucked with a pick on the thumb: the string pushed
+			   aside and let go (a step, so the fundamental is there), the pick's
+			   tick on top, one string a note, and the board measured from the
+			   VCSL dan tranh, the koto's Vietnamese cousin (IR: ZIT). The comb
+			   and body composite it replaces were heard as a ukulele. */
 			...patch(
 				[
-					['pk', 'excite', { hardness: 72, exLength: 3, exTone: 5200 }],
-					['ex', 'sum'],
-					['str', 'string', { decayTime: 1.8, damping: 26, stiffness: 55 }],
-					/* The bridge, as the comb it always was: a short delay fed back on
-					   itself. COMB was one card with a position and a depth; this is
-					   the same thing said in primitives, and the amount going round
-					   is a GAIN the patch can see. 1.7 ms is the 14% position on a
-					   12 ms scale, which is what COMBPOS meant. */
-					['bsum', 'sum'],
-					['bdly', 'delay', { delayTime: 0.0017 }],
-					['bsnd', 'fbsend', { bus: 0 }],
-					['brtn', 'fbrtn', { bus: 0 }],
-					['bfb', 'gain', { level: 0.45 }],
-					['bod', 'body', { bodySize: 40, bodyDepth: 45, bodyMix: 50 }]
+					['fq', 'tofreq'],
+					['one', 'const', { kind: 6, value: 1 }],
+					['dc', 'tosig'],
+					['pe', 'env', { envA: 0.0003, envD: 0.0136, envS: 0, envR: 0.001, envCurve: 0 }],
+					['pls', 'gain', { level: 0 }],
+					['pick', 'excite', { hardness: 85, exLength: 1, exTone: 5900 }],
+					['pkg', 'gain', { level: 0.78 }],
+					['pv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.4, outHi: 1.4 }],
+					['pg', 'gain', { level: 1 }],
+					['pluck', 'sum'],
+					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 9.2, outHi: 0.95 }],
+					['str', 'wire', { wireDecay: 3, wireDamp: 19, wireStiff: 12, wirePos: 16 }],
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.95 }],
+					['dv', 'vca', { gain: 100 }],
+					['bod', 'ir', { irBody: body('ZIT'), irMix: 73 }],
+					['rm', 'space', { spaceSize: 35, spaceDecay: 40, spaceMix: 30 }]
 				],
 				[
-					'pk>ex',
-					'ex>str',
-					'str>bsum',
-					'bsum>bdly',
-					'bdly>bsnd',
-					'brtn>bfb',
-					'bfb>bsum',
-					'bdly>bod',
-					'bod>output'
+					'entry.pitch>fq:a',
+					'one>dc:level',
+					'dc>pls',
+					'pe>pls:level',
+					'pick>pkg',
+					'pls>pluck',
+					'pkg>pluck',
+					'entry.vel>pv:a',
+					'pluck>pg',
+					'pv>pg:level',
+					'pg>str',
+					'fq>str:pitch',
+					'entry.note>dec:a',
+					'dec>str:wireDecay',
+					'str>dv',
+					'dmp>dv:level',
+					'dv>bod',
+					'bod>rm',
+					'rm>output'
 				],
-				33
+				40
 			)
 		})
 	},
@@ -1077,14 +1099,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   fundamental rather than colouring everything the bar does. */
 			...patch(
 				[
-					['mal', 'excite', { hardness: 30, exLength: 11, exTone: 2200 }],
+					['mal', 'excite', { hardness: 44, exLength: 20, exTone: 590 }],
 					['ex', 'sum'],
 					/* R3 was 9.2, which the old composite allowed and MODES does not --
 					   its ratios stop at 8. Clamped to the top of the range rather
 					   than re-voiced: 8 is still an inharmonic partial well clear of
 					   the 3.9 below it, which is what a struck bar wants. */
-					['bar', 'modes', { mode1: 1, mode2: 3.9, mode3: 8, modeQ: 22 }],
-					['tub', 'tube', { tubeDecay: 0.5, tubeDamp: 55, tubeOdd: 1 }],
+					['bar', 'modes', { mode1: 1, mode2: 3.85, mode3: 8.05, modeQ: 22.4 }],
+					['tub', 'tube', { tubeDecay: 3, tubeDamp: 94, tubeOdd: 1 }],
 					['mx', 'mix', { mixA: 100, mixB: 38 }],
 					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
 				],
@@ -1313,34 +1335,34 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampRelease: 1.4,
 			...patch(
 				[
-					['mal', 'excite', { hardness: 45, exLength: 3, exTone: 6000 }],
+					['mal', 'excite', { hardness: 33, exLength: 3.7, exTone: 7400 }],
 					['ex', 'sum'],
 					/* A tuned bar: its overtones are filed to two octaves and a
 					   little over three above the note (1 : 3.98 : 9.13), which is
 					   what makes it sound pitched where a free bar clangs. */
-					['bar', 'modes', { mode1: 1, mode2: 3.98, mode3: 9.13, modeQ: 150, modeMix: 100 }],
+					['bar', 'modes', { mode1: 1, mode2: 3.92, mode3: 9.93, modeQ: 56, modeMix: 100 }],
 					/* The mallet's brightness: the same overtones struck again
 					   with a low Q, so they flash and are gone in a third of a
 					   second -- harder the blow, more of it. */
-					['shn', 'modes', { mode1: 3.98, mode2: 9.13, mode3: 13.4, modeQ: 10, modeMix: 100 }],
-					['sv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.1, outHi: 0.9 }],
+					['shn', 'modes', { mode1: 3.98, mode2: 9.13, mode3: 13.4, modeQ: 8.6, modeMix: 100 }],
+					['sv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.1, outHi: 1.41 }],
 					['sg', 'gain', { level: 0 }],
 					// The tick of the mallet itself.
 					['tk', 'filter', { type: 1, cutoff: 2500, q: 0.7 }],
-					['tg', 'gain', { level: 0.12 }],
+					['tg', 'gain', { level: 0.044 }],
 					['sum', 'sum'],
 					/* The motor: fans over the resonator tubes swing the level
 					   between 0.65 and 1.35, five times a second. It was the LFO
 					   straight into the level, which swung it through zero -- a
 					   ring modulator, not a tremolo. */
-					['fan', 'lfo', { lfoWave: 0, lfoRate: 5, lfoAmt: 35 }],
+					['fan', 'lfo', { lfoWave: 0, lfoRate: 5, lfoAmt: 20 }],
 					['one', 'const', { kind: 6, value: 1 }],
 					['fa', 'add'],
 					['trm', 'gain', { level: 1 }],
 					// The damper bar, on the key: the bars ring while it is held.
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.5 }],
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.63 }],
 					['dv', 'vca', { gain: 100 }],
-					['rm', 'space', { spaceSize: 45, spaceDecay: 45, spaceMix: 20 }]
+					['rm', 'space', { spaceSize: 45, spaceDecay: 45, spaceMix: 38 }]
 				],
 				[
 					'mal>ex',
@@ -1368,11 +1390,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		})
 	},
 	{
-		/* Two strings a fifth apart struck as one, the way a hammered dulcimer
-		   is strung in courses. RING multiplies them rather than adding, which
-		   makes the sum and difference tones a struck metal course actually
-		   has -- adding them would just be two notes. Blended back against the
-		   plain pair so it reads as an instrument, not an effect. */
+		// A course of two strings under a hammer, on a measured board.
 		name: 'DULCIMER',
 		category: 'PLUCK',
 		kind: 'AC',
@@ -1386,35 +1404,63 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 1.6,
 			ampSustain: 0,
 			ampRelease: 0.9,
+			/* A hammered dulcimer: a light hammer on a course of two strings a
+			   few cents apart, which beat -- the shimmer the instrument is known
+			   by -- a short, hard step and the hammer's tick, and the board
+			   measured from the VCSL psaltery, its plucked cousin (IR: PSL).
+			   The strings ring on; the player seldom damps them. */
 			...patch(
 				[
-					['ham', 'excite', { hardness: 78, exLength: 3, exTone: 6400 }],
-					['ex', 'sum'],
-					['c1', 'string', { decayTime: 2.4, damping: 18, stiffness: 40 }],
-					['c2', 'string', { decayTime: 2.1, damping: 22, stiffness: 46 }],
-					/* DPTH was 110 on a knob that now stops at 100. The old composite
-					   had no ceiling; full depth is what it meant. */
-					['rg', 'ring', { ringDepth: 100 }],
-					['sm', 'sum'],
-					['smg', 'vca', { gain: 130 }],
-					['bod', 'body', { bodySize: 52, bodyDepth: 55, bodyMix: 58 }]
+					['fq', 'tofreq'],
+					['dk', 'const', { kind: 6, value: 1.0008 }],
+					['f2', 'mul'],
+					['one', 'const', { kind: 6, value: 1 }],
+					['dc', 'tosig'],
+					['pe', 'env', { envA: 0.002, envD: 0.0021, envS: 0, envR: 0.001, envCurve: 0 }],
+					['pls', 'gain', { level: 0 }],
+					['ham', 'excite', { hardness: 78, exLength: 2, exTone: 2330 }],
+					['hg', 'gain', { level: 1.95 }],
+					['pv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.4, outHi: 1.4 }],
+					['pg', 'gain', { level: 1 }],
+					['strike', 'sum'],
+					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 9, outHi: 0.63 }],
+					['c1', 'wire', { wireDecay: 4, wireDamp: 5, wireStiff: 12, wirePos: 21 }],
+					['c2', 'wire', { wireDecay: 4, wireDamp: 5, wireStiff: 12, wirePos: 21 }],
+					['crs', 'sum'],
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 1.2 }],
+					['dv', 'vca', { gain: 100 }],
+					['bod', 'ir', { irBody: body('PSL'), irMix: 77 }],
+					['rm', 'space', { spaceSize: 40, spaceDecay: 45, spaceMix: 30 }]
 				],
 				[
-					'ham>ex',
-					'ex>c1',
-					'ex>c2',
-					'c1>rg',
-					'c2>rg:b',
-					/* Two cables into SUM's one inlet, which is how addition is said
-					   here -- the `:b` this used to name was MIX's second leg and
-					   SUM has no such port. */
-					'c1>sm',
-					'rg>sm',
-					'sm>smg',
-					'smg>bod',
-					'bod>output'
+					'entry.pitch>fq:a',
+					'fq>f2:a',
+					'dk>f2:b',
+					'one>dc:level',
+					'dc>pls',
+					'pe>pls:level',
+					'ham>hg',
+					'pls>strike',
+					'hg>strike',
+					'entry.vel>pv:a',
+					'strike>pg',
+					'pv>pg:level',
+					'pg>c1',
+					'pg>c2',
+					'fq>c1:pitch',
+					'f2>c2:pitch',
+					'entry.note>dec:a',
+					'dec>c1:wireDecay',
+					'dec>c2:wireDecay',
+					'c1>crs',
+					'c2>crs',
+					'crs>dv',
+					'dmp>dv:level',
+					'dv>bod',
+					'bod>rm',
+					'rm>output'
 				],
-				14
+				40
 			)
 		})
 	},
@@ -1508,7 +1554,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['strs', 'sum'],
 					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.21 }],
 					['dv', 'vca', { gain: 100 }],
-					['board', 'ir', { irBody: 8, irMix: 24 }],
+					['board', 'ir', { irBody: body('PNO'), irMix: 24 }],
 					['jack', 'excite', { hardness: 60, exLength: 6, exTone: 1800 }],
 					['jg', 'gain', { level: 0.063 }],
 					['outRel', 'out'],
@@ -1868,7 +1914,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['ex', 'sum'],
 					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.25 }],
 					['dv', 'vca', { gain: 100 }],
-					['bod', 'ir', { irBody: 7, irMix: 68 }],
+					['bod', 'ir', { irBody: body('BPZ'), irMix: 68 }],
 					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }],
 					['rm', 'space', { spaceSize: 30, spaceDecay: 30, spaceMix: 10 }]
 				],
@@ -1953,8 +1999,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['sec', 'sum'],
 					/* The bodies, measured (IR): violins above G3, cellos below, a
 					   fifth's crossfade between. */
-					['vln', 'ir', { irBody: 0, irMix: 55 }],
-					['cel', 'ir', { irBody: 2 }],
+					['vln', 'ir', { irBody: body('VLN'), irMix: 55 }],
+					['cel', 'ir', { irBody: body('CELL') }],
 					['mv', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 0, outHi: 1 }],
 					['mc', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 1, outHi: 0 }],
 					['gv', 'gain', { level: 0 }],
@@ -2062,8 +2108,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['strs', 'sum'],
 					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.035 }],
 					['dv', 'vca', { gain: 100 }],
-					['vln', 'ir', { irBody: 5, irMix: 59 }],
-					['cel', 'ir', { irBody: 6, irMix: 59 }],
+					['vln', 'ir', { irBody: body('VPZ'), irMix: 59 }],
+					['cel', 'ir', { irBody: body('CPZ'), irMix: 59 }],
 					['mv', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 0, outHi: 1 }],
 					['mc', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 1, outHi: 0 }],
 					['gv', 'gain', { level: 0 }],
@@ -2158,7 +2204,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['da', 'add'],
 					['fv', 'mul'],
 					['reed', 'osc', { wave: 1 }],
-					['bore', 'ir', { irBody: 3, irMix: 79 }],
+					['bore', 'ir', { irBody: body('CLAR'), irMix: 79 }],
 					['air', 'noise'],
 					['k3', 'const', { kind: 6, value: 4.3 }],
 					['f3', 'mul'],
