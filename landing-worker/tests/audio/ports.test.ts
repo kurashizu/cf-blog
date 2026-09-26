@@ -2111,6 +2111,8 @@ describe('the shipped ADV presets', () => {
 		   still failing if `patch()` goes back to returning `{}` wholesale --
 		   which is the state this whole migration is climbing out of. */
 		expect(EMITTING.length, 'presets emitting a graph').toBeGreaterThanOrEqual(5);
+		/* Thirteen: PAN FLUTE went (it was FLUTE again with other numbers), and
+		   the string section became two, bowed and plucked. */
 		expect(EMITTING.length + HELD_BACK.size, 'every ADV preset is one or the other').toBe(13);
 	});
 
@@ -2220,7 +2222,8 @@ describe('the shipped ADV presets', () => {
 		   Six is ENTRY, OUT, the injected trim and three modules, which is smaller
 		   than any real patch here. The top was 60 until PIANO became the grand
 		   piano: 87 nodes once its macros are flattened (three strings, the case,
-		   their terminals, the hammer, the damper and the shared board), so 100.
+		   their terminals, the hammer, the damper and the shared board), so 100
+		   -- and 130 once it gained the knock a recording is full of (104).
 
 		   Every graph also has to reach OUT. `patch()` routes everything addressed
 		   to `output` through the injected trim, so the cable that actually lands
@@ -2230,7 +2233,7 @@ describe('the shipped ADV presets', () => {
 		const bad: string[] = [];
 		for (const p of EMITTING) {
 			const g = graphOf(p)!;
-			if (g.nodes.length < 6 || g.nodes.length > 100)
+			if (g.nodes.length < 6 || g.nodes.length > 130)
 				bad.push(`${p.name}: ${g.nodes.length} nodes is not a plausible patch`);
 			if (g.cables.length < g.nodes.length - 2)
 				bad.push(`${p.name}: ${g.cables.length} cables for ${g.nodes.length} nodes`);
@@ -2332,7 +2335,9 @@ describe('the shipped ADV presets', () => {
 				if (a !== b) varied.push(`${p.name}:${base}`);
 			}
 		}
-		expect(mixes, 'the catalogue still has expanded mixes in it').toBeGreaterThanOrEqual(2);
+		/* One since FLUTE was rebuilt from the recordings as partials and no
+		   longer mixes its breath in through a MIX. */
+		expect(mixes, 'the catalogue still has expanded mixes in it').toBeGreaterThanOrEqual(1);
 		expect(
 			varied.length,
 			'at least one MIX is voiced with its legs at different levels'

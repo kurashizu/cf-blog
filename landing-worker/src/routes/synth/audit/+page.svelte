@@ -50,6 +50,7 @@
 	} from '$lib/stores/synth-graph';
 	import { createResolver } from '$lib/stores/node-graph';
 	import { pickTimbre, isPresetFile } from '$lib/stores/synth-presets';
+	import { grandPiano } from '$lib/stores/grand-piano';
 
 	type Result = {
 		ok: boolean;
@@ -646,6 +647,8 @@
 			liveDsp: { ensureLiveDsp, createLiveDsp },
 			// The shipped presets and kits, for tests that play them as the app would.
 			presets: { SOUND_PRESETS, BUILTIN_KITS },
+			// The piano's builder, so it can be voiced with numbers changed and rendered.
+			grandPiano,
 			// The live engine itself, for driving a realtime context the way a key does.
 			engine: modularSynth,
 			sound: soundEngine,

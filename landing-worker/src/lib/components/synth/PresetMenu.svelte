@@ -466,7 +466,7 @@
 												<span class="truncate">{p.name}</span>
 												<!-- Says which of the synth's two instruments this is, since the
 												     patch bay only sounds in ADV and picking one switches the mode. -->
-												{#if p.preset.rackChain?.length}
+												{#if p.preset.rackChain?.length || p.preset.rackGraph?.nodes?.length}
 													<span
 														class="shrink-0 ml-auto text-[8px] font-black tracking-wide {$soundPresetIdx ===
 														idx

@@ -364,7 +364,8 @@ export default {
 			'Single drum sounds; put one on a key in percussion mode, or on a whole track',
 		'synthPanels.presets.hintKeyboard': 'Keyboards: pianos, electric pianos, clavs',
 		'synthPanels.presets.hintOrgan': 'Drawbars and tonewheels',
-		'synthPanels.presets.hintString': 'Bowed and blown sustains',
+		'synthPanels.presets.hintString': 'String section, bowed and plucked',
+		'synthPanels.presets.hintWind': 'Flutes and reeds: breath through a bore',
 		'synthPanels.presets.hintMallet': 'Struck bars, bells and metal',
 		'synthPanels.presets.hintFx': 'Noise, sweeps and textures',
 
@@ -653,7 +654,8 @@ export default {
 		'synthPanels.presets.hintDrums': '单个鼓声音色；可在打击乐模式下放到某个按键，也可放到整条音轨',
 		'synthPanels.presets.hintKeyboard': '键盘：钢琴、电钢、克拉维',
 		'synthPanels.presets.hintOrgan': '抽拉音栓与音轮',
-		'synthPanels.presets.hintString': '弓弦与吹奏的持续音',
+		'synthPanels.presets.hintString': '弦乐组：拉弦与拨弦',
+		'synthPanels.presets.hintWind': '笛与簧管：气流吹过管腔',
 		'synthPanels.presets.hintMallet': '敲击的音条、钟与金属',
 		'synthPanels.presets.hintFx': '噪声、扫频与音效',
 
@@ -943,7 +945,8 @@ export default {
 		'synthPanels.presets.hintDrums': '單一鼓聲音色；可在打擊樂模式下放到某個按鍵，也可放到整條音軌',
 		'synthPanels.presets.hintKeyboard': '鍵盤：鋼琴、電鋼、克拉維',
 		'synthPanels.presets.hintOrgan': '抽拉音栓與音輪',
-		'synthPanels.presets.hintString': '弓弦與吹奏的持續音',
+		'synthPanels.presets.hintString': '弦樂組：拉弦與撥弦',
+		'synthPanels.presets.hintWind': '笛與簧管：氣流吹過管腔',
 		'synthPanels.presets.hintMallet': '敲擊的音條、鐘與金屬',
 		'synthPanels.presets.hintFx': '雜訊、掃頻與音效',
 
@@ -1288,7 +1291,8 @@ export default {
 			'単発のドラム音。パーカッションモードでキーに割り当てるか、トラック全体に使用します',
 		'synthPanels.presets.hintKeyboard': '鍵盤楽器：ピアノ、エレピ、クラビ',
 		'synthPanels.presets.hintOrgan': 'ドローバーとトーンホイール',
-		'synthPanels.presets.hintString': '擦弦・吹奏の持続音',
+		'synthPanels.presets.hintString': '弦楽セクション：アルコとピチカート',
+		'synthPanels.presets.hintWind': '笛とリード：管を通る息',
 		'synthPanels.presets.hintMallet': '打たれるバー、ベル、金属',
 		'synthPanels.presets.hintFx': 'ノイズ、スイープ、テクスチャ',
 
@@ -1616,7 +1620,8 @@ export default {
 			'단일 드럼 사운드; 퍼커션 모드에서 키 하나에 넣거나 트랙 전체에 사용하세요',
 		'synthPanels.presets.hintKeyboard': '건반: 피아노, 일렉트릭 피아노, 클라비',
 		'synthPanels.presets.hintOrgan': '드로바와 톤휠',
-		'synthPanels.presets.hintString': '활과 숨으로 지속되는 소리',
+		'synthPanels.presets.hintString': '현악 합주: 아르코와 피치카토',
+		'synthPanels.presets.hintWind': '플루트와 리드: 관을 지나는 숨',
 		'synthPanels.presets.hintMallet': '때리는 바, 벨, 금속',
 		'synthPanels.presets.hintFx': '노이즈, 스윕, 텍스처',
 

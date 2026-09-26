@@ -47,19 +47,30 @@ import { showSaveStatus, askConfirm } from './synth-confirm';
 import { ENTRY_ID, OUTPUT_ID, startingGraph, type GraphNode, type GraphCable } from './graph-model';
 import type { MacroDef } from './macros';
 import { grandPiano } from './grand-piano';
+import { jazzKit, kit808 } from './drum-kits';
 
 const STORAGE_KEY = 'krsz-synth-presets-v1';
 const KIT_STORAGE_KEY = 'krsz-synth-kits-v1';
 const FILE_FORMAT = 'krsz-synth-preset';
 const KIT_FILE_FORMAT = 'krsz-synth-kit';
 
-/* Ten families, each of which can hold both kinds of sound: an electric one
+/* Eleven families, each of which can hold both kinds of sound: an electric one
    built by subtraction on racks 1-7, and an acoustic one built as a signal path
    in the patch bay. The pair is the point -- a LEAD is a lead whether it is a
    saw through a filter or a bowed string -- so they share a heading and `kind`
    separates them within it. */
 export type PresetCategory =
-	'LEAD' | 'PAD' | 'BASS' | 'PLUCK' | 'KEYBOARD' | 'ORGAN' | 'STRING' | 'MALLET' | 'FX' | 'DRUM';
+	| 'LEAD'
+	| 'PAD'
+	| 'BASS'
+	| 'PLUCK'
+	| 'KEYBOARD'
+	| 'ORGAN'
+	| 'STRING'
+	| 'WIND'
+	| 'MALLET'
+	| 'FX'
+	| 'DRUM';
 
 /** E = electric, built by subtraction. AC = acoustic, built as a signal path. */
 export type PresetKind = 'E' | 'AC';
@@ -134,25 +145,6 @@ export const BASE: Partial<TrackData> = {
 	airGain: 0
 };
 
-/* A one-shot: instant on, no sustain, and the legacy attack/decay/sustain/
-   release aliases kept in step with the AMP envelope so an old reader of the
-   patch agrees with a new one. */
-function hit(ampDecay: number, ampRelease: number, extra: Partial<TrackData>): Partial<TrackData> {
-	return {
-		...BASE,
-		osc2Gain: 0,
-		ampAttack: 0,
-		ampDecay,
-		ampSustain: 0,
-		ampRelease,
-		attack: 0,
-		decay: ampDecay,
-		sustain: 0,
-		release: ampRelease,
-		...extra
-	};
-}
-
 function synth(extra: Partial<TrackData>): Partial<TrackData> {
 	const p = { ...BASE, ...extra };
 	// keep the legacy aliases in step
@@ -201,7 +193,7 @@ function expandComposites(
 	nodes: [string, string, Record<string, number>?][],
 	cables: string[]
 ): { nodes: [string, string, Record<string, number>?][]; cables: string[] } {
-	const COMPOSITE = new Set(['eq', 'drive', 'lfo', 'bow', 'reed', 'comb', 'shell']);
+	const COMPOSITE = new Set(['drive', 'lfo', 'reed']);
 	if (!nodes.some(([, type]) => COMPOSITE.has(type))) return { nodes, cables };
 	const out: [string, string, Record<string, number>?][] = [];
 	const extra: string[] = [];
@@ -211,25 +203,6 @@ function expandComposites(
 	for (const [id, type, q] of nodes) {
 		const p = q ?? {};
 		switch (type) {
-			case 'eq': {
-				// type 4 is `lowshelf`, 6 `peaking`, 5 `highshelf`.
-				out.push(
-					[id, 'filter', { type: 4, cutoff: p.lowFreq ?? 200, filterGain: p.lowGain ?? 0 }],
-					[
-						`${id}_m`,
-						'filter',
-						{ type: 6, cutoff: p.midFreq ?? 1200, q: p.midQ ?? 1, filterGain: p.midGain ?? 0 }
-					],
-					[
-						`${id}_h`,
-						'filter',
-						{ type: 5, cutoff: p.highFreq ?? 5000, filterGain: p.highGain ?? 0 }
-					]
-				);
-				extra.push(`${id}>${id}_m`, `${id}_m>${id}_h`);
-				exit.set(id, `${id}_h`);
-				break;
-			}
 			case 'drive': {
 				/* SOFT is SHAPE's tanh, which is DRIVE's curve without the bias
 				   term. The bias made the harmonics even-order -- warmth rather
@@ -270,35 +243,6 @@ function expandComposites(
 				exit.set(id, `${id}_a`);
 				break;
 			}
-			case 'bow': {
-				/* A sawtooth dragged across the string, plus the scrape of rosin:
-				   noise through a highpass at twice the root. Summed, then a lowpass
-				   whose corner is how hard the bow bites. */
-				const noise = (p.bowNoise ?? 25) / 100;
-				out.push(
-					[id, 'osc', { wave: 2 }],
-					[`${id}_dg`, 'gain', { level: 1 - noise * 0.5 }],
-					[`${id}_n`, 'noise'],
-					[`${id}_hp`, 'filter', { type: 1, cutoff: 440, q: 0.7 }],
-					[`${id}_sg`, 'gain', { level: noise * 0.6 }],
-					[`${id}_s`, 'sum'],
-					[
-						`${id}_t`,
-						'filter',
-						{ type: 0, cutoff: 400 + ((p.bowPressure ?? 50) / 100) * 7000, q: 0.7 }
-					]
-				);
-				extra.push(
-					`${id}>${id}_dg`,
-					`${id}_dg>${id}_s`,
-					`${id}_n>${id}_hp`,
-					`${id}_hp>${id}_sg`,
-					`${id}_sg>${id}_s`,
-					`${id}_s>${id}_t`
-				);
-				exit.set(id, `${id}_t`);
-				break;
-			}
 			case 'reed': {
 				/* The reed beating against the mouthpiece: a hard clip whose
 				   threshold is the stiffness, trimmed so a stiffer reed is not
@@ -311,56 +255,6 @@ function expandComposites(
 				);
 				extra.push(`${id}>${id}_g`);
 				exit.set(id, `${id}_g`);
-				break;
-			}
-			case 'comb': {
-				/* The old COMB: the signal plus one delayed copy of itself -- feed-
-				   forward, so it notches and never rings. POS is the delay as a
-				   percentage of 12 ms, DEPTH how loud the copy is. A cymbal's
-				   closely spaced plate modes are what it is for. */
-				out.push(
-					[id, 'gain', { level: 1 }],
-					[`${id}_d`, 'delay', { delayTime: ((p.combPos ?? 20) / 100) * 0.012 }],
-					[`${id}_g`, 'gain', { level: (p.combDepth ?? 50) / 100 }],
-					[`${id}_o`, 'sum']
-				);
-				extra.push(`${id}>${id}_o`, `${id}>${id}_d`, `${id}_d>${id}_g`, `${id}_g>${id}_o`);
-				exit.set(id, `${id}_o`);
-				break;
-			}
-			case 'shell': {
-				/* A short delay fed back through a lowpass: each lap is another
-				   handful of beads hitting a shaker's shell, which is what makes it
-				   ring on after the burst. The old DELAY carried its own feedback,
-				   tone and mix; the loop is SEND and RTN now, and closes in a
-				   sample because every module on it is one the loop processor
-				   knows. Bus 6, clear of the low numbers a patch reaches for. */
-				const mix = (p.dlMix ?? 50) / 100;
-				out.push(
-					[id, 'gain', { level: 1 }],
-					[`${id}_l`, 'sum'],
-					[`${id}_d`, 'delay', { delayTime: (p.dlTime ?? 11) / 1000 }],
-					[`${id}_t`, 'filter', { type: 0, cutoff: p.dlTone ?? 8000, q: 0.7 }],
-					[`${id}_s`, 'fbsend', { bus: 6 }],
-					[`${id}_r`, 'fbrtn', { bus: 6 }],
-					[`${id}_f`, 'gain', { level: (p.dlFeedback ?? 40) / 100 }],
-					[`${id}_w`, 'gain', { level: mix }],
-					[`${id}_dr`, 'gain', { level: 1 - mix }],
-					[`${id}_o`, 'sum']
-				);
-				extra.push(
-					`${id}>${id}_l`,
-					`${id}_l>${id}_d`,
-					`${id}_d>${id}_t`,
-					`${id}_t>${id}_s`,
-					`${id}_r>${id}_f`,
-					`${id}_f>${id}_l`,
-					`${id}_t>${id}_w`,
-					`${id}>${id}_dr`,
-					`${id}_w>${id}_o`,
-					`${id}_dr>${id}_o`
-				);
-				exit.set(id, `${id}_o`);
 				break;
 			}
 			default:
@@ -510,13 +404,9 @@ function expandBody(
 const COMPOSITE_NAMES: Record<string, string> = {
 	body: 'BODY',
 	mix: 'MIX',
-	eq: 'EQ',
 	drive: 'DRV',
 	lfo: 'LFO',
-	bow: 'BOW',
-	reed: 'REED',
-	comb: 'COMB',
-	shell: 'SHEL'
+	reed: 'REED'
 };
 
 /** Composites whose output is a value rather than sound. */
@@ -568,7 +458,9 @@ function wrapComposites(
 		];
 		const isValue = VALUE_COMPOSITES.has(type);
 		let inner: [string, string, Record<string, number>?][] = [
-			...ports.map((q) => [`i_${q}`, 'nodept'] as [string, string]),
+			/* Every inlet is sound but PITCH -- BOW's, which lands on the OSC inside
+			   and is a control, so only a CV terminal carries it. */
+			...ports.map((q) => [`i_${q}`, q === 'pitch' ? 'nodecv' : 'nodept'] as [string, string]),
 			[id, type, params],
 			['o', isValue ? 'nodecv' : 'nodept']
 		];
@@ -586,6 +478,7 @@ function wrapComposites(
 			nodes: def.nodes,
 			cables: def.cables,
 			params: def.params,
+			...(Object.keys(def.waves).length ? { waves: def.waves } : {}),
 			labels: {
 				...Object.fromEntries(ports.map((q) => [`i_${q}`, q.toUpperCase()])),
 				o: isValue ? 'CV' : 'OUT'
@@ -623,7 +516,13 @@ function graphOfTuples(
 	nodes: [string, string, Record<string, number>?][],
 	cables: string[],
 	fixed: Record<string, { x: number; y: number }> = {}
-): { nodes: GraphNode[]; cables: GraphCable[]; params: Record<string, number>; lastCol: number } {
+): {
+	nodes: GraphNode[];
+	cables: GraphCable[];
+	params: Record<string, number>;
+	waves: Record<string, string>;
+	lastCol: number;
+} {
 	const COL = 300;
 	const ROW = 124;
 	const feeders = new Map<string, string[]>();
@@ -658,8 +557,17 @@ function graphOfTuples(
 		return { x: 48 + c * COL, y: 168 + (row - (peers.length - 1) / 2) * ROW };
 	};
 	const params: Record<string, number> = {};
+	const waves: Record<string, string> = {};
 	for (const [id, type, q] of nodes) {
 		for (const [k, v] of Object.entries(q ?? {})) {
+			/* An OSC's shape is a name in `graphWaves`, not a number in the
+			   params: a `wave` written as a knob was never read, and every
+			   oscillator in these patches played a sine -- BOW's sawtooth
+			   included. 0 sine, 1 square, 2 sawtooth, 3 triangle. */
+			if (type === 'osc' && k === 'wave') {
+				waves[`${id}.wave`] = OSC_WAVE_NAMES[v] ?? 'sine';
+				continue;
+			}
 			const moved = MIGRATED_PARAMS[`${type}.${k}`];
 			if (moved) params[`${id}.${moved[0]}`] = moved[1](v);
 			else params[`${id}.${k}`] = v;
@@ -674,9 +582,40 @@ function graphOfTuples(
 			return { from, fromPort: fromPort || 'out', to, toPort: toPort || 'in' };
 		}),
 		params,
+		waves,
 		lastCol
 	};
 }
+
+/* The players of a bowed section: id, vibrato rate (Hz), tuning (+8, -4 and
+   +8 cents about the first) and seat. */
+const SECTION: [number, number, number, number][] = [
+	[1, 5.2, 1, -0.6],
+	[2, 5.7, 1.0047, 0.6],
+	[3, 6.1, 0.9977, -0.2],
+	[4, 5.5, 1.00463, 0.2]
+];
+
+/* The drawbars a jazz organ is registered with, 888642000 less the top:
+   id, footage as a multiple of the key (16' is half), level. */
+const DRAWBARS: [string, number, number][] = [
+	['16', 0.5, 0.8],
+	['8', 1, 0.8],
+	['5', 1.5, 0.6],
+	['4', 2, 0.4],
+	['3', 3, 0.2]
+];
+
+/* A section plucking together, which it never quite does: id, tuning
+   (cents apart), how late the pluck lands (s), seat. */
+const PIZZ_PLAYERS: [number, number, number, number][] = [
+	[1, 1, 0, -0.5],
+	[2, 1.0029, 0.012, 0.5],
+	[3, 0.9977, 0.023, -0.15],
+	[4, 1.0012, 0.031, 0.2]
+];
+
+const OSC_WAVE_NAMES = ['sine', 'square', 'sawtooth', 'triangle'];
 
 function patch(
 	nodes: [string, string, Record<string, number>?][],
@@ -790,7 +729,11 @@ function patch(
 		return {};
 	}
 	const macros = Object.keys(wrapped.macros).length ? { macros: wrapped.macros } : {};
-	return { rackGraph: { nodes: graphNodes, cables: graphCables, ...macros }, graphParams };
+	return {
+		rackGraph: { nodes: graphNodes, cables: graphCables, ...macros },
+		graphParams,
+		...(Object.keys(laid.waves).length ? { graphWaves: laid.waves } : {})
+	};
 }
 
 /**
@@ -1224,11 +1167,16 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		})
 	},
 	{
-		/* Drawbars, as an organ actually is: separate pipes sounding together,
-		   not one oscillator filtered. Four OSC nodes at 1 / 2 / 3 / 4 -- the
-		   16', 8', 5 1/3' and 4' drawbars -- summed in pairs and rung through a
-		   short SPACE for the Leslie cabinet's room. The odd 3rd is what gives
-		   a Hammond its reedy edge; without it this is just a stack of sines. */
+		/* A tonewheel organ through a rotating speaker, which is what the
+		   sound is: drawbars 16' 8' 5 1/3' 4' 2 2/3' (8 8 6 4 2), the third
+		   harmonic's percussion ringing out over the first quarter second, the
+		   key contacts' click, a little overdrive, and the Leslie -- a horn
+		   above 800 Hz and a drum below, each spinning (6.7 and 5.9 Hz) so the
+		   sound swings in level and pitch and across the room.
+
+		   The four sines this replaces were heard as a dial tone; everything
+		   a listener knows a Hammond by -- the click, the percussion, the
+		   rotor -- was missing. */
 		name: 'DRAWBAR ORGAN',
 		category: 'ORGAN',
 		kind: 'AC',
@@ -1243,78 +1191,113 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampSustain: 1,
 			ampRelease: 0.08,
 			...patch(
-				/* Drawbars, built the way the instrument is: four oscillators at
-				   whole-number multiples of the note, each with its own level,
-				   summed. The multiples used to be a RATIO knob on the oscillator
-				   and the levels a LVL knob; both were separate primitives inside
-				   OSC, so they are a MUL on the frequency and a VCA on the output
-				   now -- more modules, and each one says what it does. */
 				[
 					['pf', 'tofreq'],
-					/* The drawbar ratios, as CONSTs into MUL's B.
-					
-					   These were written as `mul: { mulB: 2 }` -- a param MUL has
-					   never had. MUL is two inlets and no knobs, so the ratio was
-					   read as nothing and every drawbar ran at the fundamental: an
-					   organ with four copies of one pitch. A number a module does
-					   not declare is silently absent, which is why the preset test
-					   asks the catalogue rather than trusting the literal. */
-					['r2', 'const', { kind: 6, value: 2 }],
-					['r3', 'const', { kind: 6, value: 3 }],
-					['r4', 'const', { kind: 6, value: 4 }],
-					['x2', 'mul'],
-					['x3', 'mul'],
-					['x4', 'mul'],
-					['d16', 'osc', { wave: 0 }],
-					['d8', 'osc', { wave: 0 }],
-					['d5', 'osc', { wave: 0 }],
-					['d4', 'osc', { wave: 0 }],
-					['g16', 'vca', { gain: 62 }],
-					['g8', 'vca', { gain: 40 }],
-					['g5', 'vca', { gain: 24 }],
-					['g4', 'vca', { gain: 16 }],
-					['lo', 'sum'],
-					['hi', 'sum'],
-					['all', 'sum'],
-					['lvl', 'vca', { gain: 54 }],
-					['cab', 'space', { spaceSize: 22, spaceDecay: 66, spaceMix: 20 }]
+					...DRAWBARS.flatMap(
+						([id, ratio, level]) =>
+							[
+								[`r${id}`, 'const', { kind: 6, value: ratio }],
+								[`x${id}`, 'mul'],
+								[`w${id}`, 'osc', { wave: 0 }],
+								[`g${id}`, 'gain', { level }]
+							] as [string, string, Record<string, number>?][]
+					),
+					['bars', 'sum'],
+					// Percussion: the third harmonic, struck and let go in a quarter second.
+					['rp', 'const', { kind: 6, value: 3 }],
+					['xp', 'mul'],
+					['wp', 'osc', { wave: 0 }],
+					['pe', 'env', { envA: 0.001, envD: 0.25, envS: 0, envR: 0.05, envCurve: 1 }],
+					['pv', 'vca', { gain: 100 }],
+					['pg', 'gain', { level: 0.5 }],
+					// The key contacts closing: a few milliseconds of bright noise.
+					['ck', 'noise'],
+					['ce', 'env', { envA: 0.0005, envD: 0.006, envS: 0, envR: 0.004, envCurve: 1 }],
+					['cv', 'vca', { gain: 100 }],
+					['cf', 'filter', { type: 2, cutoff: 2500, q: 0.7 }],
+					['cg', 'gain', { level: 0.15 }],
+					['tone', 'sum'],
+					['ke', 'env', { envA: 0.004, envD: 0.01, envS: 100, envR: 0.03 }],
+					['key', 'vca', { gain: 100 }],
+					['od', 'shape', { shapeKind: 0, shapeDrive: 30 }],
+					// The Leslie: horn and drum, each a moving delay (pitch) and a moving level.
+					['hp', 'filter', { type: 1, cutoff: 800, q: 0.7 }],
+					['lp', 'filter', { type: 0, cutoff: 800, q: 0.7 }],
+					['hr', 'lfo', { lfoWave: 0, lfoRate: 6.7, lfoAmt: 0.05 }],
+					['dr', 'lfo', { lfoWave: 0, lfoRate: 5.9, lfoAmt: 0.08 }],
+					['hd', 'delay', { delayTime: 0.001 }],
+					['dd', 'delay', { delayTime: 0.0015 }],
+					['ha', 'lfo', { lfoWave: 0, lfoRate: 6.7, lfoAmt: 40 }],
+					['da', 'lfo', { lfoWave: 0, lfoRate: 5.9, lfoAmt: 20 }],
+					['one', 'const', { kind: 6, value: 1 }],
+					['hal', 'add'],
+					['dal', 'add'],
+					['hg', 'gain', { level: 1 }],
+					['dg', 'gain', { level: 1 }],
+					['hpn', 'pan', { panPos: 0.4 }],
+					['dpn', 'pan', { panPos: -0.25 }],
+					['les', 'sum'],
+					['lvl', 'gain', { level: 0.6 }],
+					['cab', 'space', { spaceSize: 22, spaceDecay: 40, spaceMix: 18 }]
 				],
 				[
 					'entry.pitch>pf:a',
-					'pf>d16:pitch',
-					'pf>x2:a',
-					'pf>x3:a',
-					'pf>x4:a',
-					'r2>x2:b',
-					'r3>x3:b',
-					'r4>x4:b',
-					'x2>d8:pitch',
-					'x3>d5:pitch',
-					'x4>d4:pitch',
-					'd16>g16',
-					'd8>g8',
-					'd5>g5',
-					'd4>g4',
-					'g16>lo',
-					'g8>lo',
-					'g5>hi',
-					'g4>hi',
-					'lo>all',
-					'hi>all',
-					'all>lvl',
+					...DRAWBARS.flatMap(([id]) => [
+						`pf>x${id}:a`,
+						`r${id}>x${id}:b`,
+						`x${id}>w${id}:pitch`,
+						`w${id}>g${id}`,
+						`g${id}>bars`
+					]),
+					'pf>xp:a',
+					'rp>xp:b',
+					'xp>wp:pitch',
+					'wp>pv',
+					'pe>pv:level',
+					'pv>pg',
+					'ck>cv',
+					'ce>cv:level',
+					'cv>cf',
+					'cf>cg',
+					'bars>tone',
+					'pg>tone',
+					'tone>key',
+					'ke>key:level',
+					'key>od',
+					'cg>od',
+					'od>hp',
+					'od>lp',
+					'hp>hd',
+					'lp>dd',
+					'hr.cv>hd:delayTime',
+					'dr.cv>dd:delayTime',
+					'ha.cv>hal:a',
+					'one>hal:b',
+					'da.cv>dal:a',
+					'one>dal:b',
+					'hd>hg',
+					'hal>hg:level',
+					'dd>dg',
+					'dal>dg:level',
+					'hg>hpn',
+					'dg>dpn',
+					'hpn>les',
+					'dpn>les',
+					'les>lvl',
 					'lvl>cab',
 					'cab>output'
 				],
-				68
+				54
 			)
 		})
 	},
 	{
-		/* A struck bar with no body at all: steel, not wood, so the modes are
-		   far apart (1 : 2.7 : 5.4) and ring long. The tremolo is the pair of
-		   fans a real vibraphone spins over its resonator tubes -- an LFO into
-		   PAN would move it across the stereo field, but a vibraphone's tremolo
-		   is amplitude, so it goes into a VCA instead. */
+		/* Aluminium bars under a hard mallet: a long, pure fundamental, overtones
+		   tuned to two and three octaves that flash at the strike and die, the
+		   tick of the mallet, and the motor's tremolo. It had a TUBE as its
+		   resonator, which holds while the key is down and has only odd partials
+		   -- a sustained hollow tone that read as an organ and a flute, not a
+		   struck bar. */
 		name: 'VIBRAPHONE',
 		category: 'MALLET',
 		kind: 'AC',
@@ -1330,84 +1313,57 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampRelease: 1.4,
 			...patch(
 				[
-					['mal', 'excite', { hardness: 26, exLength: 9, exTone: 2600 }],
+					['mal', 'excite', { hardness: 45, exLength: 3, exTone: 6000 }],
 					['ex', 'sum'],
-					['bar', 'modes', { mode1: 1, mode2: 2.7, mode3: 5.4, modeQ: 44 }],
-					['trm', 'vca', { gain: 100 }],
-					/* AMT carries what the VCA's DEPTH used to: 60% through a
-					   depth of 34 is the same 20% swing, now set in one place. */
-					['fan', 'lfo', { lfoWave: 0, lfoRate: 5.5, lfoAmt: 20 }],
-					['res', 'tube', { tubeDecay: 1.6, tubeDamp: 30, tubeOdd: 1 }],
-					['mx', 'mix', { mixA: 100, mixB: 44 }]
+					/* A tuned bar: its overtones are filed to two octaves and a
+					   little over three above the note (1 : 3.98 : 9.13), which is
+					   what makes it sound pitched where a free bar clangs. */
+					['bar', 'modes', { mode1: 1, mode2: 3.98, mode3: 9.13, modeQ: 150, modeMix: 100 }],
+					/* The mallet's brightness: the same overtones struck again
+					   with a low Q, so they flash and are gone in a third of a
+					   second -- harder the blow, more of it. */
+					['shn', 'modes', { mode1: 3.98, mode2: 9.13, mode3: 13.4, modeQ: 10, modeMix: 100 }],
+					['sv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.1, outHi: 0.9 }],
+					['sg', 'gain', { level: 0 }],
+					// The tick of the mallet itself.
+					['tk', 'filter', { type: 1, cutoff: 2500, q: 0.7 }],
+					['tg', 'gain', { level: 0.12 }],
+					['sum', 'sum'],
+					/* The motor: fans over the resonator tubes swing the level
+					   between 0.65 and 1.35, five times a second. It was the LFO
+					   straight into the level, which swung it through zero -- a
+					   ring modulator, not a tremolo. */
+					['fan', 'lfo', { lfoWave: 0, lfoRate: 5, lfoAmt: 35 }],
+					['one', 'const', { kind: 6, value: 1 }],
+					['fa', 'add'],
+					['trm', 'gain', { level: 1 }],
+					// The damper bar, on the key: the bars ring while it is held.
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.5 }],
+					['dv', 'vca', { gain: 100 }],
+					['rm', 'space', { spaceSize: 45, spaceDecay: 45, spaceMix: 20 }]
 				],
 				[
 					'mal>ex',
 					'ex>bar',
-					'bar>trm',
-					/* The tremolo's level. `:cv` was VCA's inlet name; GAIN's is
-					   `level`, and it is the same socket by another name. */
-					'fan.cv>trm:level',
-					'trm>mx',
-					'ex>res',
-					'res>mx:b',
-					'mx>output'
-				],
-				42
-			)
-		})
-	},
-	{
-		/* A tube closed at one end, overblown: a pan flute is mostly breath.
-		   The noise is split, one side delayed a few milliseconds against the
-		   other and merged back -- that tiny decorrelation is what makes air
-		   sound wide rather than centred, and it is the reason SPLIT and MERGE
-		   exist. */
-		name: 'PAN FLUTE',
-		category: 'STRING',
-		kind: 'AC',
-		preset: synth({
-			presetGain: 0.34,
-			osc1Gain: 0,
-			osc2Gain: 0,
-			subOscGain: 0,
-			noiseGain: 0,
-			ampAttack: 0.05,
-			ampDecay: 0.2,
-			ampSustain: 0.8,
-			ampRelease: 0.18,
-			...patch(
-				[
-					/* NOISE is white and has no knobs now -- COL was a slope the old
-					   composite carried, and a coloured noise is NOISE into FILTER
-					   where the slope is a cable you can see. */
-					['air', 'noise'],
-					['ex', 'vca', { gain: 200 }],
-					/* DEPTH was the old composite's welded envelope amount. A filter
-					   that opens with the note is ENV into CUTOFF, which is a patch
-					   rather than a knob. */
-					['edge', 'filter', { type: 1, cutoff: 2200, q: 1.1 }],
-					['pipe', 'tube', { tubeDecay: 0.7, tubeDamp: 34, tubeOdd: 1 }],
-					['sp', 'split', {}],
-					/* A bare delay line: TIME in seconds, and nothing else in the
-					   box. FEEDBACK was the loop the graph refuses, TONE was a
-					   FILTER after it, and MIX was the dry path the patch already
-					   draws -- `air` reaches the output through `edge` as well. */
-					['wid', 'delay', { delayTime: 0.007 }],
-					['mg', 'merge', {}],
-					['rm', 'space', { spaceSize: 44, spaceDecay: 50, spaceMix: 24 }]
-				],
-				[
-					'air>ex',
-					'ex>edge',
-					'edge>pipe',
-					'pipe>sp',
-					'sp>mg',
-					'sp.r>wid',
-					'wid>mg:r',
-					'mg>rm',
+					'ex>shn',
+					'entry.vel>sv:a',
+					'shn>sg',
+					'sv>sg:level',
+					'ex>tk',
+					'tk>tg',
+					'bar>sum',
+					'sg>sum',
+					'tg>sum',
+					'fan.cv>fa:a',
+					'one>fa:b',
+					'sum>trm',
+					'fa>trm:level',
+					'trm>dv',
+					'dmp>dv:level',
+					'dv>rm',
 					'rm>output'
 				],
-				124
+				42
 			)
 		})
 	},
@@ -1487,7 +1443,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		})
 	},
 	{
-		// Saw with a square an octave up, plucked and bright.
+		// Quill-plucked strings, two 8' choirs and a 4', on a wooden board.
 		name: 'HARPSICHORD',
 		category: 'KEYBOARD',
 		kind: 'AC',
@@ -1507,18 +1463,70 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.5,
 			ampSustain: 0,
 			ampRelease: 0.2,
-			/* A quill plucks the string and the jack falls back: bright, thin, and
-			   entirely without dynamics. The DRIVE is the quill's edge, not
-			   distortion -- a plectrum clips the string's first cycle. */
+			/* A quill plucks the string near its end and the jack falls back.
+			   Two 8' choirs a cent apart and a 4' an octave up, quieter -- the
+			   registration a harpsichord is heard in; a pluck with no dynamics,
+			   short and hard, so the string starts with every harmonic it has;
+			   long strings in the bass, 6 s to 1.5 s; a damper that stops the
+			   note at once, and the jack's click as it drops (REL). The
+			   soundboard is a measured wooden body (IR); the room is small.
+
+			   The string-and-drive it replaces was heard as a cowbell. */
 			...patch(
 				[
-					['qul', 'excite', { hardness: 92, exLength: 2, exTone: 8200 }],
-					['ex', 'sum'],
-					['str', 'string', { decayTime: 1.1, damping: 6, stiffness: 85 }],
-					['edg', 'drive', { driveAmt: 16, driveBias: 20, driveTone: 11000 }],
-					['bod', 'body', { bodySize: 25, bodyDepth: 35, bodyMix: 25 }]
+					['fq', 'tofreq'],
+					['dk', 'const', { kind: 6, value: 1.0006 }],
+					['f2', 'mul'],
+					['ok', 'const', { kind: 6, value: 2 }],
+					['f4', 'mul'],
+					['qul', 'excite', { hardness: 90, exLength: 1.2, exTone: 7000 }],
+					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 6, outHi: 1.5 }],
+					['d4k', 'const', { kind: 6, value: 0.6 }],
+					['dec4', 'mul'],
+					['s1', 'wire', { wireDecay: 4, wireDamp: 12, wireStiff: 6, wirePos: 8 }],
+					['s2', 'wire', { wireDecay: 4, wireDamp: 12, wireStiff: 6, wirePos: 9 }],
+					['s4', 'wire', { wireDecay: 2, wireDamp: 16, wireStiff: 8, wirePos: 11 }],
+					['g4', 'gain', { level: 0.45 }],
+					['strs', 'sum'],
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.07 }],
+					['dv', 'vca', { gain: 100 }],
+					['board', 'ir', { irBody: 1, irMix: 60 }],
+					['jack', 'excite', { hardness: 60, exLength: 6, exTone: 1800 }],
+					['jg', 'gain', { level: 0.08 }],
+					['outRel', 'out'],
+					['rm', 'space', { spaceSize: 35, spaceDecay: 35, spaceMix: 14 }]
 				],
-				['qul>ex', 'ex>str', 'str>edg', 'edg>bod', 'bod>output'],
+				[
+					'entry.pitch>fq:a',
+					'fq>f2:a',
+					'dk>f2:b',
+					'fq>f4:a',
+					'ok>f4:b',
+					'entry.note>dec:a',
+					'dec>dec4:a',
+					'd4k>dec4:b',
+					'fq>s1:pitch',
+					'f2>s2:pitch',
+					'f4>s4:pitch',
+					'dec>s1:wireDecay',
+					'dec>s2:wireDecay',
+					'dec4>s4:wireDecay',
+					'qul>s1',
+					'qul>s2',
+					'qul>s4',
+					's1>strs',
+					's2>strs',
+					's4>g4',
+					'g4>strs',
+					'strs>dv',
+					'dmp>dv:level',
+					'dv>board',
+					'board>rm',
+					'rm>output',
+					'entry.rel>outRel:exec',
+					'jack>jg',
+					'jg>outRel'
+				],
 				25
 			)
 		})
@@ -1645,14 +1653,17 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		/* A grand piano: a felt hammer, three detuned waveguide strings, the case,
 		   a damper, and one soundboard the whole track shares, which the pedal
-		   opens. See grand-piano.ts. Twenty-four voices, because released notes
-		   ring for seconds and a pedalled chord is a dozen strings at once. */
+		   opens. See grand-piano.ts. Twelve voices: a key is three strings, and
+		   at twenty-four a pedalled passage cost more than real time on the
+		   audio thread -- which silences every track at once until notes die
+		   away. Released notes are stolen first, so a dozen held is still a
+		   full pedalled chord. */
 		name: 'PIANO',
 		category: 'KEYBOARD',
 		kind: 'AC',
 		preset: synth({
 			presetGain: 0.4,
-			polyphony: 24,
+			polyphony: 12,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -1665,7 +1676,6 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		})
 	},
 	{
-		// The same pluck on a slack string in a bigger box.
 		name: 'GUITAR',
 		category: 'PLUCK',
 		kind: 'AC',
@@ -1679,18 +1689,109 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.06,
 			ampSustain: 0,
 			ampRelease: 0.03,
-			/* Pick, steel string, spruce top with a soundhole. The EQ scoops the
-			   low mids the way a dreadnought's air resonance does, which is what
-			   keeps it from sounding like a plain plucked string. */
+			/* A steel-string acoustic, voiced against the Iowa MIS recordings
+			   (mf, E2 to E4). What made the old one a pluck lead is what a
+			   guitar is not: harmonics gone in a second, a note dead in
+			   one and a half, a fundamental that led, and no box. Here:
+
+			     the pick     short and bright, brighter and louder the harder
+			     the strings  two waveguides a cent apart -- the string's two
+			                  planes of motion -- lightly damped so the upper
+			                  harmonics last, 7 s in the bass to 2 s at the top
+			     the hand     a damper on the key, a tenth of a second
+			     the box      it cannot radiate the low E's fundamental, so a
+			                  highpass under the air resonance (100 Hz, the
+			                  soundhole), the top at 200, the back and sides
+			                  above, a scoop at 700 and presence at 2.5 k -- and
+			                  the box itself knocked by the pick, three fixed
+			                  modes that ring for a moment whatever the note. */
 			...patch(
 				[
-					['pic', 'excite', { hardness: 62, exLength: 4, exTone: 4600 }],
-					['ex', 'sum'],
-					['str', 'string', { decayTime: 2.2, damping: 34, stiffness: 6 }],
-					['bod', 'body', { bodySize: 62, bodyDepth: 65, bodyMix: 70 }],
-					['eq', 'eq', { lowGain: 2, midGain: -3, midFreq: 480, highGain: 2 }]
+					['fq', 'tofreq'],
+					['dk', 'const', { kind: 6, value: 1.0007 }],
+					['f2', 'mul'],
+					['pic', 'excite', { hardness: 40, exLength: 4, exTone: 3000 }],
+					['pt', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 900, outHi: 4000 }],
+					['pv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.25, outHi: 1 }],
+					['pg', 'gain', { level: 1 }],
+					/* The flesh of the finger: a pluck's spectrum falls fast above
+					   the first few harmonics, and a harder pluck lets more through.
+					   In harmonics, not hertz: the wound bass strings lose their
+					   top where the plain treble ones ring bright, so a fixed
+					   corner left E2 fizzy and E4 dull at once. */
+					['plk', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 3, outHi: 10 }],
+					['plc', 'mul'],
+					['pl1', 'filter', { type: 0, cutoff: 1500, q: 0.6 }],
+					['pl2', 'filter', { type: 0, cutoff: 1500, q: 0.6 }],
+					['dec', 'map', { shape: 9, inLo: 68, inHi: 32, outLo: 12, outHi: 5 }],
+					['d2k', 'const', { kind: 6, value: 0.6 }],
+					['dec2', 'mul'],
+					['w1', 'wire', { wireDecay: 4, wireDamp: 30, wireStiff: 3, wirePos: 14 }],
+					['w2', 'wire', { wireDecay: 2.4, wireDamp: 36, wireStiff: 3, wirePos: 14 }],
+					['w2g', 'gain', { level: 0.5 }],
+					['strs', 'sum'],
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.15 }],
+					['dv', 'vca', { gain: 100 }],
+					['rad', 'filter', { type: 1, cutoff: 110, q: 0.9 }],
+					['air', 'filter', { type: 6, cutoff: 100, q: 2.5, filterGain: 5 }],
+					['top', 'filter', { type: 6, cutoff: 200, q: 2, filterGain: 5 }],
+					['back', 'filter', { type: 6, cutoff: 400, q: 1.5, filterGain: 3 }],
+					['scoop', 'filter', { type: 6, cutoff: 700, q: 1, filterGain: -3 }],
+					['pres', 'filter', { type: 6, cutoff: 2500, q: 0.8, filterGain: 4 }],
+					['roll', 'filter', { type: 5, cutoff: 3000, q: 0.7, filterGain: -6 }],
+					[
+						'knock',
+						'modes',
+						{ modeHz: 100, mode1: 1, mode2: 2.05, mode3: 4.1, modeQ: 12, modeMix: 100 }
+					],
+					['kg', 'gain', { level: 0.02 }],
+					['mix', 'sum'],
+					['rm', 'space', { spaceSize: 30, spaceDecay: 30, spaceMix: 15 }]
 				],
-				['pic>ex', 'ex>str', 'str>bod', 'bod>eq', 'eq>output'],
+				[
+					'entry.pitch>fq:a',
+					'fq>f2:a',
+					'dk>f2:b',
+					'entry.vel>pt:a',
+					'pt>pic:exTone',
+					'entry.vel>pv:a',
+					'pic>pg',
+					'pv>pg:level',
+					'entry.note>dec:a',
+					'dec>dec2:a',
+					'd2k>dec2:b',
+					'fq>w1:pitch',
+					'f2>w2:pitch',
+					'dec>w1:wireDecay',
+					'dec2>w2:wireDecay',
+					'entry.vel>plk:a',
+					'fq>plc:a',
+					'plk>plc:b',
+					'plc>pl1:cutoff',
+					'plc>pl2:cutoff',
+					'pg>pl1',
+					'pl1>pl2',
+					'pl2>w1',
+					'pl2>w2',
+					'w1>strs',
+					'w2>w2g',
+					'w2g>strs',
+					'strs>dv',
+					'dmp>dv:level',
+					'dv>rad',
+					'rad>air',
+					'air>top',
+					'top>back',
+					'back>scoop',
+					'scoop>pres',
+					'pres>roll',
+					'pg>knock',
+					'knock>kg',
+					'roll>mix',
+					'kg>mix',
+					'mix>rm',
+					'rm>output'
+				],
 				36
 			)
 		})
@@ -1719,118 +1820,510 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['fin', 'excite', { hardness: 18, exLength: 22, exTone: 1100 }],
 					['ex', 'sum'],
 					['str', 'string', { decayTime: 3, damping: 52, stiffness: 3 }],
+					/* The player's hand coming down on the string: the note rings
+					   while the key is held and stops in a tenth of a second when it
+					   is not. Without it every note rang its whole three-second
+					   DCAY after the key was up. */
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.12 }],
+					['dv', 'vca', { gain: 100 }],
 					['bod', 'body', { bodySize: 88, bodyDepth: 60, bodyMix: 60 }],
 					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }]
 				],
-				['fin>ex', 'ex>str', 'str>bod', 'bod>cmp', 'cmp>output'],
+				['fin>ex', 'ex>str', 'str>dv', 'dmp>dv:level', 'dv>bod', 'bod>cmp', 'cmp>output'],
 				48
 			)
 		})
 	},
 	{
-		// A bow, not a pluck: the excitation sustains, so the envelope holds.
-		name: 'BOWED STRINGS',
+		/* A string section, bowed. What the old one lacked is what separates
+		   strings from a pad built out of sawtooths:
+
+		     the players  four, each on its own vibrato (5.2 to 6.1 Hz, arriving
+		                  after the note) and a few cents from the others, so
+		                  the section shimmers rather than sweeps -- one chorus
+		                  LFO moving everyone together is the pad's sound
+		     the bow      a quick start, a tenth of a second, not a swell; a
+		                  little rosin under it; brighter as it digs in
+		     the bodies   the formants every violin-family instrument has
+		                  whatever the note: the air and wood modes low, a
+		                  nasal dip at 1.3 k, the bridge hill at 2.6 k and a
+		                  steep fall above -- a pad is the saw's spectrum,
+		                  shaped only by a lowpass following the key
+		     the hall     seats spread across the stage, and a hall behind */
+		name: 'FULL STRING',
 		category: 'STRING',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 1.36,
+			presetGain: 1,
 			osc1Waveform: 'sawtooth',
-			osc1Gain: 1,
+			osc1Gain: 0.9,
 			osc2Gain: 0,
 			cutoff: 6000,
-			ampAttack: 0.09,
+			ampAttack: 0.12,
 			ampDecay: 0.3,
-			ampSustain: 0.8,
-			ampRelease: 0.25,
-			/* A bow, not a strike: BOW drives the string continuously for as long
-			   as the note is held, which is the whole difference between this and
-			   every plucked patch above. The LFO into PAN is the section moving
-			   rather than one player, and SPACE is the room they are in. */
+			ampSustain: 0.85,
+			ampRelease: 0.35,
 			...patch(
 				[
-					['bw', 'bow', { bowPressure: 62, bowNoise: 30, bowBite: 42 }],
-					['ex', 'sum'],
-					['str', 'string', { decayTime: 1.4, damping: 40, stiffness: 2 }],
-					['bod', 'body', { bodySize: 55, bodyDepth: 50, bodyMix: 60 }],
-					['lfo', 'lfo', { lfoWave: 0, lfoRate: 0.4, lfoAmt: 22 }],
-					['pn', 'pan', { panPos: 0 }],
-					['rm', 'space', { spaceSize: 52, spaceDecay: 38, spaceMix: 26 }]
+					['fq', 'tofreq'],
+					['vf', 'env', { envA: 0.1, envD: 0.01, envS: 100, envR: 0.5 }],
+					['vk', 'const', { kind: 6, value: 0.01 }],
+					['one', 'const', { kind: 6, value: 1 }],
+					...SECTION.flatMap(
+						([i, rate, ratio, pan]) =>
+							[
+								[`v${i}`, 'lfo', { lfoWave: 0, lfoRate: rate, lfoAmt: 100 }],
+								[`vm${i}`, 'mul'],
+								[`vd${i}`, 'mul'],
+								[`vr${i}`, 'add'],
+								[`r${i}`, 'const', { kind: 6, value: ratio }],
+								[`fr${i}`, 'mul'],
+								[`fv${i}`, 'mul'],
+								[`o${i}`, 'osc', { wave: 2 }],
+								[`p${i}`, 'pan', { panPos: pan }]
+							] as [string, string, Record<string, number>?][]
+					),
+					['sec', 'sum'],
+					/* The bodies, measured (IR): violins above G3, cellos below, a
+					   fifth's crossfade between. */
+					['vln', 'ir', { irBody: 0, irMix: 55 }],
+					['cel', 'ir', { irBody: 2 }],
+					['mv', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 0, outHi: 1 }],
+					['mc', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 1, outHi: 0 }],
+					['gv', 'gain', { level: 0 }],
+					['gc', 'gain', { level: 0 }],
+					['bod', 'sum'],
+					['ae', 'env', { envA: 0.2, envD: 0.2, envS: 68, envR: 0.12 }],
+					['amp', 'vca', { gain: 100 }],
+					['vel', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.35, outHi: 1 }],
+					['vg', 'gain', { level: 1 }],
+					['hall', 'space', { spaceSize: 85, spaceDecay: 64, spaceMix: 19 }]
 				],
-				['bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo.cv>pn:panPos', 'pn>rm', 'rm>output'],
-				47
+				[
+					'entry.pitch>fq:a',
+					...SECTION.flatMap(([i]) => [
+						`v${i}.cv>vm${i}:a`,
+						`vf>vm${i}:b`,
+						`vm${i}>vd${i}:a`,
+						`vk>vd${i}:b`,
+						`vd${i}>vr${i}:a`,
+						`one>vr${i}:b`,
+						`fq>fr${i}:a`,
+						`r${i}>fr${i}:b`,
+						`fr${i}>fv${i}:a`,
+						`vr${i}>fv${i}:b`,
+						`fv${i}>o${i}:pitch`,
+						`o${i}>p${i}`,
+						`p${i}>sec`
+					]),
+					'sec>vln',
+					'sec>cel',
+					'entry.note>mv:a',
+					'entry.note>mc:a',
+					'vln>gv',
+					'mv>gv:level',
+					'cel>gc',
+					'mc>gc:level',
+					'gv>bod',
+					'gc>bod',
+					'bod>amp',
+					'ae>amp:level',
+					'entry.vel>vel:a',
+					'amp>vg',
+					'vel>vg:level',
+					'vg>hall',
+					'hall>output'
+				],
+				8
 			)
 		})
 	},
 	{
-		// Breath into a tube closed at one end: odd harmonics only.
-		name: 'CLARINET',
+		/* Pizzicato: a section plucking together, which it never quite does
+		   -- four players a few cents apart, each pluck landing up to 30 ms
+		   after the first. A fingertip pulls the string at its middle, the
+		   finger's snap is a few tens of milliseconds of noise, and the rest
+		   is the wood: bodies measured from the VSCO section's own pizzicato
+		   (IR: VPZ above G3, CPZ below), since a plucked note excites the box
+		   differently from a bowed one. Dead in two seconds in the bass, one
+		   at the top; the hand comes down on it at the key's release.
+
+		   Tuned by ear (tools/ear) against the VSCO violins' pizz: the
+		   two-string, heavily damped version before it was heard as a piano
+		   (Pizzicato 0.04); this one reads 0.20 where the recordings read
+		   0.46, and nothing else comes close. */
+		name: 'PIZZ',
 		category: 'STRING',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.34,
-			osc1Waveform: 'noise',
-			osc1Gain: 0.6,
+			presetGain: 0.8,
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 1,
 			osc2Gain: 0,
-			cutoff: 5000,
+			cutoff: 9000,
+			ampAttack: 0.001,
+			ampDecay: 0.06,
+			ampSustain: 0,
+			ampRelease: 0.03,
+			...patch(
+				[
+					['fq', 'tofreq'],
+					['fin', 'excite', { hardness: 52, exLength: 4, exTone: 1660 }],
+					// The finger leaving the string: a snap of noise, into the body with the note.
+					['snp', 'noise'],
+					['sne', 'env', { envA: 0.0005, envD: 0.043, envS: 0, envR: 0.01, envCurve: 1 }],
+					['snv', 'vca', { gain: 100 }],
+					['sng', 'gain', { level: 0.038 }],
+					['pv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.6, outHi: 2 }],
+					['pg', 'gain', { level: 1 }],
+					// The fingertip, in harmonics: a harder pull lets more of the top through.
+					['plk', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 4, outHi: 11.3 }],
+					['plc', 'mul'],
+					['pl1', 'filter', { type: 0, cutoff: 1500, q: 0.6 }],
+					['pl2', 'filter', { type: 0, cutoff: 1500, q: 0.6 }],
+					['dec', 'map', { shape: 9, inLo: 72, inHi: 24, outLo: 2.4, outHi: 1 }],
+					...PIZZ_PLAYERS.flatMap(
+						([i, ratio, late, pan]) =>
+							[
+								[`r${i}`, 'const', { kind: 6, value: ratio }],
+								[`f${i}`, 'mul'],
+								[`t${i}`, 'delay', { delayTime: late }],
+								[`w${i}`, 'wire', { wireDecay: 1, wireDamp: 23, wireStiff: 2, wirePos: 40 }],
+								[`p${i}`, 'pan', { panPos: pan }]
+							] as [string, string, Record<string, number>?][]
+					),
+					['strs', 'sum'],
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.035 }],
+					['dv', 'vca', { gain: 100 }],
+					['vln', 'ir', { irBody: 5, irMix: 59 }],
+					['cel', 'ir', { irBody: 6, irMix: 59 }],
+					['mv', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 0, outHi: 1 }],
+					['mc', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 1, outHi: 0 }],
+					['gv', 'gain', { level: 0 }],
+					['gc', 'gain', { level: 0 }],
+					['bod', 'sum'],
+					['hall', 'space', { spaceSize: 80, spaceDecay: 55, spaceMix: 3 }]
+				],
+				[
+					'entry.pitch>fq:a',
+					'entry.vel>pv:a',
+					'fin>pg',
+					'pv>pg:level',
+					'entry.vel>plk:a',
+					'fq>plc:a',
+					'plk>plc:b',
+					'plc>pl1:cutoff',
+					'plc>pl2:cutoff',
+					'pg>pl1',
+					'pl1>pl2',
+					'entry.note>dec:a',
+					...PIZZ_PLAYERS.flatMap(([i]) => [
+						`fq>f${i}:a`,
+						`r${i}>f${i}:b`,
+						`f${i}>w${i}:pitch`,
+						`dec>w${i}:wireDecay`,
+						`pl2>t${i}`,
+						`t${i}>w${i}`,
+						`w${i}>p${i}`,
+						`p${i}>strs`
+					]),
+					'snp>snv',
+					'sne>snv:level',
+					'snv>sng',
+					'sng>strs',
+					'strs>dv',
+					'dmp>dv:level',
+					'dv>vln',
+					'dv>cel',
+					'entry.note>mv:a',
+					'entry.note>mc:a',
+					'vln>gv',
+					'mv>gv:level',
+					'cel>gc',
+					'mc>gc:level',
+					'gv>bod',
+					'gc>bod',
+					'bod>hall',
+					'hall>output'
+				],
+				150
+			)
+		})
+	},
+	{
+		// A reed and a bore closed at one end: odd harmonics, through a measured tube.
+		name: 'CLARINET',
+		category: 'WIND',
+		kind: 'AC',
+		preset: synth({
+			presetGain: 0.34,
+			/* With ADV off: a square is odd harmonics, which is the clarinet's
+			   hollowness, darkened -- rather than the NOISE oscillator this
+			   half used to be, which had no pitch. */
+			osc1Waveform: 'square',
+			osc1Gain: 0.7,
+			osc2Gain: 0,
+			noiseGain: 0.01,
+			cutoff: 1800,
+			resonance: 0.5,
 			ampAttack: 0.05,
 			ampDecay: 0.2,
 			ampSustain: 0.85,
 			ampRelease: 0.15,
-			/* Breath -> reed -> a cylindrical bore closed at one end, which is why
-			   tubeOdd is ODD: a clarinet's even harmonics are nearly absent, and
-			   that hollow quality is the instrument. REED is the nonlinearity
-			   that makes the bore oscillate at all. */
+			/* A reed's pulse into the bore, and the bore measured. The source is
+			   a square -- odd harmonics only, which is the clarinet's hollowness
+			   -- and everything else a clarinet is, the register's formants and
+			   the bell's lift, is the response of the tube and bell taken from
+			   the VSCO clarinet's odd harmonics (IR: CLAR). The tube-and-reed
+			   model this replaces was heard as a sine wave: a physical bore
+			   with none of the real one's resonances.
+
+			   Breath under the tone, band-passed around the note's third
+			   harmonic; each note a few cents from true, as a player's never
+			   quite repeat; no vibrato -- a clarinet in a section plays none. */
 			...patch(
 				[
-					/* NOISE is white and has no knobs: a coloured noise is NOISE into
-					   FILTER, where the slope is a cable you can see. */
+					['fq', 'tofreq'],
+					['dr', 'rand', { lo: -1, hi: 1 }],
+					['dk', 'const', { kind: 6, value: 0.0005 }],
+					['dm', 'mul'],
+					['one', 'const', { kind: 6, value: 1 }],
+					['da', 'add'],
+					['fv', 'mul'],
+					['reed', 'osc', { wave: 1 }],
+					['bore', 'ir', { irBody: 3, irMix: 79 }],
 					['air', 'noise'],
-					/* NOISE lost its LVL knob -- a level on a source is a VCA
-					   welded to it -- so the 66% it used to carry is a VCA. */
-					['ex', 'vca', { gain: 66 }],
-					['rd', 'reed', { reedStiff: 54, reedBias: 42 }],
-					['br', 'tube', { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 1 }],
-					['bel', 'body', { bodySize: 45, bodyDepth: 40, bodyMix: 40 }]
+					['k3', 'const', { kind: 6, value: 4.3 }],
+					['f3', 'mul'],
+					['abp', 'filter', { type: 2, cutoff: 1000, q: 1.6 }],
+					['ag', 'gain', { level: 0.046 }],
+					['ae', 'env', { envA: 0.06, envD: 0.33, envS: 85, envR: 0.1 }],
+					['amp', 'vca', { gain: 100 }],
+					['mix', 'sum'],
+					['rm', 'space', { spaceSize: 45, spaceDecay: 40, spaceMix: 16 }]
 				],
-				['air>ex', 'ex>rd', 'rd>br', 'br>bel', 'bel>output'],
-				66
+				[
+					'entry.pitch>fq:a',
+					'dr>dm:a',
+					'dk>dm:b',
+					'dm>da:a',
+					'one>da:b',
+					'fq>fv:a',
+					'da>fv:b',
+					'fv>reed:pitch',
+					'reed>bore',
+					'bore>mix',
+					'air>abp',
+					'fq>f3:a',
+					'k3>f3:b',
+					'f3>abp:cutoff',
+					'abp>ag',
+					'ag>mix',
+					'mix>amp',
+					'ae>amp:level',
+					'amp>rm',
+					'rm>output'
+				],
+				30
 			)
 		})
 	},
 	{
 		// Open at both ends, so all the harmonics are there.
 		name: 'FLUTE',
-		category: 'STRING',
+		category: 'WIND',
 		kind: 'AC',
 		preset: synth({
 			presetGain: 0.36,
-			osc1Waveform: 'noise',
-			osc1Gain: 0.6,
-			osc2Gain: 0,
-			cutoff: 5000,
+			/* The racks 1-7 half, which is what plays with ADV off. It was a
+			   NOISE oscillator -- so a flute with ADV off was a hiss with no
+			   pitch at all. A sine with a quiet octave, a little air, and the
+			   same delayed vibrato. */
+			osc1Waveform: 'sine',
+			osc1Gain: 0.8,
+			osc2Waveform: 'triangle',
+			osc2Gain: 0.2,
+			osc2Ratio: 2,
+			noiseGain: 0.02,
+			cutoff: 3500,
+			lfoWaveform: 'sine',
+			lfoRate: 5.2,
+			lfoPitchAmt: 0.03,
+			lfoFadeTime: 450,
 			ampAttack: 0.05,
 			ampDecay: 0.2,
 			ampSustain: 0.85,
 			ampRelease: 0.15,
-			/* An edge tone, not a reed: breath split across the embouchure hole
-			   drives an open tube, so all harmonics are present (tubeOdd ALL). The
-			   breath is mixed in alongside rather than only through the tube --
-			   an audible amount of a flute is air that never became a note. */
+			/* Built from the recordings (Iowa MIS flute, mf, vibrato), not from a
+			   tube: eight sine partials whose balance moves with the register --
+			   at C4 the second is louder than the fundamental, by C5 the
+			   fundamental leads and the fifth and sixth are nearly gone -- which
+			   is what a flute sounds like and a dark tube did not. A flute's
+			   vibrato is mostly breath pressure, so it moves the level (+-30%)
+			   far more than the pitch (+-13 cents), at 4.8 Hz, arriving after the
+			   note. The tone speaks in 60 ms, the air a little ahead of it: the
+			   recordings take a fifth of a second, and played from a key that
+			   read as lag -- worse, ENV releases only once its attack and decay
+			   are through, so a tapped note swelled on for half a second after
+			   the key was up. The air is
+			   noise centred an octave over the key, following it, plenty of it in
+			   the low register and less above -- as the recordings have it, 20 to
+			   27 dB under the note. */
 			...patch(
 				[
-					/* NOISE is white and has no knobs: a coloured noise is NOISE into
-					   FILTER, where the slope is a cable you can see. */
+					['fq', 'tofreq'],
+					['vib', 'lfo', { lfoWave: 0, lfoRate: 4.8, lfoAmt: 100 }],
+					['vf', 'env', { envA: 0.45, envD: 0.01, envS: 100, envR: 0.1 }],
+					['vm', 'mul'],
+					['pdk', 'const', { kind: 6, value: 0.0075 }],
+					['pd', 'mul'],
+					['one', 'const', { kind: 6, value: 1 }],
+					['pr', 'add'],
+					['fv', 'mul'],
+					['h1', 'osc', { wave: 0 }],
+					['l1', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.562, outHi: 1.0 }],
+					['g1', 'gain', { level: 0 }],
+					['k2', 'const', { kind: 6, value: 2 }],
+					['f2', 'mul'],
+					['h2', 'osc', { wave: 0 }],
+					['l2', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 1.0, outHi: 0.355 }],
+					['g2', 'gain', { level: 0 }],
+					['k3', 'const', { kind: 6, value: 3 }],
+					['f3', 'mul'],
+					['h3', 'osc', { wave: 0 }],
+					['l3', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.178, outHi: 0.224 }],
+					['g3', 'gain', { level: 0 }],
+					['k4', 'const', { kind: 6, value: 4 }],
+					['f4', 'mul'],
+					['h4', 'osc', { wave: 0 }],
+					['l4', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.089, outHi: 0.126 }],
+					['g4', 'gain', { level: 0 }],
+					['k5', 'const', { kind: 6, value: 5 }],
+					['f5', 'mul'],
+					['h5', 'osc', { wave: 0 }],
+					['l5', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.251, outHi: 0.028 }],
+					['g5', 'gain', { level: 0 }],
+					['k6', 'const', { kind: 6, value: 6 }],
+					['f6', 'mul'],
+					['h6', 'osc', { wave: 0 }],
+					['l6', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.2, outHi: 0.004 }],
+					['g6', 'gain', { level: 0 }],
+					['k7', 'const', { kind: 6, value: 7 }],
+					['f7', 'mul'],
+					['h7', 'osc', { wave: 0 }],
+					['l7', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.0178, outHi: 0.0032 }],
+					['g7', 'gain', { level: 0 }],
+					['k8', 'const', { kind: 6, value: 8 }],
+					['f8', 'mul'],
+					['h8', 'osc', { wave: 0 }],
+					['l8', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.0501, outHi: 0.0009 }],
+					['g8', 'gain', { level: 0 }],
+					['tone', 'sum'],
+					['tl', 'vca', { gain: 30 }],
+					['ae', 'env', { envA: 0.06, envD: 0.08, envS: 90, envR: 0.1 }],
+					['amp', 'vca', { gain: 100 }],
+					['adk', 'const', { kind: 6, value: 0.3 }],
+					['ad', 'mul'],
+					['ar', 'add'],
+					['trem', 'gain', { level: 1 }],
 					['air', 'noise'],
-					['ex', 'vca', { gain: 200 }],
-					/* DEPTH was the old composite's welded envelope amount. A filter
-					   that opens with the note is ENV into CUTOFF -- a patch rather
-					   than a knob, which is the whole point of the rebuild. */
-					['fl', 'filter', { type: 1, cutoff: 2600, q: 3 }],
-					['br', 'tube', { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0 }],
-					['mx', 'mix', { mixA: 100, mixB: 12 }],
-					['bel', 'body', { bodySize: 38, bodyDepth: 30, bodyMix: 35 }]
+					['be', 'env', { envA: 0.02, envD: 0.15, envS: 55, envR: 0.06 }],
+					['bl', 'map', { shape: 9, inLo: 48, inHi: 24, outLo: 0.22, outHi: 0.02 }],
+					['bv', 'mul'],
+					['bg', 'gain', { level: 0 }],
+					['fk', 'const', { kind: 6, value: 2 }],
+					['fc', 'mul'],
+					['bp', 'filter', { type: 2, cutoff: 1000, q: 1 }],
+					['mix', 'sum'],
+					['rm', 'space', { spaceSize: 45, spaceDecay: 40, spaceMix: 12 }]
 				],
-				['air>ex', 'ex>fl', 'fl>br', 'br>mx', 'fl>mx:b', 'mx>bel', 'bel>output'],
+				[
+					'entry.pitch>fq:a',
+					'vib.cv>vm:a',
+					'vf>vm:b',
+					'vm>pd:a',
+					'pdk>pd:b',
+					'pd>pr:a',
+					'one>pr:b',
+					'fq>fv:a',
+					'pr>fv:b',
+					'fv>h1:pitch',
+					'entry.note>l1:a',
+					'h1>g1',
+					'l1>g1:level',
+					'g1>tone',
+					'fv>f2:a',
+					'k2>f2:b',
+					'f2>h2:pitch',
+					'entry.note>l2:a',
+					'h2>g2',
+					'l2>g2:level',
+					'g2>tone',
+					'fv>f3:a',
+					'k3>f3:b',
+					'f3>h3:pitch',
+					'entry.note>l3:a',
+					'h3>g3',
+					'l3>g3:level',
+					'g3>tone',
+					'fv>f4:a',
+					'k4>f4:b',
+					'f4>h4:pitch',
+					'entry.note>l4:a',
+					'h4>g4',
+					'l4>g4:level',
+					'g4>tone',
+					'fv>f5:a',
+					'k5>f5:b',
+					'f5>h5:pitch',
+					'entry.note>l5:a',
+					'h5>g5',
+					'l5>g5:level',
+					'g5>tone',
+					'fv>f6:a',
+					'k6>f6:b',
+					'f6>h6:pitch',
+					'entry.note>l6:a',
+					'h6>g6',
+					'l6>g6:level',
+					'g6>tone',
+					'fv>f7:a',
+					'k7>f7:b',
+					'f7>h7:pitch',
+					'entry.note>l7:a',
+					'h7>g7',
+					'l7>g7:level',
+					'g7>tone',
+					'fv>f8:a',
+					'k8>f8:b',
+					'f8>h8:pitch',
+					'entry.note>l8:a',
+					'h8>g8',
+					'l8>g8:level',
+					'g8>tone',
+					'tone>tl',
+					'tl>amp',
+					'ae>amp:level',
+					'vm>ad:a',
+					'adk>ad:b',
+					'ad>ar:a',
+					'one>ar:b',
+					'amp>trem',
+					'ar>trem:level',
+					'air>bp',
+					'fq>fc:a',
+					'fk>fc:b',
+					'fc>bp:cutoff',
+					'be>bv:a',
+					'entry.note>bl:a',
+					'bl>bv:b',
+					'bp>bg',
+					'bv>bg:level',
+					'trem>mix',
+					'bg>mix',
+					'mix>rm',
+					'rm>output'
+				],
 				60
 			)
 		})
@@ -2027,6 +2520,7 @@ export const PRESET_CATEGORIES: PresetCategory[] = [
 	'KEYBOARD',
 	'ORGAN',
 	'STRING',
+	'WIND',
 	'MALLET',
 	'FX',
 	'DRUM'
@@ -2040,6 +2534,7 @@ const CATEGORY_HINT_KEYS: Record<PresetCategory, string> = {
 	KEYBOARD: 'synthPanels.presets.hintKeyboard',
 	ORGAN: 'synthPanels.presets.hintOrgan',
 	STRING: 'synthPanels.presets.hintString',
+	WIND: 'synthPanels.presets.hintWind',
 	MALLET: 'synthPanels.presets.hintMallet',
 	FX: 'synthPanels.presets.hintFx',
 	DRUM: 'synthPanels.presets.hintDrums'
@@ -2523,966 +3018,18 @@ function keyOnly(p: Partial<TrackData>): Partial<TrackData> {
 	return out as Partial<TrackData>;
 }
 
-/* The single drums.
- *
- * Not presets: a player wants a kit, not a lone snare, so these never appear
- * in the menu. They exist because the kits below name them, and because each
- * one is a voice worth keeping the working for -- see BUILTIN_KITS for the
- * measured numbers behind the KRSZ kit.
- */
-const DRUM_VOICES: Record<string, Partial<TrackData>> = {
-	// Sine with a 2.5-octave pitch drop over 45 ms and a sub underneath it.
-	'KICK 808': hit(0.32, 0.06, {
-		osc1Waveform: 'sine',
-		osc1Gain: 1,
-		subOscGain: 0.6,
-		pitchEnvAmount: 2.5,
-		pitchAttack: 0.001,
-		pitchDecay: 0.045,
-		cutoff: 3000
-	}),
-	// Shorter, harder, a triangle for some edge and a burst of noise for the beater.
-	'KICK PUNCH': hit(0.17, 0.04, {
-		osc1Waveform: 'triangle',
-		osc1Gain: 1,
-		subOscGain: 0.4,
-		noiseGain: 0.15,
-		pitchEnvAmount: 3,
-		pitchAttack: 0.001,
-		pitchDecay: 0.03,
-		cutoff: 5000,
-		filterEnvAmount: -0.6,
-		filterAttack: 0.001,
-		filterDecay: 0.05,
-		filterSustain: 0
-	}),
-	// Body from a triangle and a sine a fifth up, rattle from the NOISE mix,
-	// a short pitch snap on the body.
-	SNARE: hit(0.18, 0.05, {
-		osc1Waveform: 'triangle',
-		osc1Gain: 0.8,
-		osc2Waveform: 'sine',
-		osc2Gain: 0.5,
-		osc2Semitone: 7,
-		noiseGain: 0.9,
-		pitchEnvAmount: 1,
-		pitchAttack: 0.001,
-		pitchDecay: 0.02,
-		cutoff: 8000,
-		resonance: 0.5,
-		keyTracking: 0.5,
-		filterEnvAmount: 0.3,
-		filterAttack: 0.001,
-		filterDecay: 0.08,
-		filterSustain: 0,
-		airGain: 0.2
-	}),
-	// Three noise bursts 11 ms apart, high-passed at 1 kHz with the top
-	// shelved down -- a band-pass there was 10 dB quieter than the hats.
-	CLAP: hit(0.25, 0.08, {
-		osc1Waveform: 'noise',
-		osc1Gain: 1,
-		noiseRetrig: 3,
-		noiseRetrigGap: 11,
-		filterType: 'highpass',
-		cutoff: 1000,
-		resonance: 0.7,
-		airGain: -0.4
-	}),
-	'CLOSED HAT': hit(0.045, 0.02, {
-		osc1Waveform: 'noise',
-		osc1Gain: 1,
-		filterType: 'highpass',
-		cutoff: 7000,
-		resonance: 0.5,
-		keyTracking: 0.8,
-		airGain: 0.4
-	}),
-	'OPEN HAT': hit(0.35, 0.15, {
-		osc1Waveform: 'noise',
-		osc1Gain: 1,
-		filterType: 'highpass',
-		cutoff: 7000,
-		resonance: 0.5,
-		keyTracking: 0.8,
-		airGain: 0.4
-	}),
-	// Like the kick but a shallower drop and longer body; play it across a few keys for a rack of toms.
-	TOM: hit(0.35, 0.08, {
-		osc1Waveform: 'sine',
-		osc1Gain: 1,
-		osc2Waveform: 'triangle',
-		osc2Gain: 0.3,
-		subOscGain: 0.3,
-		noiseGain: 0.12,
-		pitchEnvAmount: 1.2,
-		pitchAttack: 0.001,
-		pitchDecay: 0.08,
-		cutoff: 2500
-	}),
-	// Two oscillators ring-modulated (sum and difference tones two octaves
-	// apart), 40 ms, high-passed so the ping is what is left.
-	RIMSHOT: hit(0.04, 0.02, {
-		osc1Waveform: 'triangle',
-		osc1Gain: 1,
-		osc2Waveform: 'square',
-		osc2Gain: 1,
-		osc2Ratio: 4,
-		blendMode: 'ring',
-		filterType: 'highpass',
-		cutoff: 600,
-		resonance: 2,
-		pitchEnvAmount: 0.5,
-		pitchAttack: 0.001,
-		pitchDecay: 0.01,
-		airGain: 0.3
-	}),
-	// Two squares a fifth-ish apart (the 808 uses 540 and 800 Hz), band-passed.
-	COWBELL: hit(0.3, 0.1, {
-		osc1Waveform: 'square',
-		osc1Gain: 1,
-		osc2Waveform: 'square',
-		osc2Gain: 1,
-		osc2Ratio: 1.5,
-		filterType: 'bandpass',
-		cutoff: 1500,
-		resonance: 1
-	}),
-	// Noise with a soft attack and a filter that opens and closes with it.
-	SHAKER: hit(0.08, 0.05, {
-		osc1Waveform: 'noise',
-		osc1Gain: 1,
-		ampAttack: 0.012,
-		attack: 0.012,
-		filterType: 'bandpass',
-		cutoff: 6000,
-		resonance: 2,
-		keyTracking: 0.6,
-		filterEnvAmount: 0.4,
-		filterAttack: 0.01,
-		filterDecay: 0.05,
-		filterSustain: 0
-	})
-};
-
-function drum(name: string): Partial<TrackData> {
-	return keyOnly(DRUM_VOICES[name] ?? {});
-}
-
-/* Indices count down from C8 = 0; C4 = 48. The pitched drums were voiced at
-   the key they sit on here (kicks at C2, the tom at C3, the rest around C4). */
-/* A drum built the acoustic way: a strike into a set of modes into a body.
- *
- * The three modules and their wiring are the same for every drum in the kit --
- * what changes is the numbers, which is the point: a kick and a ride differ in
- * how hard they are hit, what they ring at and how long, not in what they are
- * made of. Written as one function so a drum reads as its physics rather than
- * as forty lines of graph.
- *
- * `tune` is the note the modes are built on, as a multiple of the key's own
- * pitch -- a drum map plays every key at a different frequency, and a kit needs
- * each drum to sound like itself wherever it sits. */
-/* What kind of instrument a key is, which decides how its voice is built.
- *
- * Every key used to share one graph -- excite, modes, a parallel noise burst, a
- * body -- with only the knobs differing. That cannot work: a kick is a large
- * damped head, a cymbal is a dense metal plate with no pitch at all, a cowbell
- * is a stiff bar with a few strong partials, and a shaker is nothing but
- * rattling grains. Those are different mechanisms, not one mechanism at
- * different settings, and one topology gives them all the same character
- * however its numbers are set.
- *
- * Each family below is built from what the instrument actually is. */
-type DrumFamily =
-	/** A large tuned head, heavily damped: kick, toms. Modes into a shell. */
-	| 'head'
-	/** A tuned head plus wires across it: snare. Two paths, mixed. */
-	| 'snare'
-	/** A metal plate: cymbals, hats. Dense wash, no pitch, no shell. */
-	| 'cymbal'
-	/** A stiff struck bar: cowbell, claves, blocks, agogo. Few strong partials. */
-	| 'bar'
-	/** Rattling grains: shaker, cabasa, maracas, tambourine jingles. */
-	| 'shaker'
-	/** A stick on a rim: side stick, and the hand clap's burst. */
-	| 'stick';
-
-interface DrumSpec {
-	family: DrumFamily;
-	/** The instrument's own pitch in Hz. Ignored by cymbal and shaker. */
-	hz?: number;
-	/** Partial ratios above hz, for the families that have them. */
-	modes?: [number, number, number];
-	/** Ring: roughly q/12 seconds on the lowest partial. */
-	q?: number;
-	/** Strike: 0 a soft mallet, 100 a hard stick. */
-	hard: number;
-	/** Contact time in ms. */
-	len: number;
-	/** Strike brightness in Hz. */
-	tone: number;
-	/** Shell size 0-100 and how much of it is heard, for the families with one. */
-	body?: number;
-	bodyMix?: number;
-	/** How much rattle, for snare and shaker. */
-	snare?: number;
-	/** Amp envelope, which gates the whole voice. */
-	decay: number;
-	release?: number;
-	/** Keys sharing a group cut each other off. 0 is none. */
-	group?: number;
-}
-
-/* Laid out left to right along the signal path, so the canvas reads as the
-   instrument's own chain rather than a fixed template. */
-const COL = 300;
-const node = (id: string, type: string, col: number, row = 0) => ({
-	id,
-	type,
-	x: 48 + col * COL,
-	y: 190 + row * 150
-});
-const wire = (from: string, to: string, toPort = 'in') => ({
-	from,
-	fromPort: 'out',
-	to,
-	toPort
-});
-
-/* Struck harder means struck brighter.
- *
- * A drum hit hard is not the same sound louder: the stick is in contact for
- * less time, so the strike itself carries more high frequency, and the head is
- * stretched tighter under it. Velocity reached the amp gain and nothing else
- * before ENTRY published it as a pin, which is a large part of why the kit
- * sounded mechanical however carefully the rest was voiced -- every hit was the
- * same timbre at a different level.
- *
- * REMAP rather than a raw cable because EXCT's TONE is in Hz: velocity arrives
- * 0..1 and the knob wants hundreds, which is exactly the conversion the node
- * exists for. */
-const velToTone = (target: string, lo: number, hi: number) => ({
-	nodes: [{ id: 'vt', type: 'map', x: 48, y: 40 }],
-	cables: [
-		{ from: ENTRY_ID, fromPort: 'vel', to: 'vt', toPort: 'a' },
-		{ from: 'vt', fromPort: 'out', to: target, toPort: 'exTone' }
-	],
-	params: { 'vt.inLo': 0, 'vt.inHi': 1, 'vt.outLo': Math.round(lo), 'vt.outHi': Math.round(hi) }
-});
-
-/**
- * One drum, built the way that kind of instrument is built.
- *
- * The graph differs per family; only the amp envelope and the output trim are
- * common, because those belong to the voice rather than to the instrument.
- */
-function drumPatch(o: DrumSpec): Partial<TrackData> {
-	const hz = o.hz ?? 200;
-	const modes = o.modes ?? [1, 2.4, 4.6];
-	const q = o.q ?? 8;
-	let nodes: { id: string; type: string; x: number; y: number }[];
-	let cables: { from: string; fromPort: string; to: string; toPort: string }[];
-	let gp: Record<string, number> = {};
-
-	if (o.family === 'cymbal') {
-		/* A plate has no tuned body and no shell: what makes it a cymbal is a
-		   dense metal wash. A long noise burst through a high-pass, with a comb
-		   for the closely spaced plate modes that give it its shimmer, and a
-		   short space so it is a cymbal in a room rather than a hiss. */
-		nodes = [
-			node(ENTRY_ID, 'in', 0),
-			node('n', 'excite', 1),
-			node('hp', 'filter', 2),
-			node('cb', 'comb', 3),
-			node('sp', 'space', 4),
-			node(OUTPUT_ID, 'out', 5)
-		];
-		cables = [wire('n', 'hp'), wire('hp', 'cb'), wire('cb', 'sp'), wire('sp', OUTPUT_ID)];
-		gp = {
-			'n.hardness': o.hard,
-			'n.exLength': Math.min(60, Math.max(2, Math.round(o.len * 6))),
-			'n.exTone': o.tone,
-			'hp.type': 2,
-			'hp.cutoff': Math.max(1500, o.tone * 0.45),
-			'hp.q': 0.6,
-			'hp.depth': 0,
-			// Short comb: the plate's own closely spaced modes, not an echo.
-			'cb.combPos': 3,
-			'cb.combDepth': Math.round(40 + q * 1.2),
-			/* The plate's ring lives in SPACE, so its size has to carry the
-			   whole tail: a crash written for 1.6 s measured 0.48 with the size
-			   capped at 70. A convolver rings for the length of its impulse,
-			   which is spaceSize/100 * 3 seconds.
-			
-			   DECAY now reads the way it is labelled -- higher is a longer tail
-			   -- so a cymbal written to ring wants more of it, which is the
-			   direction this already asked for. */
-			'sp.spaceSize': Math.round(Math.min(100, 20 + o.decay * 50)),
-			'sp.spaceDecay': Math.round(Math.min(95, 40 + o.decay * 34)),
-			'sp.spaceMix': Math.round(Math.min(85, 45 + o.decay * 20))
-		};
-	} else if (o.family === 'shaker') {
-		/* Grains, not a body: many tiny collisions. A bandpassed burst with no
-		   resonator at all -- adding one is what made every shaker in the kit
-		   sound like a small tuned drum. */
-		nodes = [
-			node(ENTRY_ID, 'in', 0),
-			node('n', 'excite', 1),
-			node('bp', 'filter', 2),
-			node('sh', 'shell', 3),
-			node(OUTPUT_ID, 'out', 4)
-		];
-		cables = [wire('n', 'bp'), wire('bp', 'sh'), wire('sh', OUTPUT_ID)];
-		gp = {
-			'n.hardness': o.hard,
-			'n.exLength': Math.min(60, Math.max(6, Math.round(o.decay * 220))),
-			'n.exTone': o.tone,
-			'bp.type': 1,
-			'bp.cutoff': o.tone,
-			'bp.q': 0.8,
-			'bp.depth': 0,
-			/* The shell the grains rattle inside. EXCT's burst caps at 60 ms, so
-			   without something to sustain it a cabasa was over in 0.02 s.
-			
-			   A short delay with feedback, not a comb: COMB is feed-forward --
-			   it notches, it never rings -- so it left the tail exactly as
-			   short. Each lap is another handful of beads hitting the shell,
-			   which is what a shaker is. */
-			'sh.dlTime': 11,
-			'sh.dlFeedback': Math.round(Math.min(82, 30 + o.decay * 110)),
-			'sh.dlTone': Math.min(12000, o.tone),
-			'sh.dlMix': 78
-		};
-	} else if (o.family === 'bar') {
-		/* A stiff bar rings at a few strong, widely spaced partials and has
-		   almost no shell. Struck modes straight out, with a touch of drive for
-		   the metallic edge a hard strike puts on one. */
-		nodes = [
-			node(ENTRY_ID, 'in', 0),
-			node('e', 'excite', 1),
-			node('m', 'modes', 2),
-			node('dr', 'drive', 3),
-			node(OUTPUT_ID, 'out', 4)
-		];
-		cables = [wire('e', 'm'), wire('m', 'dr'), wire('dr', OUTPUT_ID)];
-		gp = {
-			'e.hardness': o.hard,
-			'e.exLength': o.len,
-			'e.exTone': Math.min(o.tone, hz * 5),
-			'm.mode1': modes[0],
-			'm.mode2': modes[1],
-			'm.mode3': modes[2],
-			'm.modeQ': q,
-			'm.modeMix': 100,
-			'm.modeHz': hz,
-			'dr.driveAmt': 12,
-			'dr.driveBias': 20,
-			'dr.driveTone': Math.min(16000, hz * 12)
-		};
-	} else if (o.family === 'stick') {
-		/* Wood on wood, or a hand clap. The strike is the whole event, but it
-		   still rings briefly: a clave is a tuned wooden bar, not a click.
-		
-		   Built as a burst into a short resonance, because EXCT alone caps at
-		   60 ms and measured a 0.01 s decay -- a frame or two, inaudible as
-		   anything but a tick. MODES gives it the pitch a struck block has,
-		   with the Q short enough that it stays a knock. */
-		nodes = [
-			node(ENTRY_ID, 'in', 0),
-			node('n', 'excite', 1),
-			node('m', 'modes', 2),
-			node(OUTPUT_ID, 'out', 3)
-		];
-		cables = [wire('n', 'm'), wire('m', OUTPUT_ID)];
-		gp = {
-			'n.hardness': o.hard,
-			'n.exLength': Math.min(60, Math.max(2, Math.round(o.len * 4))),
-			'n.exTone': o.tone,
-			'm.mode1': 1,
-			'm.mode2': 2.8,
-			'm.mode3': 5.4,
-			/* Q well above decay*12: the higher partials are damped by r^0.6, so
-			   the audible tail is a fraction of what the lowest mode promises.
-			   A clave measured 0.03 s against the 0.09 it was written for. */
-			'm.modeQ': Math.max(3, Math.round(o.decay * 40)),
-			'm.modeMix': 82,
-			'm.modeHz': hz
-		};
-	} else if (o.family === 'snare') {
-		/* The one instrument that really is two: a tuned head, and wires
-		   rattling against it. They are summed because you hear both at once --
-		   the head gives the pitch, the wires the sizzle. */
-		nodes = [
-			node(ENTRY_ID, 'in', 0),
-			node('e', 'excite', 1, -1),
-			node('m', 'modes', 2, -1),
-			node('n', 'excite', 1, 1),
-			node('hp', 'filter', 2, 1),
-			node('mx', 'mix', 3),
-			node('b', 'body', 4),
-			node(OUTPUT_ID, 'out', 5)
-		];
-		cables = [
-			wire('e', 'm'),
-			wire('m', 'mx'),
-			wire('n', 'hp'),
-			wire('hp', 'mx', 'b'),
-			wire('mx', 'b'),
-			wire('b', OUTPUT_ID)
-		];
-		gp = {
-			'e.hardness': o.hard,
-			'e.exLength': o.len,
-			'e.exTone': Math.min(o.tone, hz * 6),
-			'm.mode1': modes[0],
-			'm.mode2': modes[1],
-			'm.mode3': modes[2],
-			'm.modeQ': q,
-			'm.modeMix': 100,
-			'm.modeHz': hz,
-			// The wires: long, bright, and high-passed clear of the head.
-			'n.hardness': 0,
-			'n.exLength': Math.min(60, Math.round(o.len * 8)),
-			'n.exTone': o.tone,
-			'hp.type': 2,
-			'hp.cutoff': Math.max(900, hz * 4),
-			'hp.q': 0.6,
-			'hp.depth': 0,
-			'mx.mixA': 100,
-			'mx.mixB': Math.round(o.snare ?? 60),
-			'b.bodySize': o.body ?? 20,
-			'b.bodyDepth': 45,
-			'b.bodyMix': o.bodyMix ?? 40
-		};
-	} else {
-		/* A head: struck modes into the shell they are stretched over. A kick
-		   and a tom are the same instrument at different sizes, which is why
-		   they share this and nothing else does. */
-		nodes = [
-			node(ENTRY_ID, 'in', 0),
-			node('e', 'excite', 1),
-			node('m', 'modes', 2),
-			node('b', 'body', 3),
-			node(OUTPUT_ID, 'out', 4)
-		];
-		cables = [wire('e', 'm'), wire('m', 'b'), wire('b', OUTPUT_ID)];
-		gp = {
-			'e.hardness': o.hard,
-			'e.exLength': o.len,
-			// A beater on a big head is dull: the click belongs near the drum.
-			'e.exTone': Math.min(o.tone, Math.max(300, hz * 6)),
-			'm.mode1': modes[0],
-			'm.mode2': modes[1],
-			'm.mode3': modes[2],
-			'm.modeQ': q,
-			'm.modeMix': 100,
-			'm.modeHz': hz,
-			'b.bodySize': o.body ?? 30,
-			'b.bodyDepth': 50,
-			'b.bodyMix': o.bodyMix ?? 60
-		};
-	}
-
-	/* Velocity into the strike's brightness, for every family that has a strike.
-	   The shaker and the cymbal have one too -- a hard shake is a sharper rattle
-	   -- so this is not limited to the drums with heads. */
-	const strike = nodes.find((n) => n.type === 'excite');
-	if (strike) {
-		const base = Math.min(o.tone, 12000);
-		const vt = velToTone(strike.id, base * 0.45, base);
-		nodes = [...nodes, ...vt.nodes];
-		cables = [...cables, ...vt.cables];
-		gp = { ...gp, ...vt.params };
-	}
-
-	/* Emitted through `patch()`, like every melodic AC preset: its composites
-	   (BODY, MIX, DRIVE, COMB, SHELL) become macros, it gets ENTRY, OUT and the
-	   trim, and anything the catalogue does not carry holds it back. These
-	   graphs were built and then discarded while the catalogue was rebuilt,
-	   so a JAZZ KIT key played the track's own oscillators under a drum
-	   envelope; every type they name is a module or a composite again.
-
-	   Two conventions from the old catalogue are translated on the way. FILTER
-	   listed its types LP, BP, HP where it now lists LP, HP, BP, so the 1s and
-	   2s are swapped; and its old envelope DEPTH is gone. The trim is the kit's
-	   own: a drum graph arrives far hotter than a melodic one, and 15% is where
-	   the keys sit level with the rest of the instrument. */
-	const LEGACY_FILTER: Record<number, number> = { 1: 2, 2: 1 };
-	const typeOf = new Map(nodes.map((n) => [n.id, n.type]));
-	const knobs = new Map<string, Record<string, number>>();
-	for (const [k, v] of Object.entries(gp)) {
-		const dot = k.indexOf('.');
-		const id = k.slice(0, dot);
-		const key = k.slice(dot + 1);
-		if (typeOf.get(id) === 'filter' && key === 'depth') continue;
-		const val = typeOf.get(id) === 'filter' && key === 'type' ? (LEGACY_FILTER[v] ?? v) : v;
-		knobs.set(id, { ...(knobs.get(id) ?? {}), [key]: val });
-	}
-	const graph = patch(
-		nodes
-			.filter((n) => n.id !== ENTRY_ID && n.id !== OUTPUT_ID)
-			.map((n) => [n.id, n.type, knobs.get(n.id)] as [string, string, Record<string, number>?]),
-		cables.map(
-			(c) =>
-				`${c.from}${c.fromPort === 'out' ? '' : `.${c.fromPort}`}>${c.to}${c.toPort === 'in' ? '' : `:${c.toPort}`}`
-		),
-		15
-	);
-	return keyOnly({
-		ampAttack: 0.001,
-		/* The envelope must not close before the instrument has finished
-		   sounding: a crash written to ring 1.3 s measured 0.25 because the amp
-		   gate reaped the voice first. */
-		/* The gate opens well past where the instrument is meant to be audible.
-		
-		   An exponential amp decay reaches -40 dB at roughly 40% of its setting,
-		   so a clave written for 0.09 s died at 0.03 -- a tick rather than a
-		   knock. The short percussion suffered most because nothing downstream
-		   was ringing to cover the gate closing. */
-		ampDecay: Math.max(o.decay * 2.5, q / 12),
-		ampSustain: 0,
-		ampRelease: o.release ?? 0.04,
-		muteGroup: o.group ?? 0,
-		...(graph.rackGraph ? { ...graph, advanced: true } : {})
-	});
-}
-
 export const BUILTIN_KITS: DrumKit[] = [
 	{
 		name: '808 KIT',
-		keys: {
-			72: drum('KICK 808'), // C2
-			70: drum('KICK PUNCH'), // D2
-			60: drum('TOM'), // C3
-			48: drum('SNARE'), // C4
-			46: drum('CLAP'), // D4
-			44: drum('CLOSED HAT'), // E4
-			43: drum('OPEN HAT'), // F4
-			41: drum('RIMSHOT'), // G4
-			39: drum('COWBELL'), // A4
-			37: drum('SHAKER') // B4
-		}
+		// The drum machine, in the patch bay: see drum-kits.ts.
+		keys: kit808()
 	},
 	{
-		/* JAZZ KIT -- built in the patch bay rather than from oscillators.
-		 *
-		 * Every drum here is the same three ideas an acoustic drum actually is:
-		 * something strikes a surface (EXCT), the surface rings at frequencies
-		 * that are not a harmonic series (MODES), and a shell or a cymbal body
-		 * colours what comes off it (BODY). The 808 kit next to it is the other
-		 * way of doing this -- oscillators and envelopes, which is what a drum
-		 * machine is -- so the two are different instruments rather than two
-		 * attempts at one.
-		 *
-		 * A jazz kit rather than a rock one: smaller shells tuned higher, sticks
-		 * rather than beaters, and cymbals that are thin and quick. That is what
-		 * the numbers below say -- short decays, high mode ratios, and a light
-		 * strike.
-		 *
-		 * Laid out on the General MIDI map (notes 35-81), so a MIDI drum part
-		 * written anywhere else plays correctly here.
-		 */
+		/* JAZZ KIT -- an acoustic kit in the patch bay, on the General MIDI map
+		   (notes 35-81) so a drum part written anywhere else plays correctly
+		   here. Every drum is its own graph: see drum-kits.ts. */
 		name: 'JAZZ KIT',
-		keys: {
-			// GM 35 ACOUSTIC BASS DRUM
-			73: drumPatch({
-				family: 'head',
-				hz: 48,
-				modes: [1, 1.59, 2.14],
-				q: 5,
-				hard: 26,
-				len: 11,
-				tone: 900,
-				body: 42,
-				bodyMix: 72,
-				decay: 0.34
-			}),
-			// GM 36 BASS DRUM 1
-			72: drumPatch({
-				family: 'head',
-				hz: 58,
-				modes: [1, 1.59, 2.14],
-				q: 4,
-				hard: 34,
-				len: 9,
-				tone: 1100,
-				body: 36,
-				bodyMix: 70,
-				decay: 0.26
-			}),
-			// GM 37 SIDE STICK
-			71: drumPatch({ family: 'stick', hz: 780, hard: 92, len: 2, tone: 6000, decay: 0.07 }),
-			// GM 38 ACOUSTIC SNARE
-			70: drumPatch({
-				family: 'snare',
-				hz: 185,
-				modes: [1, 1.59, 2.14],
-				q: 6,
-				hard: 68,
-				len: 3,
-				tone: 5200,
-				body: 20,
-				bodyMix: 40,
-				snare: 70,
-				decay: 0.22
-			}),
-			// GM 39 HAND CLAP
-			69: drumPatch({ family: 'stick', hz: 1500, hard: 70, len: 6, tone: 4200, decay: 0.18 }),
-			// GM 40 ELECTRIC SNARE
-			68: drumPatch({
-				family: 'snare',
-				hz: 210,
-				modes: [1, 1.59, 2.14],
-				q: 5,
-				hard: 80,
-				len: 2,
-				tone: 6200,
-				body: 16,
-				bodyMix: 34,
-				snare: 78,
-				decay: 0.18
-			}),
-			// GM 41 LOW FLOOR TOM
-			67: drumPatch({
-				family: 'head',
-				hz: 78,
-				modes: [1, 1.59, 2.14],
-				q: 11,
-				hard: 42,
-				len: 7,
-				tone: 1500,
-				body: 44,
-				bodyMix: 64,
-				decay: 0.6
-			}),
-			// GM 42 CLOSED HI-HAT
-			66: drumPatch({
-				family: 'cymbal',
-				q: 4,
-				hard: 94,
-				len: 2,
-				tone: 9000,
-				decay: 0.06,
-				group: 1
-			}),
-			// GM 43 HIGH FLOOR TOM
-			65: drumPatch({
-				family: 'head',
-				hz: 94,
-				modes: [1, 1.59, 2.14],
-				q: 10,
-				hard: 44,
-				len: 7,
-				tone: 1600,
-				body: 40,
-				bodyMix: 62,
-				decay: 0.54
-			}),
-			// GM 44 PEDAL HI-HAT
-			64: drumPatch({ family: 'cymbal', q: 5, hard: 88, len: 3, tone: 8200, decay: 0.1, group: 1 }),
-			// GM 45 LOW TOM
-			63: drumPatch({
-				family: 'head',
-				hz: 115,
-				modes: [1, 1.59, 2.14],
-				q: 9,
-				hard: 46,
-				len: 6,
-				tone: 1800,
-				body: 36,
-				bodyMix: 60,
-				decay: 0.46
-			}),
-			// GM 46 OPEN HI-HAT
-			62: drumPatch({
-				family: 'cymbal',
-				q: 12,
-				hard: 86,
-				len: 6,
-				tone: 8000,
-				decay: 0.55,
-				group: 1
-			}),
-			// GM 47 LOW-MID TOM
-			61: drumPatch({
-				family: 'head',
-				hz: 142,
-				modes: [1, 1.59, 2.14],
-				q: 8,
-				hard: 48,
-				len: 6,
-				tone: 2000,
-				body: 32,
-				bodyMix: 58,
-				decay: 0.4
-			}),
-			// GM 48 HI-MID TOM
-			60: drumPatch({
-				family: 'head',
-				hz: 172,
-				modes: [1, 1.59, 2.14],
-				q: 8,
-				hard: 50,
-				len: 5,
-				tone: 2200,
-				body: 28,
-				bodyMix: 56,
-				decay: 0.35
-			}),
-			// GM 49 CRASH CYMBAL 1
-			59: drumPatch({ family: 'cymbal', q: 30, hard: 72, len: 8, tone: 7000, decay: 1.6 }),
-			// GM 50 HIGH TOM
-			58: drumPatch({
-				family: 'head',
-				hz: 205,
-				modes: [1, 1.59, 2.14],
-				q: 7,
-				hard: 52,
-				len: 5,
-				tone: 2400,
-				body: 24,
-				bodyMix: 54,
-				decay: 0.3
-			}),
-			// GM 51 RIDE CYMBAL 1
-			57: drumPatch({ family: 'cymbal', q: 26, hard: 90, len: 3, tone: 7600, decay: 1.4 }),
-			// GM 52 CHINESE CYMBAL
-			56: drumPatch({ family: 'cymbal', q: 24, hard: 84, len: 7, tone: 6000, decay: 1.1 }),
-			// GM 53 RIDE BELL
-			55: drumPatch({
-				family: 'bar',
-				hz: 520,
-				modes: [1, 2.0, 3.01],
-				q: 26,
-				hard: 94,
-				len: 2,
-				tone: 9000,
-				decay: 1.1
-			}),
-			// GM 54 TAMBOURINE
-			54: drumPatch({ family: 'cymbal', q: 8, hard: 92, len: 3, tone: 9500, decay: 0.3 }),
-			// GM 55 SPLASH CYMBAL
-			53: drumPatch({ family: 'cymbal', q: 14, hard: 80, len: 4, tone: 8600, decay: 0.55 }),
-			// GM 56 COWBELL
-			52: drumPatch({
-				family: 'bar',
-				hz: 540,
-				modes: [1, 1.52, 2.71],
-				q: 14,
-				hard: 88,
-				len: 3,
-				tone: 6800,
-				decay: 0.35
-			}),
-			// GM 57 CRASH CYMBAL 2
-			51: drumPatch({ family: 'cymbal', q: 32, hard: 70, len: 8, tone: 6600, decay: 1.8 }),
-			// GM 58 VIBRASLAP
-			50: drumPatch({
-				family: 'bar',
-				hz: 380,
-				modes: [1, 2.7, 4.9],
-				q: 20,
-				hard: 92,
-				len: 4,
-				tone: 5200,
-				decay: 0.85
-			}),
-			// GM 59 RIDE CYMBAL 2
-			49: drumPatch({ family: 'cymbal', q: 28, hard: 88, len: 3, tone: 7200, decay: 1.55 }),
-			// GM 60 HI BONGO
-			48: drumPatch({
-				family: 'head',
-				hz: 330,
-				modes: [1, 1.59, 2.14],
-				q: 6,
-				hard: 62,
-				len: 4,
-				tone: 3200,
-				body: 16,
-				bodyMix: 44,
-				decay: 0.2
-			}),
-			// GM 61 LOW BONGO
-			47: drumPatch({
-				family: 'head',
-				hz: 232,
-				modes: [1, 1.59, 2.14],
-				q: 6,
-				hard: 60,
-				len: 4,
-				tone: 2800,
-				body: 20,
-				bodyMix: 46,
-				decay: 0.24
-			}),
-			// GM 62 MUTE HI CONGA
-			46: drumPatch({
-				family: 'head',
-				hz: 292,
-				modes: [1, 1.59, 2.14],
-				q: 3,
-				hard: 66,
-				len: 3,
-				tone: 3000,
-				body: 14,
-				bodyMix: 38,
-				decay: 0.11
-			}),
-			// GM 63 OPEN HI CONGA
-			45: drumPatch({
-				family: 'head',
-				hz: 262,
-				modes: [1, 1.59, 2.14],
-				q: 8,
-				hard: 58,
-				len: 5,
-				tone: 2600,
-				body: 22,
-				bodyMix: 50,
-				decay: 0.32
-			}),
-			// GM 64 LOW CONGA
-			44: drumPatch({
-				family: 'head',
-				hz: 180,
-				modes: [1, 1.59, 2.14],
-				q: 8,
-				hard: 54,
-				len: 6,
-				tone: 2200,
-				body: 28,
-				bodyMix: 54,
-				decay: 0.38
-			}),
-			// GM 65 HIGH TIMBALE
-			43: drumPatch({
-				family: 'head',
-				hz: 330,
-				modes: [1, 1.59, 2.14],
-				q: 9,
-				hard: 76,
-				len: 3,
-				tone: 4200,
-				body: 12,
-				bodyMix: 34,
-				decay: 0.3
-			}),
-			// GM 66 LOW TIMBALE
-			42: drumPatch({
-				family: 'head',
-				hz: 262,
-				modes: [1, 1.59, 2.14],
-				q: 9,
-				hard: 74,
-				len: 3,
-				tone: 3800,
-				body: 14,
-				bodyMix: 36,
-				decay: 0.34
-			}),
-			// GM 67 HIGH AGOGO
-			41: drumPatch({
-				family: 'bar',
-				hz: 780,
-				modes: [1, 1.55, 2.68],
-				q: 16,
-				hard: 90,
-				len: 2,
-				tone: 7400,
-				decay: 0.32
-			}),
-			// GM 68 LOW AGOGO
-			40: drumPatch({
-				family: 'bar',
-				hz: 620,
-				modes: [1, 1.55, 2.68],
-				q: 16,
-				hard: 90,
-				len: 2,
-				tone: 7000,
-				decay: 0.36
-			}),
-			// GM 69 CABASA
-			39: drumPatch({ family: 'shaker', hard: 90, len: 3, tone: 7000, decay: 0.12 }),
-			// GM 70 MARACAS
-			38: drumPatch({ family: 'shaker', hard: 92, len: 2, tone: 7800, decay: 0.1 }),
-			// GM 71 SHORT WHISTLE
-			37: drumPatch({
-				family: 'bar',
-				hz: 1700,
-				modes: [1, 2.0, 3.0],
-				q: 30,
-				hard: 40,
-				len: 6,
-				tone: 3000,
-				decay: 0.22
-			}),
-			// GM 72 LONG WHISTLE
-			36: drumPatch({
-				family: 'bar',
-				hz: 1500,
-				modes: [1, 2.0, 3.0],
-				q: 34,
-				hard: 40,
-				len: 14,
-				tone: 2800,
-				decay: 0.6
-			}),
-			// GM 73 SHORT GUIRO
-			35: drumPatch({ family: 'shaker', hard: 76, len: 5, tone: 4000, decay: 0.16 }),
-			// GM 74 LONG GUIRO
-			34: drumPatch({ family: 'shaker', hard: 74, len: 14, tone: 3800, decay: 0.42 }),
-			// GM 75 CLAVES
-			33: drumPatch({ family: 'stick', hz: 2500, hard: 98, len: 1, tone: 9000, decay: 0.09 }),
-			// GM 76 HI WOOD BLOCK
-			32: drumPatch({ family: 'stick', hz: 1200, hard: 96, len: 1, tone: 8000, decay: 0.1 }),
-			// GM 77 LOW WOOD BLOCK
-			31: drumPatch({ family: 'stick', hz: 900, hard: 94, len: 2, tone: 7000, decay: 0.12 }),
-			// GM 78 MUTE CUICA
-			30: drumPatch({
-				family: 'bar',
-				hz: 420,
-				modes: [1, 2.0, 3.0],
-				q: 8,
-				hard: 44,
-				len: 5,
-				tone: 1800,
-				decay: 0.16
-			}),
-			// GM 79 OPEN CUICA
-			29: drumPatch({
-				family: 'bar',
-				hz: 350,
-				modes: [1, 2.0, 3.0],
-				q: 14,
-				hard: 42,
-				len: 8,
-				tone: 1600,
-				decay: 0.4
-			}),
-			// GM 80 MUTE TRIANGLE
-			28: drumPatch({
-				family: 'bar',
-				hz: 4200,
-				modes: [1, 2.14, 3.41],
-				q: 8,
-				hard: 96,
-				len: 1,
-				tone: 12000,
-				decay: 0.1
-			}),
-			// GM 81 OPEN TRIANGLE
-			27: drumPatch({
-				family: 'bar',
-				hz: 4200,
-				modes: [1, 2.14, 3.41],
-				q: 44,
-				hard: 96,
-				len: 1,
-				tone: 12000,
-				decay: 1.6
-			})
-		}
+		keys: jazzKit()
 	},
 	{
 		// The SMB1 noise channel's three beats on the keys the transcription uses; see songs/mario1.ts.

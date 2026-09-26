@@ -55,7 +55,7 @@ async function playKit(name: string): Promise<Hit[]> {
 		const out = [];
 		for (const [key, t] of Object.entries(kit.keys)) {
 			w.__audit.setTrack({ ...t, advanced: true });
-			const r = await w.__audit.renderPhrase([{ note: +key, at: 0.02, dur: 0.3, vel: 100 }], 3);
+			const r = await w.__audit.renderPhrase([{ note: +key, at: 0.02, dur: 0.3, vel: 100 }], 7);
 			const b = Uint8Array.from(atob(r.wav!), (c) => c.charCodeAt(0));
 			const dv = new DataView(b.buffer);
 			const n = (b.length - 44) / 4;
@@ -100,7 +100,8 @@ describe('JAZZ KIT', () => {
 			expect(h.graph, `key ${h.key} has a patch`).toBe(true);
 			expect(h.peak, `key ${h.key} sounds`).toBeGreaterThan(0.005);
 			expect(h.peak, `key ${h.key} stays bounded`).toBeLessThan(0.9);
-			expect(h.ring, `key ${h.key} ends`).toBeLessThan(2.8);
+			// A ride or an open triangle rings for seconds; every voice ends by 6.8.
+			expect(h.ring, `key ${h.key} ends`).toBeLessThan(6.8);
 		}
 	});
 
@@ -109,5 +110,30 @@ describe('JAZZ KIT', () => {
 		// GM: 36 bass drum (key 72), 42 closed hat (66), 49 crash (59), 37 side stick (71).
 		expect(at(72).zc, 'a kick is darker than a closed hat').toBeLessThan(at(66).zc / 10);
 		expect(at(59).ring, 'a crash rings longer than a side stick').toBeGreaterThan(at(71).ring * 4);
+	});
+});
+
+describe('808 KIT', () => {
+	/* The drum machine, rebuilt in the patch bay: it was racks 1-7 voices, a
+	   different instrument from everything else in the kit menu. */
+	let hits: Hit[] = [];
+	beforeAll(async () => {
+		hits = await playKit('808 KIT');
+	}, 120000);
+
+	it('carries a graph on every key, and every key is a drum that sounds', () => {
+		expect(hits.length).toBe(10);
+		for (const h of hits) {
+			expect(h.graph, `key ${h.key} has a patch`).toBe(true);
+			expect(h.peak, `key ${h.key} sounds`).toBeGreaterThan(0.005);
+			expect(h.peak, `key ${h.key} stays bounded`).toBeLessThan(0.9);
+			expect(h.ring, `key ${h.key} ends`).toBeLessThan(6.8);
+		}
+	});
+
+	it('has a kick under a hat', () => {
+		const at = (k: number) => hits.find((h) => h.key === k)!;
+		// C2 kick, E4 closed hat.
+		expect(at(72).zc, 'the kick is darker than the closed hat').toBeLessThan(at(44).zc / 10);
 	});
 });
