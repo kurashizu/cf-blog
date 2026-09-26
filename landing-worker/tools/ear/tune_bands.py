@@ -63,12 +63,12 @@ BAND_SPECS = {
         'refs': 'vcsl/Idiophones/Struck Idiophones/Vibraphone/Soft Mallets/*v2_rr1_Main.wav', 'keys': [55, 62, 69, 76, 84], 'vel': 96,
         'space': [
             ('mal.hardness', 5, 90), ('mal.exLength', 1, 20, True), ('mal.exTone', 500, 10000, True),
-            ('bar.mode2', 3.5, 4.5), ('bar.mode3', 8, 11), ('bar.modeQ', 50, 1000, True),
+            ('bar.modeQ', 100, 1000, True), ('up.mode1', 3.6, 4.4), ('up.mode2', 8.5, 11), ('up.modeQ', 5, 200, True), ('ug.level', 0.02, 2, True),
             ('shn.modeQ', 2, 60, True), ('sv.outHi', 0.02, 1.5, True), ('tg.level', 0.005, 0.5, True),
             ('fan.lfoAmt', 0, 60), ('dmp.envR', 0.1, 2, True), ('rm.spaceMix', 3, 40),
         ],
-        'start': {'mal.hardness': 45, 'mal.exLength': 3, 'mal.exTone': 6000, 'bar.mode2': 3.98, 'bar.mode3': 9.13, 'bar.modeQ': 300,
-                  'shn.modeQ': 10, 'sv.outHi': 0.9, 'tg.level': 0.12, 'fan.lfoAmt': 35, 'dmp.envR': 0.5, 'rm.spaceMix': 20},
+        'start': {'mal.hardness': 33, 'mal.exLength': 3.7, 'mal.exTone': 7400, 'bar.modeQ': 300, 'up.mode1': 3.92, 'up.mode2': 9.93, 'up.modeQ': 40, 'ug.level': 0.5,
+                  'shn.modeQ': 8.6, 'sv.outHi': 1.41, 'tg.level': 0.044, 'fan.lfoAmt': 20, 'dmp.envR': 0.63, 'rm.spaceMix': 38},
     },
     'MARIMBA': {
         'refs': 'vcsl/Idiophones/Struck Idiophones/Marimba/*_med_01.wav', 'keys': [48, 55, 60, 67, 72], 'vel': 96,
