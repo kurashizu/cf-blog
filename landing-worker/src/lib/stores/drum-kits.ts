@@ -454,18 +454,29 @@ function cymbal(c: Cym) {
 	return v.done(c.ring ?? c.decay * 1.2, 0.9, c.group ?? 0);
 }
 
+/**
+ * A hi-hat: two plates, a stick. Broadband from 250 Hz to 16 kHz and nearly
+ * flat -- the VCSL closed hat is within 12 dB across it for its first 30 ms
+ * and rings about a tenth of a second. The metal bank under a 6.5 kHz
+ * highpass it replaces had nothing under 4 kHz and was over in 5 ms: heard
+ * as a clock's tick.
+ */
 function hat(decay: number, chick: number) {
 	const v = metal(new Voice(), 400, 'bank')
-		.n('bp', 'filter', { type: BP, cutoff: 9000, q: 0.8 })
-		.n('hp', 'filter', { type: HP, cutoff: 6500, q: 0.7 })
-		.w('bank>bp', 'bp>hp')
+		.n('bp', 'filter', { type: BP, cutoff: 7000, q: 0.5 })
+		.w('bank>bp')
 		.n('nz', 'noise')
-		.n('nhp', 'filter', { type: HP, cutoff: 7000, q: 0.7 })
-		.n('ng', 'gain', { level: 0.5 })
-		.w('nz>nhp', 'nhp>ng')
+		.n('nhp', 'filter', { type: HP, cutoff: 300, q: 0.7 })
+		.n('tilt', 'filter', { type: 5, cutoff: 6000, q: 0.7, filterGain: 4 })
+		.n('ng', 'gain', { level: 0.7 })
+		.w('nz>nhp', 'nhp>tilt', 'tilt>ng')
 		.n('src', 'sum')
-		.w('hp>src', 'ng>src')
-		.vca('amp', 'src', { envA: 0.0008, envD: decay }, 'mix');
+		.w('bp>src', 'ng>src')
+		.vca('amp', 'src', { envA: 0.0008, envD: decay }, 'mix')
+		// The stick on the top plate: a knock in the middle of the band.
+		.n('stk', 'excite', { hardness: 60, exLength: 1.5, exTone: 3000 })
+		.n('sg', 'gain', { level: 0.5 })
+		.w('stk>sg', 'sg>mix');
 	if (chick) {
 		// The two plates closing on each other, a low thud under the hiss.
 		v.n('ck', 'excite', { hardness: 40, exLength: 6, exTone: 900 })
@@ -476,6 +487,29 @@ function hat(decay: number, chick: number) {
 		.n('mix', 'sum')
 		.vel('v', 0.3, 'mix', 'trim')
 		.done(Math.max(0.3, decay * 2.5), 0.9, 1);
+}
+
+/**
+ * A wood block: a burst of the stick's noise through the hollow slot's two
+ * resonances (2.85 and 4.07 kHz on the VCSL block -- a ratio of 1.43), broad
+ * and gone in a fifth of a second, over the stick's own click. As three pure
+ * modes (BAR) it was a ding whatever their Q: sines ring like metal.
+ */
+function woodBlock(hz: number) {
+	return new Voice()
+		.n('nz', 'noise')
+		.vca('bst', 'nz', { envA: 0.0003, envD: 0.03 }, 'res')
+		.n('r1', 'filter', { type: BP, cutoff: hz, q: 6 })
+		.n('r2', 'filter', { type: BP, cutoff: hz * 1.43, q: 6 })
+		.n('r2g', 'gain', { level: 0.7 })
+		.n('res', 'sum')
+		.w('res>r1', 'res>r2', 'r2>r2g', 'r1>mix', 'r2g>mix')
+		.n('stk', 'excite', { hardness: 85, exLength: 1, exTone: hz * 1.5 })
+		.n('sg', 'gain', { level: 0.3 })
+		.w('stk>sg', 'sg>mix')
+		.n('mix', 'sum')
+		.vel('v', 0.25, 'mix', 'trim')
+		.done(0.35, 2);
 }
 
 /** Wood or metal struck: three modes at a bar's ratios, a hard strike, no settling. */
@@ -662,46 +696,6 @@ const JAZZ_TUNED: Record<number, Record<string, number>> = {
 		'vm.outHi': 1.294,
 		'vm.outLo': 0.34
 	},
-	42: {
-		'trim.level': 2,
-		'ampe.envA': 0.00139,
-		'ampe.envD': 0.03099,
-		'ampe.envR': 0.01652,
-		'bp.cutoff': 3124,
-		'f0.value': 163.3,
-		'f1.value': 649.1,
-		'f2.value': 1175,
-		'f3.value': 465.7,
-		'f4.value': 1163,
-		'f5.value': 675.7,
-		'hp.cutoff': 15940,
-		'hp.q': 1.126,
-		'ng.level': 0.4564,
-		'nhp.cutoff': 9937,
-		'nhp.q': 0.4598,
-		'vm.outHi': 0.5353,
-		'vm.outLo': 0.7687
-	},
-	46: {
-		'trim.level': 1.8,
-		'ampe.envA': 0.00216,
-		'ampe.envD': 1.528,
-		'ampe.envR': 0.02125,
-		'bp.cutoff': 4081,
-		'bp.q': 1.879,
-		'f0.value': 359.8,
-		'f1.value': 202.5,
-		'f2.value': 848.6,
-		'f3.value': 1575,
-		'f4.value': 1397,
-		'f5.value': 1285,
-		'hp.cutoff': 2167,
-		'hp.q': 0.5663,
-		'nhp.cutoff': 3832,
-		'nhp.q': 0.739,
-		'vm.outHi': 0.4415,
-		'vm.outLo': 0.1
-	},
 	56: {
 		'trim.level': 2,
 		'af.value': 188.1,
@@ -719,16 +713,87 @@ const JAZZ_TUNED: Record<number, Record<string, number>> = {
 		'vm.outLo': 0.1838
 	},
 	76: {
-		'trim.level': 1.29,
-		'm.mode1': 1.442,
-		'm.mode2': 8.089,
-		'm.modeHz': 383.5,
-		'm.modeMix': 100,
-		'm.modeQ': 23.7,
-		'sg.level': 0.06893,
-		'stk.exTone': 3691,
-		'stk.hardness': 100,
-		'vm.outHi': 0.5349
+		'bste.envA': 0.00017,
+		'bste.envD': 0.08809,
+		'bste.envR': 0.02301,
+		'r1.cutoff': 1155,
+		'r1.q': 16.28,
+		'r2.cutoff': 2718,
+		'r2.q': 4.867,
+		'r2g.level': 1.03,
+		'sg.level': 0.387,
+		'stk.exLength': 1.165,
+		'stk.exTone': 7764,
+		'stk.hardness': 40.54,
+		'trim.level': 1.73,
+		'vm.outHi': 2.019,
+		'vm.outLo': 0.5173
+	},
+	42: {
+		'ampe.envA': 0.00128,
+		'ampe.envD': 0.03135,
+		'ampe.envR': 0.01778,
+		'bp.cutoff': 19790,
+		'bp.q': 1.449,
+		'f0.value': 204.1,
+		'f1.value': 213.1,
+		'f2.value': 677.3,
+		'f3.value': 677.3,
+		'f4.value': 1559,
+		'f5.value': 1465,
+		'ng.level': 0.3702,
+		'nhp.cutoff': 202.7,
+		'nhp.q': 0.6517,
+		'sg.level': 0.3279,
+		'stk.exLength': 2.736,
+		'stk.exTone': 5157,
+		'stk.hardness': 30.54,
+		'tilt.filterGain': 4.424,
+		'tilt.q': 0.7486,
+		'trim.level': 2,
+		'vm.outHi': 0.5631,
+		'vm.outLo': 0.1761
+	},
+	46: {
+		'ampe.envA': 0.00095,
+		'ampe.envD': 1.041,
+		'ampe.envR': 0.02974,
+		'bp.cutoff': 4496,
+		'bp.q': 1.362,
+		'f0.value': 616.8,
+		'f1.value': 395,
+		'f2.value': 308.2,
+		'f3.value': 485.9,
+		'f4.value': 386.9,
+		'f5.value': 627.3,
+		'ng.level': 0.7534,
+		'nhp.q': 0.3608,
+		'sg.level': 0.9903,
+		'stk.exTone': 1843,
+		'stk.hardness': 45.3,
+		'tilt.cutoff': 4100,
+		'tilt.filterGain': 2.264,
+		'tilt.q': 1.084,
+		'trim.level': 0.6,
+		'vm.outHi': 1.319,
+		'vm.outLo': 0.374
+	},
+	77: {
+		'bste.envA': 0.00017,
+		'bste.envD': 0.08809,
+		'bste.envR': 0.02301,
+		'r1.cutoff': 810.5,
+		'r1.q': 16.28,
+		'r2.cutoff': 1907,
+		'r2.q': 4.867,
+		'r2g.level': 1.03,
+		'sg.level': 0.387,
+		'stk.exLength': 1.165,
+		'stk.exTone': 5448,
+		'stk.hardness': 40.54,
+		'trim.level': 2,
+		'vm.outHi': 2.019,
+		'vm.outLo': 0.5173
 	}
 };
 
@@ -761,9 +826,9 @@ export function jazzKit(): Record<number, Partial<TrackData>> {
 		// A tighter, brighter snare: more wire, a harder crack.
 		[gm(40)]: snare(230, 1.6, 0.2, 0.4),
 		[gm(41)]: tom(82, 20),
-		[gm(42)]: hat(0.05, 0),
+		[gm(42)]: hat(0.09, 0),
 		[gm(43)]: tom(98, 20),
-		[gm(44)]: hat(0.07, 0.5),
+		[gm(44)]: hat(0.08, 0.5),
 		[gm(45)]: tom(112, 18),
 		[gm(46)]: hat(0.9, 0),
 		[gm(47)]: tom(132, 16),
@@ -814,8 +879,8 @@ export function jazzKit(): Record<number, Partial<TrackData>> {
 		[gm(73)]: grains(3000, 2, 0.14, 0.01, 24, 1.2),
 		[gm(74)]: grains(3000, 2, 0.42, 0.02, 24, 1.2),
 		[gm(75)]: bar(2500, [1, 2.76, 5.4], 30, 95, 0.7, 0.4),
-		[gm(76)]: bar(1150, [1, 2.7, 4.8], 12, 90, 0.8, 0.35),
-		[gm(77)]: bar(820, [1, 2.7, 4.8], 12, 90, 0.8, 0.35),
+		[gm(76)]: woodBlock(2850),
+		[gm(77)]: woodBlock(2000),
 		[gm(78)]: cuica(620, 520, 0.14),
 		[gm(79)]: cuica(330, 520, 0.4),
 		// The triangle: a steel rod, bright partials that ring and ring -- or a hand stops it.
