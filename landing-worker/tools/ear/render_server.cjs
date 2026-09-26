@@ -17,6 +17,14 @@ const readline = require('readline');
        and render again rather than dying mid-search. */
     const once = () => page.evaluate(async (q) => {
       const a = window.__audit;
+      if (q.kit) {
+        const kit = a.presets.BUILTIN_KITS.find((k) => k.name === q.kit);
+        const t = kit?.keys[q.key];
+        if (!t) return { ok: false, error: 'no kit key ' + q.kit + ' ' + q.key };
+        if (q.getParams) return { ok: true, params: t.graphParams ?? {}, types: Object.fromEntries((t.rackGraph?.nodes ?? []).map((n) => [n.id, n.type])) };
+        a.setTrack({ ...t, graphParams: { ...(t.graphParams ?? {}), ...(q.params ?? {}) }, advanced: true });
+        return a.renderPhrase(q.notes, q.seconds ?? 10.3);
+      }
       const p = a.presets.SOUND_PRESETS.find((x) => x.name === q.name);
       if (!p) return { ok: false, error: 'no preset ' + q.name };
       // A piano voicing to try: the preset's graph rebuilt from grandPiano(overrides).
@@ -41,8 +49,8 @@ const readline = require('readline');
         await new Promise((res) => setTimeout(res, 1500));
       }
     }
-    if (r.ok) fs.writeFileSync(q.out, Buffer.from(r.wav, 'base64'));
-    console.log(JSON.stringify({ ok: r.ok, peak: r.peak, error: r.error }));
+    if (r.ok && r.wav) fs.writeFileSync(q.out, Buffer.from(r.wav, 'base64'));
+    console.log(JSON.stringify({ ok: r.ok, peak: r.peak, error: r.error, params: r.params, types: r.types }));
   }
   await br.close();
 })();
