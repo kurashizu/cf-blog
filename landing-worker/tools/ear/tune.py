@@ -66,7 +66,22 @@ def passage(base, seed=0):
 
 
 def ref_embedding(spec):
-    """None where no recording is at hand: then the label alone is the score."""
+    """None where no recording is at hand: then the label alone is the score.
+    A keyboard spec with a `bank` of recorded notes is compared with those
+    notes playing the very passage the render plays."""
+    if spec.get('bank'):
+        import glob
+        from body import midi_of
+        from realplay import play
+        bank = {midi_of(f.split('/')[-1]): f for f in glob.glob(os.path.join(C, 'refs', spec['bank']))}
+        refs = []
+        for k in range(2):
+            path = os.path.join(C, f"_ref_{spec['name'].replace(' ', '_')}_bank_{k}.wav")
+            if not os.path.exists(path):
+                notes = (comping if spec.get('keyboard') == 'chords' else passage)(spec['base'], k)
+                sf.write(path, play(notes, banks={'mf': bank, 'ff': bank}), 48000)
+            refs.append(listen(path))
+        return refs
     if not spec.get('ref'):
         return None
     refs = []
@@ -78,8 +93,32 @@ def ref_embedding(spec):
     return refs
 
 
+LTAS_BANDS = [63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
+
+
+def ltas(path):
+    """Long-term average spectrum by octave band, dB under its loudest band."""
+    from body import load
+    x = load(path); N = 4096; P = 0; k = 0
+    for s in range(0, len(x) - N, N // 2):
+        P = P + np.abs(np.fft.rfft(x[s:s + N] * np.hanning(N))) ** 2; k += 1
+    fr = np.fft.rfftfreq(N, 1 / 48000)
+    v = np.array([10 * np.log10(P[(fr >= b / 1.414) & (fr < b * 1.414)].sum() + 1e-20) for b in LTAS_BANDS])
+    return v - v.max()
+
+
+_LTAS = {}
+
+
+def ltas_target(spec):
+    key = spec['name']
+    if key not in _LTAS:
+        _LTAS[key] = np.mean([ltas(os.path.join(C, 'refs', p)) for p in spec['ltas']], axis=0)
+    return _LTAS[key]
+
+
 def score(spec, render, ref, params, tag='x', phrases=None):
-    labs, ceils, sims, bads, peaks = [], [], [], [], []
+    labs, ceils, sims, bads, peaks, tilts = [], [], [], [], [], []
     plans = [(comping if spec.get('keyboard') == 'chords' else passage)(spec['base'], k) for k in range(2)] if spec.get('keyboard') else [
         [{'note': spec['base'] - s, 'at': 0.05 + i * step, 'dur': held, 'vel': 96} for i, s in enumerate(steps)]
         for steps, held, step in PHRASES]
@@ -96,10 +135,14 @@ def score(spec, render, ref, params, tag='x', phrases=None):
         sims.append(float(e @ ref[k][1]) if ref else 1.0)
         bads.append(sum(s[l] for l in spec.get('avoid', [])))
         peaks.append(r['peak'])
+        if spec.get('ltas'):
+            tilts.append(float(np.mean(np.abs(np.maximum(ltas(out), -60) - np.maximum(ltas_target(spec), -60)))))
     lab, ceil, sim, bad, peak = np.mean(labs), np.mean(ceils), np.mean(sims), np.mean(bads), max(peaks)
     pen = max(0.0, peak - 0.9) * 2 + max(0.0, 0.05 - peak) * 10
-    total = min(lab / max(ceil, 1e-3), 1.5) + 2 * sim - 0.5 * bad - pen
-    return float(total), {'label': round(float(lab), 3), 'ceil': round(float(ceil), 3), 'sim': round(float(sim), 3), 'avoid': round(float(bad), 3), 'peak': round(float(peak), 3)}
+    tilt = float(np.mean(tilts)) if tilts else 0.0
+    # A dB of average spectral error costs what 5% of the label is worth.
+    total = min(lab / max(ceil, 1e-3), 1.5) + 2 * sim - 0.5 * bad - pen - 0.05 * tilt
+    return float(total), {'label': round(float(lab), 3), 'ceil': round(float(ceil), 3), 'sim': round(float(sim), 3), 'avoid': round(float(bad), 3), 'peak': round(float(peak), 3), 'tilt': round(tilt, 1)}
 
 
 def run(spec, evals=120):
@@ -115,7 +158,7 @@ def run(spec, evals=120):
         # A key written a|b|c sets all of them: the players share one knob.
         return {kk: float(x) for k, x in zip(keys, v) for kk in k.split('|')}
     def from_params(p):
-        v = np.array([p[k.split('|')[0]] for k in keys], float)
+        v = np.array([p[k] if k in p else p[k.split('|')[0]] for k in keys], float)
         return np.clip(np.where(logs, np.log(v / lo) / np.log(hi / lo), (v - lo) / (hi - lo)), 0, 1)
     x0 = from_params(spec['start'])
     base, info = score(spec, render, ref, to_params(x0), 'base', phrases=[0])

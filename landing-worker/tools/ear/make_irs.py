@@ -20,6 +20,7 @@ BODIES = [
     # Plucked: the first quarter second, against a pluck's 1/n^2.
     ('VPZ', 'violin section, pizzicato', 'Strings/Violin Section/Pizz/*rr1.wav', 2.0, False, 0.01, 0.25),
     ('CPZ', 'cello section, pizzicato', 'Strings/Cello Section/pizzT/*RR1.wav', 2.0, False, 0.01, 0.25),
+    ('BPZ', 'double bass, pizzicato', 'Strings/Solo Contrabass/Pizz/*rr1.wav', 2.0, False, 0.01, 0.4),
 ]
 N = 4096
 

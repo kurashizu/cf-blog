@@ -32,10 +32,12 @@ const readline = require('readline');
     for (let attempt = 0; ; attempt++) {
       try {
         await page.waitForFunction(() => !!window.__audit, null, { timeout: 30000 });
-        r = await once();
+        // A render the page reloaded under never settles: give up on it after a minute.
+        r = await Promise.race([once(), new Promise((_, no) => setTimeout(() => no(new Error('render timed out')), 60000))]);
         break;
       } catch (e) {
         if (attempt > 4) { r = { ok: false, error: String(e) }; break; }
+        if (/timed out/.test(String(e))) await page.reload({ waitUntil: 'networkidle' }).catch(() => {});
         await new Promise((res) => setTimeout(res, 1500));
       }
     }
