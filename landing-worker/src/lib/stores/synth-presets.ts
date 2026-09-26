@@ -1335,21 +1335,28 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampRelease: 1.4,
 			...patch(
 				[
-					['mal', 'excite', { hardness: 33, exLength: 3.7, exTone: 7400 }],
+					['mal', 'excite', { hardness: 54, exLength: 2.3, exTone: 6600 }],
 					['ex', 'sum'],
 					/* A tuned bar: its overtones are filed to two octaves and a
 					   little over three above the note (1 : 3.98 : 9.13), which is
 					   what makes it sound pitched where a free bar clangs. */
-					['bar', 'modes', { mode1: 1, mode2: 3.92, mode3: 9.93, modeQ: 56, modeMix: 100 }],
+					/* The bar's fundamental, alone and long: a vibraphone's C4 is
+					   5 dB down after two seconds. Its upper modes (4x, 10x) die
+					   far sooner, and MODES has one Q for its three, so they are a
+					   bank of their own -- together, the fundamental rang short or
+					   the overtones rang for ever. */
+					['bar', 'modes', { mode1: 1, mode2: 1.0004, mode3: 1.0008, modeQ: 970, modeMix: 100 }],
+					['up', 'modes', { mode1: 3.84, mode2: 10.24, mode3: 13.4, modeQ: 18.5, modeMix: 100 }],
+					['ug', 'gain', { level: 0.027 }],
 					/* The mallet's brightness: the same overtones struck again
 					   with a low Q, so they flash and are gone in a third of a
 					   second -- harder the blow, more of it. */
-					['shn', 'modes', { mode1: 3.98, mode2: 9.13, mode3: 13.4, modeQ: 8.6, modeMix: 100 }],
-					['sv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.1, outHi: 1.41 }],
+					['shn', 'modes', { mode1: 3.98, mode2: 9.13, mode3: 13.4, modeQ: 16.6, modeMix: 100 }],
+					['sv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.1, outHi: 1.04 }],
 					['sg', 'gain', { level: 0 }],
 					// The tick of the mallet itself.
 					['tk', 'filter', { type: 1, cutoff: 2500, q: 0.7 }],
-					['tg', 'gain', { level: 0.044 }],
+					['tg', 'gain', { level: 0.4 }],
 					['sum', 'sum'],
 					/* The motor: fans over the resonator tubes swing the level
 					   between 0.65 and 1.35, five times a second. It was the LFO
@@ -1360,13 +1367,16 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['fa', 'add'],
 					['trm', 'gain', { level: 1 }],
 					// The damper bar, on the key: the bars ring while it is held.
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.63 }],
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 1.36 }],
 					['dv', 'vca', { gain: 100 }],
 					['rm', 'space', { spaceSize: 45, spaceDecay: 45, spaceMix: 38 }]
 				],
 				[
 					'mal>ex',
 					'ex>bar',
+					'ex>up',
+					'up>ug',
+					'ug>sum',
 					'ex>shn',
 					'entry.vel>sv:a',
 					'shn>sg',

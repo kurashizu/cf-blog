@@ -1441,10 +1441,11 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ key: 'mode1', label: 'R1', min: 1, max: 16, step: 0.01, def: 1, field: true },
 			{ key: 'mode2', label: 'R2', min: 1, max: 16, step: 0.01, def: 2.4, field: true },
 			{ key: 'mode3', label: 'R3', min: 1, max: 16, step: 0.01, def: 4.1, field: true },
-			/* To 16 and 200: a tuned bar's third mode sits nine or ten times over its
-			   note, and a vibraphone rings for many seconds -- at 8 and 60 neither
-			   could be said. */
-			{ key: 'modeQ', label: 'Q', min: 1, max: 200, step: 0.1, def: 14, scale: 'log' },
+			/* To 16 and 1000: a tuned bar's third mode sits nine or ten times over
+			   its note, and a vibraphone's fundamental is 5 dB down after two
+			   seconds -- a Q near 1000 against the recordings; at 200 it died in
+			   one. */
+			{ key: 'modeQ', label: 'Q', min: 1, max: 1000, step: 0.1, def: 14, scale: 'log' },
 			{ key: 'modeMix', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true }
 		]
 	},
