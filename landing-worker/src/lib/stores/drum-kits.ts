@@ -595,9 +595,146 @@ function snare(hz: number, wires: number, wireDecay: number, crack: number) {
 	return v.vel('v', 0.2, 'mix', 'trim').done(0.9, 0.9);
 }
 
+/**
+ * Knobs the ear moved, by GM number: each key's graph as its builder makes it,
+ * then these on top. Tuned (tools/ear/tune_kit.py) against VCSL recordings of
+ * the same instrument (CC0), band by band and by what an AudioSet model hears
+ * in eight hits -- the builders' own numbers were set by reading, and a kit
+ * voiced that way was heard as a heartbeat, a clock and radio static. The
+ * score cannot hear how loud a key is against the others, so each TRIM here
+ * puts the key back at the peak its builder gave it (0.9 at most).
+ */
+const JAZZ_TUNED: Record<number, Record<string, number>> = {
+	38: {
+		'trim.level': 0.761,
+		'bendb.value': 163.3,
+		'bende.envD': 0.09917,
+		'bende.envR': 0.00683,
+		'bendk.value': 5.419,
+		'body.cutoff': 1830,
+		'body.filterGain': 4.918,
+		'body.q': 0.7915,
+		'm1.mode1': 1.192,
+		'm1.mode2': 3.043,
+		'm1.mode3': 4.719,
+		'm1.modeMix': 100,
+		'm1.modeQ': 12.8,
+		'm2.mode1': 1,
+		'm2.mode2': 2.168,
+		'm2.mode3': 4.893,
+		'm2.modeMix': 71.27,
+		'm2.modeQ': 2.902,
+		'm2g.level': 1.185,
+		'slf.cutoff': 2957,
+		'slf.q': 0.3993,
+		'slg.level': 0.1174,
+		'stk.exTone': 5900,
+		'stk.hardness': 100,
+		'vm.outHi': 0.8558,
+		'vm.outLo': 0.09332,
+		'wae.envA': 0.00145,
+		'wae.envD': 0.5553,
+		'wae.envR': 0.02339,
+		'wg.level': 1.54,
+		'whp.cutoff': 1607,
+		'whp.q': 0.8827,
+		'wlp.cutoff': 8846,
+		'wlp.q': 0.4416,
+		'wpk.cutoff': 3872,
+		'wpk.filterGain': 1.765,
+		'wpk.q': 0.3405
+	},
+	39: {
+		'trim.level': 1.79,
+		'bp.q': 2.819,
+		'd1.delayTime': 0.00579,
+		'd2.delayTime': 0.01382,
+		'hite.envA': 0.00028,
+		'hite.envD': 0.02901,
+		'lift.level': 2,
+		'room.spaceDecay': 38.59,
+		'room.spaceMix': 11.42,
+		'room.spaceSize': 28.69,
+		'taile.envA': 0.03661,
+		'taile.envD': 0.07069,
+		'taile.envR': 0.00986,
+		'tg.level': 0.5349,
+		'vm.outHi': 1.294,
+		'vm.outLo': 0.34
+	},
+	42: {
+		'trim.level': 2,
+		'ampe.envA': 0.00139,
+		'ampe.envD': 0.03099,
+		'ampe.envR': 0.01652,
+		'bp.cutoff': 3124,
+		'f0.value': 163.3,
+		'f1.value': 649.1,
+		'f2.value': 1175,
+		'f3.value': 465.7,
+		'f4.value': 1163,
+		'f5.value': 675.7,
+		'hp.cutoff': 15940,
+		'hp.q': 1.126,
+		'ng.level': 0.4564,
+		'nhp.cutoff': 9937,
+		'nhp.q': 0.4598,
+		'vm.outHi': 0.5353,
+		'vm.outLo': 0.7687
+	},
+	46: {
+		'trim.level': 1.8,
+		'ampe.envA': 0.00216,
+		'ampe.envD': 1.528,
+		'ampe.envR': 0.02125,
+		'bp.cutoff': 4081,
+		'bp.q': 1.879,
+		'f0.value': 359.8,
+		'f1.value': 202.5,
+		'f2.value': 848.6,
+		'f3.value': 1575,
+		'f4.value': 1397,
+		'f5.value': 1285,
+		'hp.cutoff': 2167,
+		'hp.q': 0.5663,
+		'nhp.cutoff': 3832,
+		'nhp.q': 0.739,
+		'vm.outHi': 0.4415,
+		'vm.outLo': 0.1
+	},
+	56: {
+		'trim.level': 2,
+		'af.value': 188.1,
+		'bf.value': 455.5,
+		'bp.cutoff': 1923,
+		'bp.q': 2.402,
+		'hite.envA': 0.0002,
+		'hite.envD': 0.02215,
+		'hite.envR': 0.03447,
+		'rg.level': 0.2557,
+		'ringe.envA': 0.00144,
+		'ringe.envD': 0.8332,
+		'ringe.envR': 0.03753,
+		'vm.outHi': 0.9459,
+		'vm.outLo': 0.1838
+	},
+	76: {
+		'trim.level': 1.29,
+		'm.mode1': 1.442,
+		'm.mode2': 8.089,
+		'm.modeHz': 383.5,
+		'm.modeMix': 100,
+		'm.modeQ': 23.7,
+		'sg.level': 0.06893,
+		'stk.exTone': 3691,
+		'stk.hardness': 100,
+		'vm.outHi': 0.5349
+	}
+};
+
 export function jazzKit(): Record<number, Partial<TrackData>> {
 	const gm = (n: number) => 108 - n;
-	return {
+	const keys: Record<number, Partial<TrackData>> = {
 		[gm(35)]: kick(52, 30, 0.45),
 		[gm(36)]: kick(60, 24, 0.3),
 		// Side stick: the stick laid across, its shaft cracking on the rim.
@@ -685,4 +822,9 @@ export function jazzKit(): Record<number, Partial<TrackData>> {
 		[gm(80)]: bar(3800, [1, 1.87, 2.73], 12, 95, 0.4, 0.3),
 		[gm(81)]: bar(3800, [1, 1.87, 2.73], 150, 95, 0.4, 3)
 	};
+	for (const [n, knobs] of Object.entries(JAZZ_TUNED)) {
+		const k = keys[gm(+n)];
+		k.graphParams = { ...k.graphParams, ...knobs };
+	}
+	return keys;
 }
