@@ -125,7 +125,9 @@ def score(spec, render, ref, params, tag='x', phrases=None):
     for k, notes in enumerate(plans):
         if phrases is not None and k not in phrases:
             continue
-        out = os.path.join(C, f'_tune_{tag}_{k}.wav')
+        # Per process: two tuners (or agents) sharing a tag overwrote each
+        # other's renders and scored the wrong sound. Removed once heard.
+        out = os.path.join(C, f'_tune_{tag}_{os.getpid()}_{k}.wav')
         r = render(name=spec['name'], params=params, notes=notes, out=out)
         if not r['ok']:
             return -1.0, {'error': r['error']}
@@ -137,6 +139,7 @@ def score(spec, render, ref, params, tag='x', phrases=None):
         peaks.append(r['peak'])
         if spec.get('ltas'):
             tilts.append(float(np.mean(np.abs(np.maximum(ltas(out), -60) - np.maximum(ltas_target(spec), -60)))))
+        os.remove(out)
     lab, ceil, sim, bad, peak = np.mean(labs), np.mean(ceils), np.mean(sims), np.mean(bads), max(peaks)
     pen = max(0.0, peak - 0.9) * 2 + max(0.0, 0.05 - peak) * 10
     tilt = float(np.mean(tilts)) if tilts else 0.0
