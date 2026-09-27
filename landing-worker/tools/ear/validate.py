@@ -27,7 +27,9 @@ Candidates:
   mel    paired log-mel distance: ours against the recording of the same
          note, frame by frame over its first 1.5 s, level-normalised (dB)
 
-    uv run validate.py [PRESET ...]
+    uv run validate.py [PRESET ...]      single notes against each bank
+    uv run validate.py --organ           DRAWBAR ORGAN by phrase (no bank)
+    uv run validate.py --kits            kit pieces against VCSL single hits
 """
 import glob, os, sys, numpy as np, torch
 from scipy.signal import resample_poly, butter, sosfilt
@@ -170,11 +172,92 @@ SPECS['PIANO'] = {**SPECS['PIANO'], 'bank': 'iowa-piano/Piano.mf.*.wav'}
 
 
 def main():
-    names = sys.argv[1:] or [n for n, s in SPECS.items() if s.get('ref') or s.get('bank')]
+    names = [a for a in sys.argv[1:] if not a.startswith('--')] or [n for n, s in SPECS.items() if s.get('ref') or s.get('bank')]
     render = Renderer()
-    for n in names:
-        report(n, SPECS[n], render)
+    if '--kits' in sys.argv:
+        for kit in ['JAZZ KIT', '808 KIT']:
+            drum_check(render, kit)
+    elif '--organ' in sys.argv:
+        phrase_check(render, 'DRAWBAR ORGAN', ['commons/Hammond_Organ_-_Model_A_Medley.wav', 'commons/Jazzyblues_For_Hammond_by_Michael_Huber.wav', 'commons/Drawbar_C_Chord.wav'], ['ORGAN', 'CLARINET', 'FULL STRING', 'PIANO'])
+    else:
+        for n in names:
+            report(n, SPECS[n], render)
     render.p.stdin.close()
+
+
+
+def windows(x, n=12, sec=CLIP):
+    """Up to n sounding two-second windows spread through a recording."""
+    w = int(sec * SR)
+    starts = [i for i in range(0, len(x) - w, w) if np.sqrt(np.mean(x[i:i + w] ** 2)) > 0.01 * np.abs(x).max()]
+    if len(starts) > n:
+        starts = [starts[round(i * (len(starts) - 1) / (n - 1))] for i in range(n)]
+    return [x[i:i + w] for i in starts]
+
+
+def phrase_check(render, target, files, others):
+    """For sounds with no single-note bank: the recordings' two-second windows
+    against our phrase's. The floor is one recording's windows against the
+    others'; `others` are presets the same measure should rank below."""
+    from tune import comping
+    real = {f: [features(w)[1] for w in windows(load(os.path.join(C, 'refs', f)))] for f in files}
+    A = np.array(real[files[0]])
+    B = np.array([e for f in files[1:] for e in real[f]])
+    allr = np.vstack([A, B])
+    print(f'\n== {target} by phrase: {len(allr)} windows of {len(files)} recordings')
+    print(f"{'real vs real (file 1 vs rest)':34s} {mmd(A, B):7.3f}")
+    for name in [target] + others:
+        path = os.path.join(C, f'_val_{os.getpid()}.wav')
+        embs = []
+        for seed in range(2):
+            r = render(name=name, params={}, notes=comping(SPECS['DRAWBAR ORGAN']['base'], seed), out=path, seconds=10.3)
+            assert r['ok'], r
+            embs += [features(w)[1] for w in windows(load(path), n=6)]
+        os.remove(path)
+        print(f"{'OURS ' + name:34s} {mmd(allr, np.array(embs)):7.3f}")
+
+
+V = 'vcsl/Membranophones/Struck Membranophones/'
+I = 'vcsl/Idiophones/Struck Idiophones/'
+# GM key, what it is, the recordings' single hits (rolls, bows, crescendos left out).
+DRUMS = [
+    (36, 'kick', V + 'Bass Drum 2/bassdrum_hit_*.wav'),
+    (38, 'snare', V + 'Snare Drum, Modern 1/Snare2_HitSN_*.wav'),
+    (50, 'high tom', V + 'Tom 1/Stick/TomH_HitS_*.wav'),
+    (42, 'closed hat', I + 'Hi-Hat Cymbal/HiHat_HitC_*.wav'),
+    (46, 'open hat', I + 'Hi-Hat Cymbal/HiHat_HitO*.wav'),
+    (49, 'crash', I + 'Suspended Cymbal 1/susCymb1_hit_[!b]*.wav'),
+    (39, 'clap', I + 'Claps/SoloClap_*.wav'),
+    (76, 'wood block', I + 'Woodblock/wood_click*.wav'),
+    (56, 'cowbell', I + 'Cowbells/Cowbell1_Hit_*.wav'),
+]
+
+
+def drum_check(render, kit):
+    """Each kit piece against the recordings' own hits, by the same measure:
+    the floor is half the takes against the other half."""
+    print(f"\n== {kit}: kit pieces against VCSL single hits (mmd; real vs real first)")
+    print(f"{'':12s} {'hits':>5s} {'real':>7s} {'sine':>7s} {'OURS':>7s}")
+    for gm, what, pattern in DRUMS:
+        files = sorted(glob.glob(os.path.join(C, 'refs', pattern)))
+        if len(files) < 4:
+            print(f'{what:12s} too few recordings ({len(files)})')
+            continue
+        R = [features(onset_clip(load(f)))[1] for f in files[:12]]
+        Rs = [features(damaged(onset_clip(load(f)), 'sine'))[1] for f in files[:12]]
+        S = []
+        for vel in [50, 70, 85, 100, 115, 127]:
+            path = os.path.join(C, f'_val_{os.getpid()}.wav')
+            r = render(kit=kit, key=str(108 - gm), params={}, notes=[{'note': 108 - gm, 'at': 0.05, 'dur': 0.3, 'vel': vel}], out=path, seconds=CLIP + 0.3)
+            if not r['ok']:
+                break  # the kit has no such key
+            S.append(features(onset_clip(load(path)))[1])
+            os.remove(path)
+        if not S:
+            print(f'{what:12s} not in this kit')
+            continue
+        R = np.array(R)
+        print(f'{what:12s} {len(R):5d} {mmd(R[0::2], R[1::2]):7.3f} {mmd(R, np.array(Rs)):7.3f} {mmd(R, np.array(S)):7.3f}')
 
 
 if __name__ == '__main__':
