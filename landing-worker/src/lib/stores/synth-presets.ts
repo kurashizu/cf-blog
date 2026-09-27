@@ -2017,7 +2017,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'KEYBOARD',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.29,
+			/* A dB over the set's level: at the set's own it was heard as quiet --
+			   a struck note's first 400 ms, which the level is set by, is mostly
+			   the strike, and a piano's tone is what a player listens to. */
+			presetGain: 0.53,
 			polyphony: 12,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,

@@ -64,10 +64,12 @@ const ROW = 1.9;
 type ByKey = [number, number, number, number, number];
 /** The keys those five sit on, counted from A0. */
 const ANCHOR = [0, 15, 39, 63, 87];
-/* The voice's level wants one number an octave: it was voiced by ear, key
-   by key, and five points could not hold it. A0, then C1 to C8. */
-type ByOctave = [number, number, number, number, number, number, number, number, number];
-const KEY_ANCHOR = [0, 3, 15, 27, 39, 51, 63, 75, 87];
+/* The voice's level wants a number every half octave: A0, then C1 to C8 by
+   tritones. An octave apart could not hold it -- the keys between (Gb2, Gb3,
+   Gb4) came out 4 to 12 dB over the recording's balance, and one number an
+   octave can only move them with their neighbours. */
+type ByTritone = [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
+const KEY_ANCHOR = [0, 3, 9, 15, 21, 27, 33, 39, 45, 51, 57, 63, 69, 75, 81, 87];
 
 const VOICING = {
 	/* The prompt string against the long one: under a cent (0.9 at C4).
@@ -77,19 +79,24 @@ const VOICING = {
 	   in the bass, where the beat is in the upper partials that carry the
 	   note. */
 	detune: [1.0001, 1.0001, 1.0005, 1.0005, 1.0005] as ByKey,
-	/** T60 of the long string, seconds. */
-	dec: [25.7, 21.8, 9.3, 7.2, 0.41] as ByKey,
+	/* T60 of the long string, seconds. The treble's two (C6, C8) and the
+	   treble anchors of the prompt string, loss, blow and knock below were
+	   refitted on tools/ear/keyboard.py's table (tune_keyboard.py): at 7.2
+	   and 0.41 s the tone was gone by 0.3 s and each high key was its strike
+	   alone -- C7 41 dB of crest over its tone where the Steinway has 23, C8
+	   78 against 35 -- so a chord's top notes came out as clicks. */
+	dec: [25.7, 21.8, 9.3, 22.13, 5.209] as ByKey,
 	/* The prompt string's decay, as a share of `dec`: the treble's first
 	   sound falls away in tens of milliseconds -- C6 drops 15 dB in the first
 	   40 -- where the bass's takes seconds. */
-	prompt: [0.408, 0.648, 0.119, 0.119, 0.37] as ByKey,
+	prompt: [0.408, 0.648, 0.119, 0.1599, 0.6617] as ByKey,
 	/** And its level against the long one. */
-	promptLevel: [2.06, 1.68, 3.59, 2.57, 1.81] as ByKey,
+	promptLevel: [2.06, 1.68, 3.59, 0.5311, 4.585] as ByKey,
 	/* More loss in the upper partials at both ends: C2's tenth to twelfth are
 	   15-30 dB under its seventh by 2 s, and the short treble strings go dull
 	   fast. Next to none at C2 itself -- the 4th to 9th carry the bass note
 	   once its lowest partials have drained. */
-	damp: [19.6, 0.21, 2.39, 26.8, 2] as ByKey,
+	damp: [19.6, 0.21, 2.39, 39.77, 0.631] as ByKey,
 	/** Strike point, % of the string from its end. */
 	pos: [5, 2.681, 8.138, 6.697, 12] as ByKey,
 	/* Fitted to B of 1.5e-4 at C2, 3.1e-4 at C4 and 2.4e-3 at C6 (the
@@ -105,7 +112,7 @@ const VOICING = {
 	   drawn as "heavier in the bass": the recordings want C4 struck softly
 	   long (its 2nd and 3rd partials lead, not the 5th to 8th) and the
 	   treble short, and A0's hammer is the longest of all. */
-	blow: [5.77, 1.55, 3.63, 0.294, 0.297] as ByKey,
+	blow: [5.77, 1.55, 3.63, 2.041, 0.0775] as ByKey,
 	/** A soft blow stays on the string this much longer. */
 	blowSoft: 1.3,
 	/* Felt's bandwidth from pp to ff, in hertz. Wide apart: a soft blow's
@@ -115,19 +122,20 @@ const VOICING = {
 	/** The felt's cutoff by key, as a share of what the blow asks. */
 	feltKey: [1, 1, 1, 0.8, 0.8] as ByKey,
 	/* The knock: the key hitting its bed and the frame answering, low and
-	   broad (Q under 1, so a thud rather than a tone), loudest against the
-	   treble's short strings. The band tables wanted four times this -- at
-	   C6 the recordings' first 30 ms carry the 63-500 Hz bands 20 dB over
-	   where the note leaves them -- but at that the ear heard a box being
-	   knocked (0.49 against 0.53 at a quarter). */
+	   broad (Q under 1, so a thud rather than a tone), loudest around C6. At
+	   C8 it was the loudest thing in the note; the keyboard table took it to
+	   a sixteenth of that, where the strike stands over the tone as the
+	   recording's does. */
 	knockHz: 267,
 	knockQ: 0.72,
-	knock: [0.36, 0.36, 0.72, 2.38, 3.58] as ByKey,
-	/* The voice's level by key, one number an octave from A0: the balance
-	   the three-string patch was voiced to by ear, key for key, 5 dB up (it
-	   sat that far under the rest of the set). C8 is left at the old level:
-	   5 dB more there peaked at -3 dBFS on a single mf note. */
-	key: [0.923, 0.977, 1.096, 0.776, 0.759, 2.29, 3.43, 8.9, 20] as ByOctave,
+	knock: [0.36, 0.36, 0.72, 2.318, 0.2275] as ByKey,
+	/* The voice's level by key, A0 then C1 to C8 by tritones: the Steinway's
+	   own balance, measured (tools/ear/keyboard.py -- each key's tone at 0.3 to
+	   0.7 s against C4's, mf and ff, the recording's smoothed over neighbours
+	   so one odd take is not chased). The band tables normalise every note to
+	   itself and could not see this: the treble had come out 10 to 30 dB
+	   under the recording, and the middle's Gb keys 4 to 12 over. */
+	key: [0.418, 0.443, 0.493, 0.771, 0.427, 0.498, 0.355, 0.765, 0.573, 1.713, 2.635, 6.429, 4.775, 14.256, 33.69, 79.621] as ByTritone,
 	ampLo: 0.03,
 	/** The whole instrument's level: `key` says how loud each key is against the others. */
 	level: 0.1,
@@ -262,6 +270,19 @@ export function grandPiano(over: Partial<PianoVoicing> = {}): {
 	cable('felt', 'out', 'felt2', 'in');
 	cable('feltHz', 'out', 'felt', 'cutoff');
 	cable('feltHz', 'out', 'felt2', 'cutoff');
+	/* Each key's hammer lands a little apart from its neighbours'.
+
+	   The pulse is the same shape on neighbouring keys, so a chord's strings
+	   all began with one coincident pulse and the strike summed coherently:
+	   a C-E-G stood 3.4 dB further over its tone than C alone, where the
+	   Steinway's three notes, summed exactly in time, stand 0.7 (mf) to 2.6
+	   (ff) further -- each of its hammers and actions arrives a little
+	   differently. So each key waits its own 0 to 2.5 ms before the strings
+	   hear it, spread by the golden ratio so that neighbours differ most. */
+	byCurve('mSpread', (key) => ((key * 0.6180339887) % 1) * 0.0025, [7, 460]);
+	node('spread', 'delay', [8, 460], { delayTime: 0.001 });
+	cable('felt2', 'out', 'spread', 'in');
+	cable('mSpread', 'out', 'spread', 'delayTime');
 	// The knock: the same pulse ringing the key and the frame, under the note.
 	node('knock', 'filter', [6, 240], { type: 2, cutoff: opt.knockHz, q: opt.knockQ });
 	cable('blow', 'out', 'knock', 'in');
@@ -288,7 +309,7 @@ export function grandPiano(over: Partial<PianoVoicing> = {}): {
 		['prompt', 'f2', 'dec2', 420]
 	] as const) {
 		node(id, 'wire', [10, y], { wireDecay: 4, wireDamp: opt.damp[2], wireStiff: 30, wirePos: opt.pos[2] });
-		cable('felt2', 'out', id, 'in');
+		cable('spread', 'out', id, 'in');
 		cable(f, 'out', id, 'pitch');
 		cable(d, 'out', id, 'wireDecay');
 		cable('mPos', 'out', id, 'wirePos');
@@ -393,7 +414,7 @@ export function grandPiano(over: Partial<PianoVoicing> = {}): {
 	};
 	stage(
 		'HAMMER',
-		['mBlowLvl', 'mAmp', 'mKey', 'ampKey', 'ampBlow', 'cLevel', 'strike', 'dc', 'mBlow', 'mSoft', 'blowHz', 'blow', 'mFelt', 'mFeltKey', 'feltHz', 'felt', 'felt2', 'knock', 'mKnock', 'gKnock'],
+		['mBlowLvl', 'mAmp', 'mKey', 'ampKey', 'ampBlow', 'cLevel', 'strike', 'dc', 'mBlow', 'mSoft', 'blowHz', 'blow', 'mFelt', 'mFeltKey', 'feltHz', 'felt', 'felt2', 'mSpread', 'spread', 'knock', 'mKnock', 'gKnock'],
 		'#d19a66',
 		'The felt: a step through a bandpass is a pulse over the contact time, softened by two lowpasses that open with velocity. The same pulse rings the frame (BP): the knock.'
 	);

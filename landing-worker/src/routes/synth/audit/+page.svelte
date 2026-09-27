@@ -285,6 +285,8 @@
 	): Promise<{
 		ok: boolean;
 		envelope?: number[];
+		/** The loudest sample in each slice: a click the RMS averages away. */
+		peaks?: number[];
 		firstNonFinite?: number;
 		voicesLeft?: number;
 		error?: string;
@@ -340,12 +342,19 @@
 				}
 			const per = Math.floor(l.length / slices);
 			const envelope: number[] = [];
+			const peaks: number[] = [];
 			for (let s = 0; s < slices; s++) {
 				let sum = 0;
-				for (let i = s * per; i < (s + 1) * per; i++) sum += Number.isFinite(l[i]) ? l[i] * l[i] : 0;
+				let pk = 0;
+				for (let i = s * per; i < (s + 1) * per; i++) {
+					if (!Number.isFinite(l[i])) continue;
+					sum += l[i] * l[i];
+					pk = Math.max(pk, Math.abs(l[i]), Math.abs(r[i]));
+				}
 				envelope.push(Math.round(Math.sqrt(sum / per) * 10000) / 10000);
+				peaks.push(Math.round(pk * 10000) / 10000);
 			}
-			return { ok: true, envelope, firstNonFinite: nan, voicesLeft: S.activeVoices.size };
+			return { ok: true, envelope, peaks, firstNonFinite: nan, voicesLeft: S.activeVoices.size };
 		} catch (e) {
 			return { ok: false, error: e instanceof Error ? e.message : String(e) };
 		} finally {
