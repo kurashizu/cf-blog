@@ -1219,43 +1219,81 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.35,
 			ampSustain: 0,
 			ampRelease: 0.25,
-			/* A rosewood bar is struck, and a tuned tube hangs under it. The bar's
-			   modes (1 : 3.9 : 9.2 -- the arch cut into its underside) and the
-			   tube run in parallel into a MIX, because the tube resonates the
-			   fundamental rather than colouring everything the bar does. */
+			/* A rosewood bar struck by a yarn mallet, a tuned tube hanging under
+			   it. What a marimba sounds like is almost all fundamental: in the
+			   VCSL marimba (CC0) the first overtone, filed to two octaves up
+			   (4x), is 30 dB under it at the strike and gone within a third of
+			   a second, and every bar rings for less the higher it is.
+
+			   This was a MODES bank for the bar (1 : 3.85 : 8, one Q) and a TUBE
+			   for the resonator. A TUBE is a blown pipe: it ignores what is fed
+			   in, sounds its own odd harmonics from the moment the key goes down
+			   and holds them until it comes up, its DCAY being only the release.
+			   So every note sustained a hollow tone for as long as it was held
+			   -- a C7 held 4 s was still sounding at 3 s, where the VCSL
+			   marimba's is 20 dB down in 0.13 -- and the key-tracked decay
+			   cabled onto it had no say while the key was down (the MAPs
+			   worked; the module holds). Now two MODES banks, each struck by
+			   the note and dying at a rate the key sets: the fundamental (the
+			   bar's and the tube's, one pitch), and the overtones on their own
+			   so they can die first. Voiced by ear (tools/ear) against the VCSL
+			   marimba: 0.13 -> 0.35 as a marimba, where the recordings read
+			   0.59. */
 			...patch(
 				[
-					['mal', 'excite', { hardness: 44, exLength: 20, exTone: 590 }],
-					['ex', 'sum'],
-					/* R3 was 9.2, which the old composite allowed and MODES does not --
-					   its ratios stop at 8. Clamped to the top of the range rather
-					   than re-voiced: 8 is still an inharmonic partial well clear of
-					   the 3.9 below it, which is what a struck bar wants. */
-					['bar', 'modes', { mode1: 1, mode2: 3.85, mode3: 8.05, modeQ: 22.4 }],
-					['tub', 'tube', { tubeDecay: 3, tubeDamp: 94, tubeOdd: 1 }],
-					['mx', 'mix', { mixA: 100, mixB: 38 }],
+					/* A yarn mallet: a dull 11 ms thump, most of it under 250 Hz. It
+					   strikes nothing -- MODES starts its own partials at the note --
+					   but what the banks pass of it (MIX 59 leaves a sixth dry, and
+					   their band-passes colour it) is the knock of the stroke. */
+					['mal', 'excite', { hardness: 60, exLength: 11, exTone: 222 }],
+					/* The fundamental, three times: the bar and the tube under it,
+					   tuned to the same note. */
+					['bar', 'modes', { mode1: 1, mode2: 1, mode3: 1, modeQ: 36, modeMix: 59 }],
+					/* The overtones: 3.97 (the two octaves the arch under the bar is
+					   cut for) and the next pair near 9 and 10. A MODES bank dies
+					   faster up its ratios (Q / 12 over r^0.6 s), so on the same Q
+					   as the fundamental these are gone in a quarter of its time.
+					   They meet the fundamental in a MIX, the overtones' leg at twice
+					   the bar's -- louder than the recording's at the strike, which
+					   is what the ear asked for: tuned from 0.1 up, it settled at 2. */
+					['up', 'modes', { mode1: 3.97, mode2: 8.92, mode3: 9.87, modeQ: 36, modeMix: 100 }],
+					['mx', 'mix', { mixA: 100, mixB: 200 }],
 					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }],
 					/* How long a bar rings, by its pitch: halved about every octave
-					   up, as the VCSL marimba's are -- 20 dB down in 2.4 s at C3,
-					   0.6 at C5, 0.13 at C7. One Q and one tube decay for every bar
-					   rang the treble as long as the bass: a pluck held up. */
-					['mq', 'map', { shape: 1, inLo: 60, inHi: 12, outLo: 86, outHi: 5 }],
-					['md', 'map', { shape: 1, inLo: 60, inHi: 12, outLo: 3, outHi: 0.4 }]
+					   up, as the VCSL marimba's are -- 20 dB down in 2.4 s at C3, 0.6
+					   at C5, 0.13 at C7. A MODES fundamental is 20 dB down in Q / 60
+					   s, so a curve through halvings (DRAW) from Q 224 at C3 to 6 at
+					   C7 (rows count down from C8, so C3 is 60 and C7 is 12); with
+					   the overtones on top this measures 2.4 s, 0.63 and 0.09. The
+					   EXP it replaces put C5 at two thirds of C3. */
+					['mq', 'map', { shape: 9, drawN: 5, d0: 0, d1: 0.533, d2: 0.8, d3: 0.933, d4: 1, inLo: 60, inHi: 12, outLo: 224, outHi: 6.2 }]
 				],
 				[
-					'mal>ex',
-					'ex>bar',
+					'mal>bar',
+					'mal>up',
 					'bar>mx',
-					'ex>tub',
-					'tub>mx:b',
+					'up>mx:b',
 					'mx>bod',
 					'bod>output',
 					'entry.note>mq:a',
 					'mq>bar:modeQ',
-					'entry.note>md:a',
-					'md>tub:tubeDecay'
+					'mq>up:modeQ'
 				],
-				26
+				17,
+				undefined,
+				{
+					groups: [
+						['MALLET', ['mal']],
+						['BAR + TUBE', ['bar', 'up', 'mx', 'mq']],
+						['BODY', ['bod']]
+					],
+					notes: [
+						['A yarn mallet: a dull thump. The banks strike themselves; this is the knock.', 'mal'],
+						['Fundamental (bar and tube, one pitch) and the overtones 3.97 : 8.9 : 9.9, which die first.', 'bar'],
+						['Both ring for less the higher the note: halved each octave, from the key (MAP).', 'mq'],
+						['BODY: two broad peaks, 260 and 700 Hz.', 'bod']
+					]
+				}
 			)
 		})
 	},
@@ -1343,7 +1381,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		   The four sines this replaces were heard as a dial tone; everything
 		   a listener knows a Hammond by -- the click, the percussion, the
 		   rotor -- was missing. Tuned by ear (tools/ear) on held chords under
-		   a melody: Hammond organ 0.75, where Hammond recordings read 0.8. */
+		   a melody: Hammond organ 0.76 (one Leslie for the track, heard in a
+		   room), where Hammond recordings read 0.8. */
 		name: 'DRAWBAR ORGAN',
 		category: 'ORGAN',
 		kind: 'AC',
@@ -1401,8 +1440,25 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['dg', 'gain', { level: 1 }],
 					['hpn', 'pan', { panPos: 0.4 }],
 					['dpn', 'pan', { panPos: -0.25 }],
+					/* The room's first answer to each rotor: the horn's and the drum's
+					   sound off a wall 23 and 31 ms later, a quarter turn on, at the
+					   other side. A Leslie is one rotor for every key, so moving it
+					   to the track (built once, not per note) was right, but alone it
+					   swung every note as one and read 0.65-0.72 as a Hammond,
+					   depending only on where in its turn the rotor met the phrase;
+					   a rotor per note read 0.75 because each started its own turn on
+					   its own note. The reflections put two phases of each rotor in
+					   every note, which is what a Leslie in a room sounds like: 0.76-
+					   0.79 wherever the rotor stands, for nothing per note. */
+					['hrf', 'delay', { delayTime: 0.023 }],
+					['hrg', 'gain', { level: 0.6 }],
+					['hrp', 'pan', { panPos: -0.6 }],
+					['drf', 'delay', { delayTime: 0.031 }],
+					['drg', 'gain', { level: 0.6 }],
+					['drp', 'pan', { panPos: 0.5 }],
 					['cab', 'sum'],
-					['lvl', 'gain', { level: 0.5 }],
+					// 0.5 before the reflections; lowered so the organ is exactly as loud.
+					['lvl', 'gain', { level: 0.4 }],
 					['room', 'space', { spaceSize: 22, spaceDecay: 40, spaceMix: 100 }],
 					['roomLvl', 'gain', { level: 0.13 }],
 					['roomOut', 'out']
@@ -1450,6 +1506,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'hg>hpn',
 					'dg>dpn',
 					'hpn>cab',
+					'hg>hrf',
+					'hrf>hrg',
+					'hrg>hrp',
+					'hrp>cab',
+					'dg>drf',
+					'drf>drg',
+					'drg>drp',
+					'drp>cab',
 					'dpn>cab',
 					'cab>lvl',
 					'lvl>output',
@@ -1465,7 +1529,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 						['DRAWBARS', ['pf', ...DRAWBARS.flatMap(([id]) => [`r${id}`, `x${id}`, `w${id}`, `g${id}`]), 'bars']],
 						['PERC + CLICK', ['rp', 'xp', 'wp', 'pe', 'pv', 'pg', 'ck', 'ce', 'cv', 'cf', 'cg']],
 						['KEY', ['tone', 'ke', 'key', 'toLes']],
-						['LESLIE (TRACK)', ['les', 'hp', 'lp', 'hr', 'dr', 'hd', 'dd', 'ha', 'da', 'one', 'hal', 'dal', 'hg', 'dg', 'hpn', 'dpn', 'cab', 'lvl']],
+						['LESLIE (TRACK)', ['les', 'hp', 'lp', 'hr', 'dr', 'hd', 'dd', 'ha', 'da', 'one', 'hal', 'dal', 'hg', 'dg', 'hpn', 'dpn', 'hrf', 'hrg', 'hrp', 'drf', 'drg', 'drp', 'cab', 'lvl']],
 						['ROOM (TRACK)', ['trim', 'output', 'room', 'roomLvl', 'roomOut']]
 					],
 					notes: [
@@ -1473,6 +1537,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 						["Percussion: the 3rd harmonic, struck and gone in 0.1 s. The key contacts' click.", 'wp'],
 						['Every key goes to one Leslie (TSND > TRTN), built once for the track.', 'toLes'],
 						['Horn above 800 Hz, drum below, each spinning: a moving delay (pitch) and level.', 'hd'],
+						['A wall a quarter turn later: two phases of each rotor in every note.', 'hrf'],
 						['One room for the track.', 'room']
 					]
 				}
@@ -1501,66 +1566,98 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampRelease: 1.4,
 			...patch(
 				[
-					['mal', 'excite', { hardness: 54, exLength: 2.3, exTone: 6600 }],
-					['ex', 'sum'],
-					/* A tuned bar: its overtones are filed to two octaves and a
-					   little over three above the note (1 : 3.98 : 9.13), which is
-					   what makes it sound pitched where a free bar clangs. */
+					/* No mallet module: a MODES bank is struck by the note itself
+					   (its partials start loud at the gate and decay), so what fed
+					   the banks was only ever coloured by their bandpasses and
+					   passed through as a tick -- an EXCITE, five nodes and an
+					   envelope worklet a note, for a click the strike already has. */
 					/* The bar's fundamental, alone and long: a vibraphone's C4 is
-					   5 dB down after two seconds. Its upper modes (4x, 10x) die
-					   far sooner, and MODES has one Q for its three, so they are a
-					   bank of their own -- together, the fundamental rang short or
-					   the overtones rang for ever. */
-					['bar', 'modes', { mode1: 1, mode2: 1.0004, mode3: 1.0008, modeQ: 970, modeMix: 100 }],
-					['up', 'modes', { mode1: 3.84, mode2: 10.24, mode3: 13.4, modeQ: 18.5, modeMix: 100 }],
-					['ug', 'gain', { level: 0.027 }],
-					/* The mallet's brightness: the same overtones struck again
-					   with a low Q, so they flash and are gone in a third of a
-					   second -- harder the blow, more of it. */
-					['shn', 'modes', { mode1: 3.98, mode2: 9.13, mode3: 13.4, modeQ: 16.6, modeMix: 100 }],
-					['sv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.1, outHi: 1.04 }],
+					   5 dB down after two seconds (Q 600 is 100 dB in 50 s). Its upper modes die far sooner,
+					   and MODES has one Q for its three, so they are a bank of
+					   their own -- together, the fundamental rang short or the
+					   overtones rang for ever. Three modes a hair apart are the
+					   bar's two bending modes and the tube, beating slowly. */
+					['bar', 'modes', { mode1: 1, mode2: 1.0004, mode3: 1.0008, modeQ: 603, modeMix: 100 }],
+					/* A tuned bar: its overtones are filed to two octaves and a
+					   little over three above the note (near 1 : 3.9 : 10), which is
+					   what makes it sound pitched where a free bar clangs. With a
+					   low Q they flash and are gone in a third of a second -- the
+					   mallet's brightness, harder the blow, more of it, though
+					   never much: tuned by ear against the VCSL vibraphone, a full
+					   blow is a fifth of the fundamental. This was two banks (a
+					   long quiet one under a short loud one); the long one was 30
+					   dB down, and three banks a note is one resonator over. */
+					['up', 'modes', { mode1: 3.91, mode2: 10.07, mode3: 10.49, modeQ: 14.2, modeMix: 100 }],
+					['sv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.1, outHi: 0.22 }],
 					['sg', 'gain', { level: 0 }],
-					// The tick of the mallet itself.
-					['tk', 'filter', { type: 1, cutoff: 2500, q: 0.7 }],
-					['tg', 'gain', { level: 0.4 }],
-					['sum', 'sum'],
+					/* The tick of the mallet: a step (the bar pushed in) through a
+					   band-pass, which rings for a millisecond and is gone -- a click
+					   with no envelope to run. */
+					['st', 'const', { kind: 6, value: 1 }],
+					['stp', 'tosig'],
+					['tk', 'filter', { type: 2, cutoff: 1520, q: 1.5 }],
+					['tg', 'gain', { level: 0.12 }],
+					// The damper bar, on the key: the bars ring while it is held.
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 1.21 }],
+					['dv', 'vca', { gain: 100 }],
+					['toMot', 'tsend', { bus: 0 }],
+					['mot', 'trtn', { bus: 0 }],
 					/* The motor: fans over the resonator tubes swing the level
-					   between 0.65 and 1.35, five times a second. It was the LFO
-					   straight into the level, which swung it through zero -- a
-					   ring modulator, not a tremolo. */
+					   between 0.8 and 1.2, five times a second. There is one motor
+					   and one shaft, so every bar swells together -- which is what
+					   putting it on the track says, and why it costs no note
+					   anything. (Straight into the level it swung through zero: a
+					   ring modulator, not a tremolo.) */
 					['fan', 'lfo', { lfoWave: 0, lfoRate: 5, lfoAmt: 20 }],
 					['one', 'const', { kind: 6, value: 1 }],
 					['fa', 'add'],
 					['trm', 'gain', { level: 1 }],
-					// The damper bar, on the key: the bars ring while it is held.
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 1.36 }],
-					['dv', 'vca', { gain: 100 }]
+					/* The room, fed before the trim, so its level is the old 38%
+					   send times the trim (0.29). */
+					['room', 'space', { spaceSize: 45, spaceDecay: 45, spaceMix: 100 }],
+					['roomLvl', 'gain', { level: 0.11 }],
+					['roomOut', 'out']
 				],
 				[
-					'mal>ex',
-					'ex>bar',
-					'ex>up',
-					'up>ug',
-					'ug>sum',
-					'ex>shn',
+					'bar>dv',
 					'entry.vel>sv:a',
-					'shn>sg',
+					'up>sg',
 					'sv>sg:level',
-					'ex>tk',
+					'st>stp:level',
+					'stp>tk',
 					'tk>tg',
-					'bar>sum',
-					'sg>sum',
-					'tg>sum',
+					'tg>dv',
+					'sg>dv',
+					'dmp>dv:level',
+					'dv>toMot',
+					'entry.then>toMot:exec',
+					'mot>trm',
 					'fan.cv>fa:a',
 					'one>fa:b',
-					'sum>trm',
 					'fa>trm:level',
-					'trm>dv',
-					'dmp>dv:level',
-					'dv>output'
+					'trm>output',
+					'trm>room',
+					'room>roomLvl',
+					'roomLvl>roomOut',
+					'entry.then>roomOut:exec'
 				],
-				42,
-				{ spaceSize: 45, spaceDecay: 45, spaceMix: 38 }
+				29,
+				undefined,
+				{
+					groups: [
+						['BAR + MALLET', ['bar', 'up', 'sv', 'sg', 'st', 'stp', 'tk', 'tg']],
+						['DAMPER', ['dmp', 'dv', 'toMot']],
+						['MOTOR (TRACK)', ['mot', 'fan', 'one', 'fa', 'trm']],
+						['ROOM (TRACK)', ['trim', 'output', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						['The bar: its fundamental rings for seconds (Q 600); the tuned overtones flash with the strike.', 'bar'],
+						['Velocity: a harder blow, brighter overtones. The tick: a step through a band-pass.', 'sv'],
+						['The damper bar: the note rings while the key is held, then dies in 1.2 s.', 'dmp'],
+						['One motor for the instrument: every bar swells together (TSND > TRTN).', 'fan'],
+						['One room for the track.', 'room']
+					]
+				}
 			)
 		})
 	},
@@ -1684,8 +1781,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampSustain: 0,
 			ampRelease: 0.2,
 			/* A quill plucks the string near its end and the jack falls back.
-			   Two 8' choirs a cent apart and a 4' an octave up, quieter -- the
-			   registration a harpsichord is heard in; a pluck with no dynamics,
+			   An 8' choir and a 4' an octave up, quieter; a pluck with no dynamics,
 			   short and hard, so the string starts with every harmonic it has;
 			   long strings in the bass, 6 s to 1.5 s; a damper that stops the
 			   note at once, and the jack's click as it drops (REL). The
@@ -1698,79 +1794,108 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   (tools/ear) against the VCSL Flemish harpsichord (CC0): its notes
 			   band by band, then its notes playing the very passage this plays
 			   -- Harpsichord 0.38 to an AudioSet model, where the recording
-			   reads 0.87. */
+			   reads 0.87.
+
+			   Then held to the voice budget (two resonators, three worklets a
+			   note). It had two 8' choirs as well as the 4'; of the three
+			   strings the 4' is the one the ear missed when it went (0.37 without
+			   it, 0.52 without the second 8'). The pluck's envelope and both
+			   EXCITEs (the quill's tick, the jack's) became a step through
+			   band-passes, and the board went wet-only beside the dry string:
+			   32 nodes and 3 worklets a note, from 44 and 7. Retuned by ear
+			   after: Harpsichord 0.72, where the recording reads 0.87. */
 			...patch(
 				[
 					['fq', 'tofreq'],
-					['dk', 'const', { kind: 6, value: 1.00058 }],
-					['f2', 'mul'],
 					['ok', 'const', { kind: 6, value: 2 }],
 					['f4', 'mul'],
-					/* The pluck: the string pushed aside and let go -- a step,
-					   rising over 3 ms and let go over 85, so the harmonics fall
-					   as 1/n from a strong fundamental. A click alone (EXCITE) carried none of the low
-					   end, the strings sounded only their top, and it was heard as
-					   a ringtone. The click stays, quieter: the quill's own tick. */
-					['one', 'const', { kind: 6, value: 1 }],
-					['dc', 'tosig'],
-					['pe', 'env', { envA: 0.0032, envD: 0.085, envS: 0, envR: 0.001, envCurve: 0 }],
-					['pls', 'gain', { level: 0 }],
-					['qul', 'excite', { hardness: 95, exLength: 1.2, exTone: 9800 }],
-					['qg', 'gain', { level: 0.83 }],
-					['pluck', 'sum'],
-					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 19.6, outHi: 0.5 }],
 					['d4k', 'const', { kind: 6, value: 0.6 }],
 					['dec4', 'mul'],
-					['s1', 'wire', { wireDecay: 4, wireDamp: 1.1, wireStiff: 27, wirePos: 16 }],
-					['s2', 'wire', { wireDecay: 4, wireDamp: 1.1, wireStiff: 27, wirePos: 16 }],
+					/* The pluck: the string pushed aside and let go -- a step, so
+					   the harmonics fall as 1/n from a strong fundamental (a click
+					   alone carried none of the low end, and was heard as a
+					   ringtone). It was an ENV worklet a note, rising over 3 ms and
+					   letting go over 85; a band-pass low and wide (20 Hz, Q 0.25)
+					   draws the same pulse from a bare step, and its top corner
+					   is that rise. A step not let go -- a high-
+					   pass alone -- kept every harmonic at 1/n up to 20 kHz and
+					   was heard as video game music. */
+					['one', 'const', { kind: 6, value: 1 }],
+					['dc', 'tosig'],
+					['pl', 'filter', { type: 2, cutoff: 20, q: 0.14 }],
+					/* The quill's own tick, from the same step: a band-pass high
+					   up rings for a fraction of a millisecond, and its Q is its
+					   level (a narrower band passes less of a step). It was an
+					   EXCITE -- five nodes and an envelope worklet for one click. */
+					['qt', 'filter', { type: 2, cutoff: 13100, q: 0.32 }],
+					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 18.6, outHi: 0.75 }],
+					['s1', 'wire', { wireDecay: 4, wireDamp: 0.4, wireStiff: 5, wirePos: 17 }],
 					['s4', 'wire', { wireDecay: 2, wireDamp: 3, wireStiff: 8, wirePos: 11 }],
-					['g4', 'gain', { level: 0.4 }],
-					['strs', 'sum'],
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.21 }],
+					['g4', 'gain', { level: 0.21 }],
+					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.37 }],
 					['dv', 'vca', { gain: 100 }],
-					['board', 'ir', { irBody: body('PNO'), irMix: 24 }],
-					['jack', 'excite', { hardness: 60, exLength: 6, exTone: 1800 }],
-					['jg', 'gain', { level: 0.063 }],
+					/* The board, wet only, beside the dry string: IR at 100 is one
+					   convolver, where a MIX between builds a wet/dry pair around
+					   it. It was 24% wet; tuned by ear with the rest, the board came
+					   up to 0.88 of the dry. */
+					['board', 'ir', { irBody: body('PNO'), irMix: 100 }],
+					['bg', 'gain', { level: 0.88 }],
+					/* The jack falling back when the key is let go (REL): the
+					   same step-and-band-pass click, lower and quieter. */
+					['jk', 'const', { kind: 6, value: 0.063 }],
+					['js', 'tosig'],
+					['jf', 'filter', { type: 2, cutoff: 1800, q: 1 }],
 					['outRel', 'out']
 				],
 				[
 					'entry.pitch>fq:a',
-					'fq>f2:a',
-					'dk>f2:b',
 					'fq>f4:a',
 					'ok>f4:b',
 					'entry.note>dec:a',
 					'dec>dec4:a',
 					'd4k>dec4:b',
 					'fq>s1:pitch',
-					'f2>s2:pitch',
 					'f4>s4:pitch',
 					'dec>s1:wireDecay',
-					'dec>s2:wireDecay',
 					'dec4>s4:wireDecay',
 					'one>dc:level',
-					'dc>pls',
-					'pe>pls:level',
-					'qul>qg',
-					'pls>pluck',
-					'qg>pluck',
-					'pluck>s1',
-					'pluck>s2',
-					'pluck>s4',
-					's1>strs',
-					's2>strs',
+					'dc>pl',
+					'dc>qt',
+					'pl>s1',
+					'qt>s1',
+					'pl>s4',
+					'qt>s4',
+					's1>dv',
 					's4>g4',
-					'g4>strs',
-					'strs>dv',
+					'g4>dv',
 					'dmp>dv:level',
+					'dv>output',
 					'dv>board',
+					'board>bg',
+					'bg>output',
 					'entry.rel>outRel:exec',
-					'jack>jg',
-					'jg>outRel',
-					'board>output'
+					'jk>js:level',
+					'js>jf',
+					'jf>outRel'
 				],
-				25,
-				{ spaceSize: 35, spaceDecay: 35, spaceMix: 40 }
+				23,
+				{ spaceSize: 35, spaceDecay: 35, spaceMix: 40 },
+				{
+					groups: [
+						['QUILL', ['one', 'dc', 'pl', 'qt']],
+						["8' + 4'", ['fq', 'ok', 'f4', 'dec', 'd4k', 'dec4', 's1', 's4', 'g4']],
+						['DAMPER + BOARD', ['dmp', 'dv', 'board', 'bg']],
+						['JACK (REL)', ['jk', 'js', 'jf', 'outRel']],
+						['ROOM (TRACK)', ['roomSend', 'roomRtn', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						['The quill: a step let go (BP 20 Hz) and its tick (BP 13 kHz). No dynamics, no envelope.', 'pl'],
+						["An 8' string and a 4' an octave up, quieter and shorter; 19 s in the bass, 0.75 s at C7.", 's1'],
+						['The damper stops the note at once. The board is the measured piano board (IR: PNO), wet beside dry.', 'board'],
+						['Letting go: the jack drops back and clicks.', 'jf'],
+						['A small room, one for the track.', 'room']
+					]
+				}
 			)
 		})
 	},

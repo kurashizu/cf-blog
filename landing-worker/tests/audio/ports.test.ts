@@ -2233,10 +2233,15 @@ describe('the shipped ADV presets', () => {
 		const bad: string[] = [];
 		for (const p of EMITTING) {
 			const g = graphOf(p)!;
-			if (g.nodes.length < 6 || g.nodes.length > 130)
-				bad.push(`${p.name}: ${g.nodes.length} nodes is not a plausible patch`);
-			if (g.cables.length < g.nodes.length - 2)
-				bad.push(`${p.name}: ${g.cables.length} cables for ${g.nodes.length} nodes`);
+			/* NOTE cards are nodes on the canvas but not modules: they carry no
+			   cable, so counting them let a well-annotated patch whose resonators
+			   strike themselves (VIBRAPHONE's MODES banks take no input) read as
+			   one with its cables dropped. */
+			const modules = g.nodes.filter((n) => n.type !== 'note');
+			if (modules.length < 6 || modules.length > 130)
+				bad.push(`${p.name}: ${modules.length} nodes is not a plausible patch`);
+			if (g.cables.length < modules.length - 2)
+				bad.push(`${p.name}: ${g.cables.length} cables for ${modules.length} nodes`);
 			const intoOut = (g.cables as { to: string; toPort: string }[]).filter(
 				(c) => c.to === 'output' && c.toPort === 'in'
 			);
@@ -2309,12 +2314,12 @@ describe('the shipped ADV presets', () => {
 		   dropped `mixA`/`mixB` on the floor -- numbers a module does not declare
 		   are silently absent, and every one of these instruments lost the balance
 		   it was voiced with. Since both legs then run at unity the patch still
-		   sounds, which is why nothing above catches it: MARIMBA's resonator tube
-		   under the bar, PIANO's sympathetic pair and FLUTE's breath noise all
-		   come back at full level instead of at 38, 64 and 12 percent.
+		   sounds, which is why nothing above catches it: MARIMBA's overtones
+		   against its fundamental, PIANO's sympathetic pair and FLUTE's breath
+		   noise all came back at unity instead of at 200, 64 and 12 percent.
 
-		   Measured, the three MIX presets emit `mx.level` 1 against `mx_b.level`
-		   0.38, 0.64 and 0.12. What is asserted is that the two legs are not all
+		   Measured, the three MIX presets emitted `mx.level` 1 against
+		   `mx_b.level` 0.38 (MARIMBA's then tube; 2 now), 0.64 and 0.12. What is asserted is that the two legs are not all
 		   equal -- the balance is a voicing decision and will move, whereas a
 		   migration that dropped it makes every pair identical. */
 		const varied: string[] = [];
@@ -2397,7 +2402,7 @@ describe('the shipped ADV presets', () => {
 		     DULCIMER     0.0421 -> 0.0000   struck
 		     PIANO        0.0660 -> 0.0000   struck
 		     UPRIGHT BASS 0.0728 -> 0.0000   struck
-		     MARIMBA      0.0555 -> 0.0245   struck bar over a held tube
+		     MARIMBA      0.0555 -> 0.0245   struck bar over a held tube (then)
 		     DRAWBAR ORGAN 0.1138 -> 0.1287  held
 		     PAN FLUTE    0.1679 -> 0.1956   held
 		     FLUTE        0.0876 -> 0.0988   held
@@ -2405,9 +2410,11 @@ describe('the shipped ADV presets', () => {
 		   The four struck patches reach *exact* zero, which is the strong claim:
 		   a stuck envelope or a latched feedback loop is loud at the end of the
 		   render and could not. The three blown ones end within a few percent of
-		   where they peaked. MARIMBA sits between the two by construction -- the
-		   bar decays, the TUBE under it does not -- and is the reason this is two
-		   groups picked by measurement rather than one rule applied to all eight.
+		   where they peaked. MARIMBA sat between the two -- the bar decayed, the
+		   TUBE under it held, which is what a blown pipe does and a marimba's
+		   tube does not; its tube is a struck MODES bank now and it decays with
+		   the rest. Still two groups picked by measurement rather than one rule
+		   applied to all eight, since a patch can legitimately sit between.
 
 		   Both groups have to be non-empty, or a catalogue that lost all its
 		   sustained patches would pass by having nothing to check. */

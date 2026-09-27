@@ -168,8 +168,8 @@ describe('patch-bay presets', () => {
 		/* Nor DRAWBAR ORGAN, whose rotating speaker moves its pitch and level
 		   several times a second on purpose -- the same reason VIBRAPHONE's
 		   motor is excused. */
-		/* Nor HARPSICHORD, whose two 8' choirs a cent apart and a 4' above them
-		   beat against each other, as a harpsichord's do. */
+		/* Nor HARPSICHORD, whose 8' and 4' strings are stiff wires, their
+		   overtones a little sharp of the series and of each other's. */
 		const inharmonic = new Set([
 			'VIBRAPHONE',
 			'MARIMBA',

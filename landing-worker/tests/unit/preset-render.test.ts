@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { modularSynth } from '../../src/lib/synth';
 import { SOUND_PRESETS } from '../../src/lib/stores/synth-presets';
-import { FakeCtx, FakeParam } from './stubs/audio-context';
+import { FakeCtx, FakeParam, FakeWorklet } from './stubs/audio-context';
 
 /**
  * Every shipped preset builds a voice, and builds a sane one.
@@ -54,12 +54,18 @@ describe('the shipped presets', () => {
 				/* A step counts: PIANO's hammer is a constant turned into sound
 				   (TO-SIG) through a highpass, so its only source is a
 				   ConstantSource set to the strike's level. ENTRY's own idle
-				   constant sits at 0 and is not one. */
+				   constant sits at 0 and is not one. A resonator worklet is a
+				   source too: MODES strikes its own partials at the note, and WIRE
+				   rings from a bare step (HARPSICHORD plucks with a constant
+				   through a band-pass, with no oscillator or noise buffer anywhere
+				   in the note). */
 				const sources = ctx.nodes.filter(
 					(n) =>
 						n.kind === 'osc' ||
 						n.kind === 'bufsrc' ||
-						(n.kind === 'const' && (n as unknown as { offset: FakeParam }).offset.value !== 0)
+						(n.kind === 'const' && (n as unknown as { offset: FakeParam }).offset.value !== 0) ||
+						(n instanceof FakeWorklet &&
+							['krsz-wire', 'krsz-modes', 'krsz-strings'].includes(n.processor))
 				);
 				if (!sources.length) bad.push(`${entry.name}: builds no source`);
 
