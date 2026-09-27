@@ -113,24 +113,30 @@ A knob is an inlet too. Every parameter can be driven by a cable, and `p(key,
 def)` resolves through the same path -- so a value into a knob works on every
 module without that module knowing about it.
 
-### A value replaces a knob; a signal adds to it
+### A cable replaces a knob -- except OSC's FREQ
 
-The two kinds of source into a knob are not the same thing, and the difference
-is audible:
+The two kinds of source into a knob reach it by different mechanisms, and
+both take it over:
 
-| Cable from                            | What it is | What the knob does                   |
-| ------------------------------------- | ---------- | ------------------------------------ |
-| CONST, ADD, TO-FREQ ... (a pure node) | a number   | **replaced** by it                   |
-| ENV, LFO, an audio outlet             | a signal   | **added to** by it, knob is the base |
+| Cable from                            | What it is | What the knob does                             |
+| ------------------------------------- | ---------- | ---------------------------------------------- |
+| CONST, ADD, TO-FREQ ... (a pure node) | a number   | **replaced** by it                             |
+| ENV, LFO, an audio outlet             | a signal   | **replaced** by it: the knob reads 0, disabled |
+| a signal into OSC's FREQ              | a signal   | **added to** it: the knob is the carrier       |
 
-A pure node has a value to pull, so the resolver pulls it. Everything else is
-an AudioParam connection, and Web Audio _sums_ into a param -- so the knob's own
-setting is the base the signal moves around.
+A pure node has a value to pull, so the resolver pulls it. A signal is an
+AudioParam connection, and Web Audio _sums_ into a param -- so the engine sets
+a knob a signal has claimed to zero (`p()` asks `resolver.isDrivenBySignal`)
+and the cable alone decides. A knob that silently offset its cable was a
+second opinion: an LFO swinging 0..1 into a GAIN whose LVL read 1 gave a level
+moving between 1 and 2, and never reached silence. The resting level a patch
+wants under a signal is a GAIN before or after, or an ADD with a CONST (the
+Leslie's delay, the tremolo's 1 + LFO).
 
-Returning 0 for the second case is what made `ENV -> VCF.FREQ` -- the first
-patch anyone tries -- play silence: the filter opened at 0 Hz and the envelope
-added its 0..1 on top of nothing. Measured after the fix: 320 Hz unmodulated,
-2068 Hz at the attack, 660 Hz as it decays.
+OSC's FREQ is the exception, because frequency modulation is a deviation and a
+deviation needs a centre: set the carrier to 440, cable a modulator in, and the
+knob is what it swings around. So a pitch *replacing* a FREQ has to arrive as a
+value (TO-FREQ of a number), or as the note in hertz plus a deviation.
 
 ### Every value a pure node reads is a signed float, whatever role drew the cable
 
