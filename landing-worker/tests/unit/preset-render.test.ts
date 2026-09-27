@@ -54,7 +54,8 @@ describe('the shipped presets', () => {
 				/* A step counts: PIANO's hammer is a constant turned into sound
 				   (TO-SIG) through a highpass, so its only source is a
 				   ConstantSource set to the strike's level. ENTRY's own idle
-				   constant sits at 0 and is not one. A resonator worklet is a
+				   constant sits at 0 and is not one. The plucked presets (KOTO,
+				   DULCIMER, GUITAR, UPRIGHT BASS) are excited by such a step too. A resonator worklet is a
 				   source too: MODES strikes its own partials at the note, and WIRE
 				   rings from a bare step (HARPSICHORD plucks with a constant
 				   through a band-pass, with no oscillator or noise buffer anywhere
@@ -84,6 +85,12 @@ describe('the shipped presets', () => {
 			} catch (e) {
 				bad.push(`${entry.name}: threw ${String(e).slice(0, 70)}`);
 			} finally {
+				/* Back to exactly what it was. Assigning `saved` over the track
+				   left every key the preset added -- `advanced`, `rackGraph` --
+				   in place, so each rack preset after the first graph one played
+				   that graph, and "builds a source" was answered by the wrong
+				   preset's EXCITE. */
+				for (const k of Object.keys(track)) if (!(k in saved)) delete (track as Timbre)[k];
 				Object.assign(track, saved);
 				S.renderCtx = null;
 			}

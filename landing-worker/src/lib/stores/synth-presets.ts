@@ -1147,48 +1147,89 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			/* A long zither plucked with a pick on the thumb: the string pushed
 			   aside and let go (a step, so the fundamental is there), the pick's
 			   tick on top, one string a note, and the board measured from the
-			   VCSL dan tranh, the koto's Vietnamese cousin (IR: ZIT). The comb
-			   and body composite it replaces were heard as a ukulele. */
+			   VCSL dan tranh, the koto's Vietnamese cousin (IR: ZIT).
+
+			   The string is two WIREs, its two planes of motion: the one across
+			   the board hands its energy to the bridge and dies in a fraction of
+			   a second, the one along it rings on. One WIRE is one slope, and a
+			   note still at -5 dB after 0.6 s, where the recordings have fallen
+			   10 to 14, is heard as a held pad rather than a pluck.
+
+			   The pick has no ENV of its own: CONST -> TO-SIG is a level that
+			   arrives with the note, and a highpass (PLS) lets it back down over
+			   a few milliseconds -- the string pushed aside and let go, the
+			   WIRE's POS comb making a pulse of it. The one ENV is the hand,
+			   open while the key is down and damping at the release. An ENV that
+			   was the pluck as well let go of its step at the release, and the
+			   key-up plucked the string a second time. Tuned against the dan
+			   tranh's per-note decay (octave bands) and by ear. */
 			...patch(
 				[
 					['fq', 'tofreq'],
-					['one', 'const', { kind: 6, value: 1 }],
-					['dc', 'tosig'],
-					['pe', 'env', { envA: 0.0003, envD: 0.0136, envS: 0, envR: 0.001, envCurve: 0 }],
-					['pls', 'gain', { level: 0 }],
-					['pick', 'excite', { hardness: 85, exLength: 1, exTone: 5900 }],
-					['pkg', 'gain', { level: 0.78 }],
 					['pv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.4, outHi: 1.4 }],
-					['pg', 'gain', { level: 1 }],
-					['pluck', 'sum'],
-					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 9.2, outHi: 0.95 }],
-					['str', 'wire', { wireDecay: 3, wireDamp: 19, wireStiff: 12, wirePos: 16 }],
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.95 }],
+					['dc', 'tosig'],
+					['key', 'env', { envA: 0.0009, envD: 0.001, envS: 100, envR: 0.95 }],
+					['pls', 'filter', { type: 1, cutoff: 26, q: 0.5 }],
+					['tick', 'filter', { type: 1, cutoff: 1000, q: 0.7 }],
+					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 9.3, outHi: 7.6 }],
+					['dk', 'const', { kind: 6, value: 0.073 }],
+					['dec2', 'mul'],
+					['rk', 'const', { kind: 6, value: 1.0025 }],
+					['f2', 'mul'],
+					['s1', 'wire', { wireDecay: 3, wireDamp: 14, wireStiff: 24, wirePos: 17 }],
+					['s2', 'wire', { wireDecay: 0.5, wireDamp: 14, wireStiff: 24, wirePos: 17 }],
+					['s1g', 'gain', { level: 0.35 }],
 					['dv', 'vca', { gain: 100 }],
-					['bod', 'ir', { irBody: body('ZIT'), irMix: 73 }]
+					['bod', 'ir', { irBody: body('ZIT'), irMix: 97 }]
 				],
 				[
 					'entry.pitch>fq:a',
-					'one>dc:level',
-					'dc>pls',
-					'pe>pls:level',
-					'pick>pkg',
-					'pls>pluck',
-					'pkg>pluck',
 					'entry.vel>pv:a',
-					'pluck>pg',
-					'pv>pg:level',
-					'pg>str',
-					'fq>str:pitch',
+					'pv>dc:level',
+					'dc>pls',
+					'pls>s1',
+					'pls>s2',
+					'pls>tick',
+					'fq>s1:pitch',
+					'fq>f2:a',
+					'rk>f2:b',
+					'f2>s2:pitch',
 					'entry.note>dec:a',
-					'dec>str:wireDecay',
-					'str>dv',
-					'dmp>dv:level',
+					'dec>s1:wireDecay',
+					'dec>dec2:a',
+					'dk>dec2:b',
+					'dec2>s2:wireDecay',
+					's1>s1g',
+					's1g>dv',
+					's2>dv',
+					'tick>dv',
+					'key>dv:level',
 					'dv>bod',
 					'bod>output'
 				],
-				40,
-				{ spaceSize: 35, spaceDecay: 40, spaceMix: 30 }
+				47,
+				{ spaceSize: 35, spaceDecay: 40, spaceMix: 30 },
+				{
+					groups: [
+						['PLUCK', ['pv', 'dc', 'pls', 'tick']],
+						['STRING', ['fq', 'rk', 'f2', 'dec', 'dk', 'dec2', 's1', 's2', 's1g', 'key', 'dv']],
+						['BOARD', ['bod']],
+						['ROOM (TRACK)', ['roomSend', 'roomRtn', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						[
+							'The pick: a step (harder, taller) let back down by the highpass, its tick heard through a second one. No ENV, so a key-up cannot pluck again.',
+							'pls'
+						],
+						['The hand: open while the key is down, damping the string at the release.', 'key'],
+						[
+							'Two planes of motion: one dies in a fraction of a second, the other rings on. Two slopes make it a pluck, not a pad.',
+							's1'
+						],
+						['The board, measured from the VCSL dan tranh (IR: ZIT).', 'bod'],
+						['One room for the whole track, not one per note.', 'room']
+					]
+				}
 			)
 		})
 	},
@@ -1669,60 +1710,90 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampRelease: 0.9,
 			/* A hammered dulcimer: a light hammer on a course of two strings a
 			   few cents apart, which beat -- the shimmer the instrument is known
-			   by -- a short, hard step and the hammer's tick, and the board
-			   measured from the VCSL psaltery, its plucked cousin (IR: PSL).
-			   The strings ring on; the player seldom damps them. */
+			   by -- and the board measured from the VCSL psaltery, its plucked
+			   cousin (IR: PSL).
+
+			   The two strings of a course are coupled through the bridge: the
+			   motion they share drains into the board fast, what is left of
+			   the difference rings on. So they do not decay alike -- the second
+			   string here goes in a fraction of the first one's time -- and the
+			   note falls quickly and then hangs, as the recordings do, rather
+			   than holding its level like a pad.
+
+			   The blow has no ENV of its own: CONST -> TO-SIG is a step that
+			   arrives with the note and a highpass lets it back down, the
+			   WIRE's POS comb making a pulse of it. The one ENV is the palm,
+			   open while the key is down and damping at the release; one that
+			   was the blow as well struck the course again at every key-up.
+			   Tuned against the VCSL psaltery's per-note decay (octave bands):
+			   no recording of a hammered dulcimer is at hand. */
 			...patch(
 				[
 					['fq', 'tofreq'],
-					['dk', 'const', { kind: 6, value: 1.0008 }],
+					['dk', 'const', { kind: 6, value: 1.0009 }],
 					['f2', 'mul'],
-					['one', 'const', { kind: 6, value: 1 }],
-					['dc', 'tosig'],
-					['pe', 'env', { envA: 0.002, envD: 0.0021, envS: 0, envR: 0.001, envCurve: 0 }],
-					['pls', 'gain', { level: 0 }],
-					['ham', 'excite', { hardness: 78, exLength: 2, exTone: 2330 }],
-					['hg', 'gain', { level: 1.95 }],
 					['pv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.4, outHi: 1.4 }],
-					['pg', 'gain', { level: 1 }],
-					['strike', 'sum'],
-					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 9, outHi: 0.63 }],
-					['c1', 'wire', { wireDecay: 4, wireDamp: 5, wireStiff: 12, wirePos: 21 }],
-					['c2', 'wire', { wireDecay: 4, wireDamp: 5, wireStiff: 12, wirePos: 21 }],
-					['crs', 'sum'],
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 1.2 }],
+					['dc', 'tosig'],
+					['key', 'env', { envA: 0.0037, envD: 0.001, envS: 100, envR: 1.2 }],
+					['blow', 'filter', { type: 1, cutoff: 20, q: 0.5 }],
+					['tick', 'filter', { type: 1, cutoff: 6800, q: 0.7 }],
+					['dec', 'map', { shape: 9, inLo: 72, inHi: 12, outLo: 12.8, outHi: 3.6 }],
+					['ck', 'const', { kind: 6, value: 0.15 }],
+					['dec2', 'mul'],
+					['c1', 'wire', { wireDecay: 4, wireDamp: 1.2, wireStiff: 3.5, wirePos: 25 }],
+					['c2', 'wire', { wireDecay: 1, wireDamp: 1.2, wireStiff: 3.5, wirePos: 25 }],
+					['c1g', 'gain', { level: 0.98 }],
 					['dv', 'vca', { gain: 100 }],
-					['bod', 'ir', { irBody: body('PSL'), irMix: 77 }]
+					['bod', 'ir', { irBody: body('PSL'), irMix: 83 }]
 				],
 				[
 					'entry.pitch>fq:a',
 					'fq>f2:a',
 					'dk>f2:b',
-					'one>dc:level',
-					'dc>pls',
-					'pe>pls:level',
-					'ham>hg',
-					'pls>strike',
-					'hg>strike',
 					'entry.vel>pv:a',
-					'strike>pg',
-					'pv>pg:level',
-					'pg>c1',
-					'pg>c2',
+					'pv>dc:level',
+					'dc>blow',
+					'blow>c1',
+					'blow>c2',
+					'blow>tick',
 					'fq>c1:pitch',
 					'f2>c2:pitch',
 					'entry.note>dec:a',
 					'dec>c1:wireDecay',
-					'dec>c2:wireDecay',
-					'c1>crs',
-					'c2>crs',
-					'crs>dv',
-					'dmp>dv:level',
+					'dec>dec2:a',
+					'ck>dec2:b',
+					'dec2>c2:wireDecay',
+					'c1>c1g',
+					'c1g>dv',
+					'c2>dv',
+					'tick>dv',
+					'key>dv:level',
 					'dv>bod',
 					'bod>output'
 				],
-				40,
-				{ spaceSize: 40, spaceDecay: 45, spaceMix: 30 }
+				34,
+				{ spaceSize: 40, spaceDecay: 45, spaceMix: 30 },
+				{
+					groups: [
+						['HAMMER', ['pv', 'dc', 'blow', 'tick']],
+						['COURSE', ['fq', 'dk', 'f2', 'dec', 'ck', 'dec2', 'c1', 'c2', 'c1g', 'key', 'dv']],
+						['BOARD', ['bod']],
+						['ROOM (TRACK)', ['roomSend', 'roomRtn', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						[
+							'The hammer: a step let back down by the highpass, its tick through a second one. No ENV, so a key-up cannot strike again.',
+							'blow'
+						],
+						['The palm: open while the key is down, damping the course at the release.', 'key'],
+						[
+							'A course of two strings a few cents apart, which beat. Coupled at the bridge they decay unalike: a fast fall, then a long hang.',
+							'c1'
+						],
+						['The board, measured from the VCSL psaltery (IR: PSL).', 'bod'],
+						['One room for the whole track, not one per note.', 'room']
+					]
+				}
 			)
 		})
 	},
@@ -2053,43 +2124,52 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   guitar is not: harmonics gone in a second, a note dead in
 			   one and a half, a fundamental that led, and no box. Here:
 
-			     the pick     short and bright, brighter and louder the harder
-			     the strings  two waveguides a cent apart -- the string's two
-			                  planes of motion -- lightly damped so the upper
-			                  harmonics last, 7 s in the bass to 2 s at the top
-			     the hand     a damper on the key, a tenth of a second
+			     the pluck    the string pushed aside and let go -- a step, so
+			                  the fundamental is there, let back down by a
+			                  highpass rather than an ENV -- through the flesh
+			                  of the finger, brighter the harder
+			     the strings  two waveguides in unison, the string's two
+			                  planes of motion: the one driving the bridge dies
+			                  in a fifth of the other's time, so the note falls
+			                  fast and then hangs, as a pluck does, rather than
+			                  holding its level like a pad
+			     the hand     the one ENV, open while the key is down, a tenth
+			                  of a second at the release. It is not the pluck:
+			                  an ENV that was let go of its step at the key-up
+			                  too, and plucked the string again
+
+			   The recordings are phrases, not single notes, so the knobs were
+			   tuned by ear alone (tools/ear, "Acoustic guitar").
 			     the box      it cannot radiate the low E's fundamental, so a
 			                  highpass under the air resonance (100 Hz, the
 			                  soundhole), the top at 200, the back and sides
 			                  above, a scoop at 700 and presence at 2.5 k -- and
-			                  the box itself knocked by the pick, three fixed
-			                  modes that ring for a moment whatever the note. */
+			                  the box itself knocked by the pluck, a resonant
+			                  band at the air mode that rings for a moment
+			                  whatever the note. */
 			...patch(
 				[
 					['fq', 'tofreq'],
-					['dk', 'const', { kind: 6, value: 1.0007 }],
+					['dk', 'const', { kind: 6, value: 1.00004 }],
 					['f2', 'mul'],
-					['pic', 'excite', { hardness: 40, exLength: 4, exTone: 3000 }],
-					['pt', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 900, outHi: 4000 }],
 					['pv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.25, outHi: 1 }],
-					['pg', 'gain', { level: 1 }],
+					['dc', 'tosig'],
+					['key', 'env', { envA: 0.0005, envD: 0.001, envS: 100, envR: 0.15 }],
+					['pls', 'filter', { type: 1, cutoff: 350, q: 0.5 }],
 					/* The flesh of the finger: a pluck's spectrum falls fast above
 					   the first few harmonics, and a harder pluck lets more through.
 					   In harmonics, not hertz: the wound bass strings lose their
 					   top where the plain treble ones ring bright, so a fixed
 					   corner left E2 fizzy and E4 dull at once. */
-					['plk', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 3, outHi: 10 }],
+					['plk', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 6.3, outHi: 15 }],
 					['plc', 'mul'],
-					['pl1', 'filter', { type: 0, cutoff: 1500, q: 0.6 }],
-					['pl2', 'filter', { type: 0, cutoff: 1500, q: 0.6 }],
-					['dec', 'map', { shape: 9, inLo: 68, inHi: 32, outLo: 12, outHi: 5 }],
-					['d2k', 'const', { kind: 6, value: 0.6 }],
+					['pl', 'filter', { type: 0, cutoff: 1500, q: 0.6 }],
+					['dec', 'map', { shape: 9, inLo: 68, inHi: 32, outLo: 9.1, outHi: 6.6 }],
+					['d2k', 'const', { kind: 6, value: 0.19 }],
 					['dec2', 'mul'],
-					['w1', 'wire', { wireDecay: 4, wireDamp: 30, wireStiff: 3, wirePos: 14 }],
-					['w2', 'wire', { wireDecay: 2.4, wireDamp: 36, wireStiff: 3, wirePos: 14 }],
-					['w2g', 'gain', { level: 0.5 }],
-					['strs', 'sum'],
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.15 }],
+					['w1', 'wire', { wireDecay: 4, wireDamp: 5, wireStiff: 0.55, wirePos: 28.6 }],
+					['w2', 'wire', { wireDecay: 2.4, wireDamp: 5, wireStiff: 0.55, wirePos: 28.6 }],
+					['w1g', 'gain', { level: 1.34 }],
 					['dv', 'vca', { gain: 100 }],
 					['rad', 'filter', { type: 1, cutoff: 110, q: 0.9 }],
 					['air', 'filter', { type: 6, cutoff: 100, q: 2.5, filterGain: 5 }],
@@ -2098,23 +2178,21 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['scoop', 'filter', { type: 6, cutoff: 700, q: 1, filterGain: -3 }],
 					['pres', 'filter', { type: 6, cutoff: 2500, q: 0.8, filterGain: 4 }],
 					['roll', 'filter', { type: 5, cutoff: 3000, q: 0.7, filterGain: -6 }],
-					[
-						'knock',
-						'modes',
-						{ modeHz: 100, mode1: 1, mode2: 2.05, mode3: 4.1, modeQ: 12, modeMix: 100 }
-					],
-					['kg', 'gain', { level: 0.02 }],
-					['mix', 'sum']
+					['knock', 'filter', { type: 2, cutoff: 100, q: 13 }],
+					['kg', 'gain', { level: 0.37 }]
 				],
 				[
 					'entry.pitch>fq:a',
 					'fq>f2:a',
 					'dk>f2:b',
-					'entry.vel>pt:a',
-					'pt>pic:exTone',
 					'entry.vel>pv:a',
-					'pic>pg',
-					'pv>pg:level',
+					'pv>dc:level',
+					'dc>pls',
+					'entry.vel>plk:a',
+					'fq>plc:a',
+					'plk>plc:b',
+					'plc>pl:cutoff',
+					'pls>pl',
 					'entry.note>dec:a',
 					'dec>dec2:a',
 					'd2k>dec2:b',
@@ -2122,20 +2200,15 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'f2>w2:pitch',
 					'dec>w1:wireDecay',
 					'dec2>w2:wireDecay',
-					'entry.vel>plk:a',
-					'fq>plc:a',
-					'plk>plc:b',
-					'plc>pl1:cutoff',
-					'plc>pl2:cutoff',
-					'pg>pl1',
-					'pl1>pl2',
-					'pl2>w1',
-					'pl2>w2',
-					'w1>strs',
-					'w2>w2g',
-					'w2g>strs',
-					'strs>dv',
-					'dmp>dv:level',
+					'pl>w1',
+					'pl>w2',
+					'w1>w1g',
+					'w1g>dv',
+					'w2>dv',
+					'pls>knock',
+					'knock>kg',
+					'kg>dv',
+					'key>dv:level',
 					'dv>rad',
 					'rad>air',
 					'air>top',
@@ -2143,14 +2216,34 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'back>scoop',
 					'scoop>pres',
 					'pres>roll',
-					'pg>knock',
-					'knock>kg',
-					'roll>mix',
-					'kg>mix',
-					'mix>output'
+					'roll>output'
 				],
-				36,
-				{ spaceSize: 30, spaceDecay: 30, spaceMix: 15 }
+				4.3,
+				{ spaceSize: 30, spaceDecay: 30, spaceMix: 15 },
+				{
+					groups: [
+						['PLUCK', ['pv', 'dc', 'pls', 'plk', 'plc', 'pl']],
+						['STRING', ['fq', 'dk', 'f2', 'dec', 'd2k', 'dec2', 'w1', 'w2', 'w1g', 'knock', 'kg', 'key', 'dv']],
+						['BOX', ['rad', 'air', 'top', 'back', 'scoop', 'pres', 'roll']],
+						['ROOM (TRACK)', ['roomSend', 'roomRtn', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						[
+							'The pluck: a step let back down by the highpass, no ENV. The LP is the fingertip, in harmonics.',
+							'pls'
+						],
+						[
+							'Two planes of motion: one dies fast, one rings. Two slopes make it a pluck, not a pad. The ENV is the hand, at the release.',
+							'w1'
+						],
+						['The box knocked by the pluck: a band at the air mode, ringing a moment.', 'knock'],
+						[
+							'The box as EQ (no measured guitar body): no low E fundamental, air 100, top 200, back 400, scoop 700, presence 2.5 k.',
+							'air'
+						],
+						['One room for the whole track, not one per note.', 'room']
+					]
+				}
 			)
 		})
 	},
@@ -2169,68 +2262,103 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.06,
 			ampSustain: 0,
 			ampRelease: 0.03,
-			/* Pulled with the side of a finger: a soft, slow pluck, so the
-			   attack is round; the finger leaving the string is a short snap
-			   of noise; one string, heavily damped above its first partials,
-			   ringing a few seconds in the low register. The body is measured
-			   from the VSCO double bass's own pizzicato (IR: BPZ) -- the wood a
-			   string-and-EQ model could not draw, which is what had it heard as
-			   a synth bass. The hand comes down at the key's release; the COMP
-			   is the one an upright always goes through on a record. */
+			/* Pulled with the side of a finger: the string drawn aside and let
+			   go 20 ms later, the let-go a snap; one string, heavily damped
+			   above its first partials. The body is measured from the VSCO
+			   double bass's own pizzicato (IR: BPZ) -- the wood a
+			   string-and-EQ model could not draw, which is what had it heard
+			   as a synth bass. The hand comes down at the key's release.
+
+			   The string is two WIREs, its two planes of motion. The recordings
+			   drop 15 dB in the first 0.3 s and then hang on -- the plane that
+			   drives the bridge gives its energy to the body at once, the other
+			   rings -- and one WIRE, one slope, was still at -4 dB there: a
+			   held bass tone, heard as an electronic tuner. Tuned against the
+			   VSCO contrabass pizzicato's per-note decay and by ear: 0.02 of
+			   the recordings' "Double bass" before, 0.16 now. */
 			...patch(
 				[
 					['fq', 'tofreq'],
-					/* The finger pushing the string aside and letting go: a
-					   displacement, a step rather than a tap -- rising over 26 ms
-					   and let go over 130 -- which is where the note's low
-					   fundamental comes from (a step falls as 1/n, a tap is flat). EXCITE's click alone has
-					   no low end -- the string sounded only its top, 30 dB short
-					   at the fundamental, and read as a guitar. */
-					['one', 'const', { kind: 6, value: 1 }],
-					['dc', 'tosig'],
-					['fe', 'env', { envA: 0.026, envD: 0.127, envS: 0, envR: 0.004, envCurve: 0 }],
-					['fin', 'gain', { level: 0 }],
-					['flp', 'filter', { type: 0, cutoff: 930, q: 0.5 }],
+					/* The finger: a displacement, a step rather than a tap, which
+					   is where the note's low fundamental comes from (a step
+					   falls as 1/n, a tap is flat) -- drawn aside through a
+					   lowpass, let go by the same step delayed and upside down.
+					   No ENV: the one ENV is the hand, open while the key is
+					   down. An ENV that was the pull as well let go of it at the
+					   key-up and plucked the string a second time. */
 					['pv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.5, outHi: 1.6 }],
-					['pg', 'gain', { level: 1 }],
-					['snp', 'noise'],
-					['sne', 'env', { envA: 0.0005, envD: 0.03, envS: 0, envR: 0.01, envCurve: 1 }],
-					['snv', 'vca', { gain: 100 }],
-					['sng', 'gain', { level: 0.07 }],
-					['dec', 'map', { shape: 9, inLo: 84, inHi: 48, outLo: 0.63, outHi: 4.9 }],
-					['str', 'wire', { wireDecay: 3, wireDamp: 90, wireStiff: 20, wirePos: 42 }],
-					['ex', 'sum'],
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.25 }],
+					['dc', 'tosig'],
+					['key', 'env', { envA: 0.034, envD: 0.001, envS: 100, envR: 0.25 }],
+					['fin', 'filter', { type: 0, cutoff: 240, q: 0.5 }],
+					['go', 'delay', { delayTime: 0.021 }],
+					['gon', 'gain', { level: -1 }],
+					['flp', 'filter', { type: 0, cutoff: 1140, q: 0.5 }],
+					['snp', 'filter', { type: 2, cutoff: 500, q: 1.2 }],
+					['sng', 'gain', { level: 0.72 }],
+					['dec', 'map', { shape: 9, inLo: 84, inHi: 48, outLo: 5, outHi: 4.6 }],
+					['dk', 'const', { kind: 6, value: 0.068 }],
+					['dec2', 'mul'],
+					['rk', 'const', { kind: 6, value: 1.00095 }],
+					['f2', 'mul'],
+					['s1', 'wire', { wireDecay: 3, wireDamp: 89, wireStiff: 13, wirePos: 37 }],
+					['s2', 'wire', { wireDecay: 0.3, wireDamp: 89, wireStiff: 13, wirePos: 37 }],
+					['s1g', 'gain', { level: 0.15 }],
 					['dv', 'vca', { gain: 100 }],
-					['bod', 'ir', { irBody: body('BPZ'), irMix: 68 }],
-					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }]
+					['bod', 'ir', { irBody: body('BPZ'), irMix: 66 }]
 				],
 				[
 					'entry.pitch>fq:a',
 					'entry.vel>pv:a',
-					'one>dc:level',
+					'pv>dc:level',
 					'dc>fin',
-					'fe>fin:level',
 					'fin>flp',
-					'flp>pg',
-					'pv>pg:level',
-					'pg>str',
-					'fq>str:pitch',
+					'dc>go',
+					'go>gon',
+					'gon>fin',
+					'flp>s1',
+					'flp>s2',
+					'gon>snp',
+					'snp>sng',
+					'sng>dv',
+					'fq>s1:pitch',
+					'fq>f2:a',
+					'rk>f2:b',
+					'f2>s2:pitch',
 					'entry.note>dec:a',
-					'dec>str:wireDecay',
-					'snp>snv',
-					'sne>snv:level',
-					'snv>sng',
-					'str>ex',
-					'sng>ex',
-					'ex>dv',
-					'dmp>dv:level',
+					'dec>s1:wireDecay',
+					'dec>dec2:a',
+					'dk>dec2:b',
+					'dec2>s2:wireDecay',
+					's1>s1g',
+					's1g>dv',
+					's2>dv',
+					'key>dv:level',
 					'dv>bod',
-					'bod>cmp',
-					'cmp>output'
+					'bod>output'
 				],
-				48,
-				{ spaceSize: 30, spaceDecay: 30, spaceMix: 10 }
+				22,
+				{ spaceSize: 30, spaceDecay: 30, spaceMix: 10 },
+				{
+					groups: [
+						['FINGER', ['pv', 'dc', 'fin', 'go', 'gon', 'flp', 'snp', 'sng']],
+						['STRING', ['fq', 'rk', 'f2', 'dec', 'dk', 'dec2', 's1', 's2', 's1g', 'key', 'dv']],
+						['BODY', ['bod']],
+						['ROOM (TRACK)', ['roomSend', 'roomRtn', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						[
+							'The finger: a step drawn aside through the LP, let go 20 ms later (DLY, -1). The let-go is also the snap, through a band-pass.',
+							'fin'
+						],
+						['The hand: open while the key is down, damping the string at the release.', 'key'],
+						[
+							'Two planes of motion: one gives its energy to the body at once, the other rings on. Two slopes make it a pluck, not a held tone.',
+							's1'
+						],
+						["The double bass's own pizzicato body, measured (IR: BPZ).", 'bod'],
+						['One room for the whole track, not one per note.', 'room']
+					]
+				}
 			)
 		})
 	},
