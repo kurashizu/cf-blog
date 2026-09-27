@@ -6,31 +6,42 @@
  * makes it a piano rather than a plucked string, in the order the signal
  * meets them:
  *
- *   the felt     a smooth force pulse, not a click -- a constant through a
- *                gain an ENV opens, pressed fast and let go slowly, shorter
- *                (so brighter) the harder the blow and longer on the heavy
- *                bass hammers; then a lowpass in absolute hertz that opens
- *                with velocity, since felt limits bandwidth the same on every
- *                key
- *   the strings  three WIREs a key, slightly detuned so they beat, struck at
- *                a point that moves toward the end in the bass; the unison's
- *                fundamental fades first (a low shelf), and a third string
- *                decays quickly for the prompt sound
- *   the case     a radiation highpass and two gentle shelves
+ *   the felt     a smooth force pulse, not a click: a step (a constant turned
+ *                into sound) through a critically damped bandpass is a pulse
+ *                that rises and lets go over the contact time, shorter (so
+ *                brighter) the harder the blow
+ *                and longer on the heavy bass hammers; then two lowpasses in
+ *                absolute hertz that open with velocity, since felt limits
+ *                bandwidth the same on every key
+ *   the knock    the same pulse ringing the key and frame, a low resonance
+ *                for a few tens of milliseconds under the note
+ *   the strings  two WIREs a key, slightly detuned so they beat: a long one
+ *                whose fundamental is shelved down, and a prompt one that
+ *                decays quickly for the first sound -- the two-stage decay of
+ *                a unison, from two strings rather than three
  *   the damper   an envelope that lets go at the key's release; with the
  *                pedal down the engine holds the note, so it does not
- *   the board    one soundboard for the whole track (TSND into TRTN), which
- *                every string drives -- and the pedal, from CTRL, lets it
- *                ring longer and louder, as lifting every damper does
- *   key-up       the damper felt landing, a soft thud on REL
+ *   the board    one for the whole track (TSND into TRTN), which every string
+ *                drives after its damper: the case's filters and the measured
+ *                Steinway body (IR: PNO), and a SPACE that the pedal, from
+ *                CTRL, lets ring longer and louder, as lifting every damper
+ *                does
  *
- * Built here rather than in the preset list because it is sixty modules; the
- * list holds the name and this holds the instrument. The strings are one
- * macro placed three times and the case another, so the canvas reads as the
- * instrument and a double-click shows each part.
+ * Built here rather than in the preset list because every key-tracked number
+ * is a drawn curve over the 88 keys; the list holds the name and this holds
+ * the instrument.
+ *
+ * The budget (docs/node-graph.md, "The built-in patches"). This patch once
+ * built 72 nodes and 10 worklets a note -- three WIREs, a case and an IR per
+ * key, an EXCITE for the hammer and another for the key-up thud, an ENV each
+ * for the felt, the knock and the bass drain -- and twelve held notes of it
+ * underran the audio thread until the page went silent. The sound was never
+ * in those: the felt is a step through a bandpass (no envelope), the knock is
+ * that pulse through one resonant filter (no noise, no envelope), and the
+ * board is one per instrument, so the case and the IR moved to the track
+ * chain and are built once. A note is now two WIREs and the damper's ENV.
  */
 import type { GraphCable, GraphGroup, GraphNode, RackGraph } from './graph-model';
-import type { MacroDef } from './macros';
 import { BODY_IRS } from '../audio/body-irs';
 
 const F32 = 6;
@@ -38,7 +49,10 @@ const EXP = 1;
 const LOG = 3;
 const INV = 8;
 const DRAW = 9;
-const COL = 260;
+const COL = 300;
+/* Rows are written 140 apart and drawn 1.9 times that: a drawn MAP's card
+   is taller than 140, and at 1.0 each column's MAPs stacked on each other. */
+const ROW = 1.9;
 
 /**
  * Anything that changes up the keyboard is five numbers, at A0, C2, C4, C6
@@ -47,155 +61,92 @@ const COL = 260;
  * ms and the middle's in seconds, and any shape joining the ends bent both.
  */
 type ByKey = [number, number, number, number, number];
+/** The keys those five sit on, counted from A0. */
+const ANCHOR = [0, 15, 39, 63, 87];
+/* The voice's level wants one number an octave: it was voiced by ear, key
+   by key, and five points could not hold it. A0, then C1 to C8. */
+type ByOctave = [number, number, number, number, number, number, number, number, number];
+const KEY_ANCHOR = [0, 3, 15, 27, 39, 51, 63, 75, 87];
 
 const VOICING = {
-	/* Half a cent or so either side: two cents beat like a honky-tonk, and
-	   against the recordings read as a plucked string's twang. Tighter in the
-	   bass, where the beat is in the upper partials that carry the note: at
-	   half a cent C2's 7th cancelled itself two seconds in. */
+	/* The prompt string against the long one: under a cent (0.9 at C4).
+	   The band tables pulled it to three and a half, which beats like a
+	   honky-tonk and which the ear heard as a plucked string's twang: 0.39 on
+	   the AudioSet piano label there, 0.49 at 1.3 cents, 0.52 here. Tighter
+	   in the bass, where the beat is in the upper partials that carry the
+	   note. */
 	detune: [1.0001, 1.0001, 1.0005, 1.0005, 1.0005] as ByKey,
-	detune3: [0.9999, 0.9999, 0.9995, 0.9995, 0.9995] as ByKey,
-	third: 0.6,
-	/** T60 of the long strings, seconds. */
-	dec: [29.3, 24.8, 10.6, 8.2, 0.47] as ByKey,
-	/** The prompt string's decay, as a share of `dec`. */
-	prompt: [0.1715, 0.272, 0.05, 0.05, 0.1552] as ByKey,
-	/** And its level against the long pair. */
-	promptLevel: [1.31, 1.07, 2.29, 1.64, 1.15] as ByKey,
-	/* A little more loss in the bass's upper partials: C2's tenth to twelfth
-	   are 15-30 dB under its seventh by 2 s. Not much more -- the 4th to 9th
-	   carry the bass note once its lowest partials have drained, and at DAMP
-	   30 they died with them. */
-	damp: [11.8, 0.08, 4.2, 13.7, 2] as ByKey,
+	/** T60 of the long string, seconds. */
+	dec: [25.7, 21.8, 9.3, 7.2, 0.41] as ByKey,
+	/* The prompt string's decay, as a share of `dec`: the treble's first
+	   sound falls away in tens of milliseconds -- C6 drops 15 dB in the first
+	   40 -- where the bass's takes seconds. */
+	prompt: [0.408, 0.648, 0.119, 0.119, 0.37] as ByKey,
+	/** And its level against the long one. */
+	promptLevel: [2.06, 1.68, 3.59, 2.57, 1.81] as ByKey,
+	/* More loss in the upper partials at both ends: C2's tenth to twelfth are
+	   15-30 dB under its seventh by 2 s, and the short treble strings go dull
+	   fast. Next to none at C2 itself -- the 4th to 9th carry the bass note
+	   once its lowest partials have drained. */
+	damp: [19.6, 0.21, 2.39, 26.8, 2] as ByKey,
 	/** Strike point, % of the string from its end. */
 	pos: [5, 2.681, 8.138, 6.697, 12] as ByKey,
 	/* Fitted to B of 1.5e-4 at C2, 3.1e-4 at C4 and 2.4e-3 at C6 (the
 	   recordings' first four partials). Past C7 it asks for more than WIRE's
 	   100 and holds there. */
 	stiff: [22, 25.18, 43.5, 78.11, 129] as ByKey,
-	/** The hammer's own knock, dry. */
-	hamDry: [0.1, 0.15, 0.1, 0.02, 0.02] as ByKey,
-	/* The hammer hitting the string and the key hitting its bed: at C6 the
-	   first 30 ms peaks 10 dB over the note that follows. Low, a thud -- the
-	   recordings' partials 4-12 sit 60-75 dB down through it, so the knock is
-	   under the note, not a hiss between its harmonics (a 3 kHz knock filled
-	   those at -30 and the treble clicked like a plectrum). Five gains'
-	   worth, since one stops at 2. */
-	thump: [0.058, 0.058, 0.145, 0.58, 0.58] as ByKey,
-	/** Low shelf on the long pair's fundamental, dB. */
-	cutLong: [-19.3, -15.2, -2.1, -0.1, -4] as ByKey,
-	/** And on the prompt string's. */
-	cutPrompt: [-0.06, -1.1, -3.6, 0, 0] as ByKey,
-	/* The bass's low partials drain into the board: dB the long pair's first
-	   three partials have lost by `drainTime`, seconds. C2 at 2 s is led by
-	   its 4th to 7th partials in the recordings, the 2nd 20 dB and the 3rd 40
-	   dB under them -- where a string alone keeps its lowest partials longest
-	   and rings like a bass guitar. */
-	drain: [-17.7, -0.05, -3.5, 0, 0] as ByKey,
-	drainTime: 1.2,
-	/** The voice's level by key: the treble's short strings are quiet. */
-	key: [0.825, 0.8277, 0.9492, 1.671, 3.9] as ByKey,
-	/** The hammer's contact, ms: heavier and longer in the bass. */
-	exLen: [4, 3.081, 2.566, 2.343, 0.8] as ByKey,
-	radiate: 90,
-	/** The case's middle: where its one broad dip or lift sits, and how deep. */
-	caseMidHz: 889,
-	caseMidDb: -6.3,
-	/** And the top, above 6 kHz. */
-	caseHiDb: -2.6,
-	feltSoft: 1255,
-	feltHard: 3902,
-	board: { spaceSize: 12, spaceDecay: 12, spaceMix: 100 },
-	boardLevel: 1.03,
-	boardPedal: 3,
-	decayPedal: 60,
-	dryLevel: 0.8,
+	/* Low shelf on the long string's fundamental, dB. A few dB: the prompt
+	   string, dying young, already takes the bass's lowest partials away
+	   early, which the old three-string patch needed an envelope-swept shelf
+	   (and -19 dB here) to do. */
+	cutLong: [-4.19, -2.3, -1.35, -0.16, -4] as ByKey,
+	/* The felt's contact, ms: the pulse's peak time. Fitted key by key, not
+	   drawn as "heavier in the bass": the recordings want C4 struck softly
+	   long (its 2nd and 3rd partials lead, not the 5th to 8th) and the
+	   treble short, and A0's hammer is the longest of all. */
+	blow: [5.77, 1.55, 3.63, 0.294, 0.297] as ByKey,
+	/** A soft blow stays on the string this much longer. */
+	blowSoft: 1.3,
+	/* Felt's bandwidth from pp to ff, in hertz. Wide apart: a soft blow's
+	   spectrum falls steeply, which is most of why pp is dark. */
+	feltSoft: 353,
+	feltHard: 4411,
+	/** The felt's cutoff by key, as a share of what the blow asks. */
+	feltKey: [1, 1, 1, 0.8, 0.8] as ByKey,
+	/* The knock: the key hitting its bed and the frame answering, low and
+	   broad (Q under 1, so a thud rather than a tone), loudest against the
+	   treble's short strings. The band tables wanted four times this -- at
+	   C6 the recordings' first 30 ms carry the 63-500 Hz bands 20 dB over
+	   where the note leaves them -- but at that the ear heard a box being
+	   knocked (0.49 against 0.53 at a quarter). */
+	knockHz: 267,
+	knockQ: 0.72,
+	knock: [0.36, 0.36, 0.72, 2.38, 3.58] as ByKey,
+	/* The voice's level by key, one number an octave from A0: the balance
+	   the three-string patch was voiced to by ear, key for key, 5 dB up (it
+	   sat that far under the rest of the set). C8 is left at the old level:
+	   5 dB more there peaked at -3 dBFS on a single mf note. */
+	key: [0.923, 0.977, 1.096, 0.776, 0.759, 2.29, 3.43, 8.9, 20] as ByOctave,
+	ampLo: 0.03,
+	/** The whole instrument's level: `key` says how loud each key is against the others. */
+	level: 0.1,
 	riseBass: 0.03,
 	riseTreble: 0.003,
-	ampLo: 0.03,
-	/* A longer blow than the felt's cutoff alone implies: at 1.1 ms the
-	   attack's upper partials stood 15-25 dB over the recordings', the
-	   bright pluck that made the piano a koto. */
-	contactHard: 0.0038,
-	contactSoft: 0.0045,
 	damperRel: 0.3,
-	relLevel: 0.05,
-	/** How much of the voice goes through the measured board (IR: PNO), %. */
-	pnoMix: 81,
-	/** The felt's cutoff by key, as a share of what the blow asks. */
-	feltKey: [1, 1, 1, 0.8, 0.8] as ByKey
+	/* The board, as the track hears it: the measured body nine times over
+	   the dry string (the note's own OUT is the dry), and the case's broad
+	   strokes on the way in -- a dip around 860 Hz, and a radiation highpass
+	   low enough to leave A0 its body. */
+	body: 9,
+	radiate: 46,
+	caseMidHz: 861,
+	caseMidDb: -10.4,
+	caseHiDb: -0.09,
+	board: { spaceSize: 12, spaceDecay: 12, spaceMix: 100 },
+	boardLevel: 1.06,
+	boardPedal: 3,
+	decayPedal: 60
 };
-
-/** One string of the unison: struck at IN, tuned, damped and stiffened from outside. */
-const stringDef = (opt: PianoVoicing): MacroDef => ({
-	name: 'STR',
-	nodes: [
-		{ id: 'in', type: 'nodept', x: 0, y: 0 },
-		{ id: 'freq', type: 'nodecv', x: 0, y: 110 },
-		{ id: 'dec', type: 'nodecv', x: 0, y: 200 },
-		{ id: 'pos', type: 'nodecv', x: 0, y: 290 },
-		{ id: 'stif', type: 'nodecv', x: 0, y: 380 },
-		{ id: 'damp', type: 'nodecv', x: 0, y: 470 },
-		{ id: 'w', type: 'wire', x: 240, y: 120 },
-		{ id: 'out', type: 'nodept', x: 520, y: 120 }
-	],
-	cables: [
-		{ from: 'in', fromPort: 'out', to: 'w', toPort: 'in' },
-		{ from: 'freq', fromPort: 'out', to: 'w', toPort: 'pitch' },
-		{ from: 'dec', fromPort: 'out', to: 'w', toPort: 'wireDecay' },
-		{ from: 'pos', fromPort: 'out', to: 'w', toPort: 'wirePos' },
-		{ from: 'stif', fromPort: 'out', to: 'w', toPort: 'wireStiff' },
-		{ from: 'damp', fromPort: 'out', to: 'w', toPort: 'wireDamp' },
-		{ from: 'w', fromPort: 'out', to: 'out', toPort: 'in' }
-	],
-	params: {
-		'w.wireDecay': 0.8,
-		'w.wireDamp': opt.damp[2],
-		'w.wireStiff': 30,
-		'w.wirePos': opt.pos[2]
-	},
-	labels: {
-		in: 'IN',
-		freq: 'FREQ',
-		dec: 'DCAY',
-		pos: 'POS',
-		stif: 'STIF',
-		damp: 'DAMP',
-		out: 'OUT'
-	}
-});
-
-/** The case: a radiation highpass, a dip in the middle, a softened top. */
-const caseDef = (opt: PianoVoicing): MacroDef => ({
-	name: 'CASE',
-	nodes: [
-		{ id: 'in', type: 'nodept', x: 0, y: 40 },
-		{ id: 'low', type: 'filter', x: 160, y: 0 },
-		{ id: 'mid', type: 'filter', x: 420, y: 0 },
-		{ id: 'hi', type: 'filter', x: 680, y: 0 },
-		{ id: 'out', type: 'nodept', x: 940, y: 40 }
-	],
-	cables: [
-		{ from: 'in', fromPort: 'out', to: 'low', toPort: 'in' },
-		{ from: 'low', fromPort: 'out', to: 'mid', toPort: 'in' },
-		{ from: 'mid', fromPort: 'out', to: 'hi', toPort: 'in' },
-		{ from: 'hi', fromPort: 'out', to: 'out', toPort: 'in' }
-	],
-	params: {
-		'low.type': 1,
-		'low.cutoff': opt.radiate,
-		'low.q': 0.7,
-		'mid.type': 6,
-		'mid.cutoff': opt.caseMidHz,
-		'mid.q': 0.9,
-		'mid.filterGain': opt.caseMidDb,
-		'hi.type': 5,
-		'hi.cutoff': 6000,
-		'hi.q': 0.7,
-		'hi.filterGain': opt.caseHiDb
-	},
-	labels: { in: 'IN', out: 'OUT' }
-});
 
 export type PianoVoicing = typeof VOICING;
 
@@ -206,337 +157,242 @@ export type PianoVoicing = typeof VOICING;
 export function grandPiano(over: Partial<PianoVoicing> = {}): {
 	rackGraph: RackGraph;
 	graphParams: Record<string, number>;
+	graphLabels: Record<string, string>;
 } {
 	const opt = { ...VOICING, ...over };
-	const STRING = stringDef(opt);
-	const CASE = caseDef(opt);
 	const nodes: GraphNode[] = [];
 	const cables: GraphCable[] = [];
 	const params: Record<string, number> = {};
+	const labels: Record<string, string> = {};
 	/* Placed on a grid of columns, [column, y], as the patch reads left to right:
-	   key-tracked settings, the hammer, the strings, the case, the voice's own
-	   level and damper, and last the track's soundboard. */
-	const node = (
-		id: string,
-		type: string,
-		at: [number, number],
-		p: Record<string, number> = {},
-		macro?: string
-	) => {
-		nodes.push({ id, type, x: at[0] * COL, y: at[1], ...(macro ? { macro } : {}) });
+	   the key's numbers, the hammer, the strings, the damper, and last the
+	   track's board. */
+	const node = (id: string, type: string, at: [number, number], p: Record<string, number> = {}) => {
+		nodes.push({ id, type, x: at[0] * COL, y: at[1] * ROW });
 		for (const [k, v] of Object.entries(p)) params[`${id}.${k}`] = v;
 	};
-	const wire = (from: string, fromPort: string, to: string, toPort: string) =>
+	const cable = (from: string, fromPort: string, to: string, toPort: string) =>
 		cables.push({ from, fromPort, to, toPort });
+	/* Every MAP, MUL and CONST here reads only ENTRY's numbers, so it is
+	   worked out once when the note starts and builds nothing: a per-note
+	   number, not a node on the audio thread. */
 	/* Key tracking reads NOTE, the key's index, rather than PITCH: a pitch is
 	   a place on a scale and only a converter may take it, so the editor would
 	   not draw PITCH into a MAP. The index counts down from C8 (index = 39 -
 	   pitch), so each range is given reversed -- MAP reads a reversed X range
 	   as it is written, and the curve lands exactly where it would over pitch. */
-	const byPitch = (
-		id: string,
-		shape: number,
-		lo: number,
-		hi: number,
-		at: [number, number],
-		inHi = 39
-	) => {
-		node(id, 'map', at, { shape, inLo: 39 + 48, inHi: 39 - inHi, outLo: lo, outHi: hi });
-		wire('entry', 'note', id, 'a');
+	const byPitch = (id: string, shape: number, lo: number, hi: number, at: [number, number]) => {
+		node(id, 'map', at, { shape, inLo: 39 + 48, inHi: 0, outLo: lo, outHi: hi });
+		cable('entry', 'note', id, 'a');
 	};
-	/* Five anchors as a drawn curve, one point per key: DRAW interpolates
-	   between its points, so 88 of them is every key exactly and a straight
-	   line between the anchors. */
-	const ANCHOR = [0, 15, 39, 63, 87];
-	const byKey = (id: string, v: ByKey, at: [number, number]) => {
-		const lo = Math.min(...v);
-		const hi = Math.max(...v) === lo ? lo + 1 : Math.max(...v);
+	/* Any curve over the keys, drawn: DRAW interpolates between its points,
+	   so 88 of them is every key exactly. */
+	const byCurve = (id: string, f: (key: number) => number, at: [number, number]) => {
+		const ys = Array.from({ length: 88 }, (_, key) => f(key));
+		const lo = Math.min(...ys);
+		const hi = Math.max(...ys) === lo ? lo + 1 : Math.max(...ys);
 		const pts: Record<string, number> = {};
-		for (let k = 0; k < 88; k++) {
-			const seg = Math.min(
-				3,
-				ANCHOR.findIndex((_, n) => k <= ANCHOR[n + 1])
-			);
-			const t = (k - ANCHOR[seg]) / (ANCHOR[seg + 1] - ANCHOR[seg]);
-			pts[`d${k}`] = (v[seg] + t * (v[seg + 1] - v[seg]) - lo) / (hi - lo);
-		}
-		node(id, 'map', at, {
-			shape: DRAW,
-			inLo: 87,
-			inHi: 0,
-			outLo: lo,
-			outHi: hi,
-			drawN: 88,
-			...pts
-		});
-		wire('entry', 'note', id, 'a');
+		ys.forEach((y, key) => (pts[`d${key}`] = (y - lo) / (hi - lo)));
+		node(id, 'map', at, { shape: DRAW, inLo: 87, inHi: 0, outLo: lo, outHi: hi, drawN: 88, ...pts });
+		cable('entry', 'note', id, 'a');
 	};
+	/** A straight line between each pair of anchors. */
+	const lerp = (v: number[], anchor: number[], key: number) => {
+		const seg = Math.min(
+			anchor.length - 2,
+			anchor.findIndex((_, n) => key <= anchor[n + 1])
+		);
+		const t = (key - anchor[seg]) / (anchor[seg + 1] - anchor[seg]);
+		return v[seg] + t * (v[seg + 1] - v[seg]);
+	};
+	const byKey = (id: string, v: ByKey, at: [number, number]) =>
+		byCurve(id, (key) => lerp(v, ANCHOR, key), at);
 	const byVel = (id: string, shape: number, lo: number, hi: number, at: [number, number]) => {
 		node(id, 'map', at, { shape, inLo: 0, inHi: 1, outLo: lo, outHi: hi });
-		wire('entry', 'vel', id, 'a');
+		cable('entry', 'vel', id, 'a');
 	};
+	const mul = (id: string, a: string, b: string, at: [number, number]) => {
+		node(id, 'mul', at);
+		cable(a, 'out', id, 'a');
+		cable(b, 'out', id, 'b');
+	};
+	const k = (id: string, value: number, at: [number, number]) =>
+		node(id, 'const', at, { kind: F32, value });
 
 	node('entry', 'in', [0, 700]);
 
-	// ── the key: pitch, the unison's detuning, decays and the strike position
-	node('freq', 'tofreq', [1, 0]);
-	wire('entry', 'pitch', 'freq', 'a');
-	byKey('cUp', opt.detune, [1, 130]);
-	node('f2', 'mul', [2, 130]);
-	wire('freq', 'out', 'f2', 'a');
-	wire('cUp', 'out', 'f2', 'b');
-	byKey('cDn', opt.detune3, [0, 0]);
-	node('f3', 'mul', [2, -40]);
-	wire('freq', 'out', 'f3', 'a');
-	wire('cDn', 'out', 'f3', 'b');
-	byKey('mDec', opt.dec, [1, 260]);
-	/* The prompt string's share of the decay, by key: the treble's first
-	   sound falls away in tens of milliseconds -- C6 drops 15 dB in the first
-	   40 -- where the bass's takes seconds. */
-	byKey('mPrompt', opt.prompt, [1, 500]);
-	node('dec2', 'mul', [2, 400]);
-	wire('mDec', 'out', 'dec2', 'a');
-	wire('mPrompt', 'out', 'dec2', 'b');
-	node('cThird', 'const', [0, 130], { kind: F32, value: opt.third });
-	node('dec3', 'mul', [2, 270]);
-	wire('mDec', 'out', 'dec3', 'a');
-	wire('cThird', 'out', 'dec3', 'b');
-	// Where the hammer meets the string: nearer the end in the bass, so its notch sits high.
-	byKey('mPos', opt.pos, [2, 620]);
-	// High partials die sooner up the keyboard: a string's loss grows with its frequency.
-	byKey('mDamp', opt.damp, [2, 760]);
-	byKey('mStiff', opt.stiff, [1, 640]);
-
-	// ── the hammer: harder and brighter with velocity, heavier and longer in the bass
-	byKey('mExLen', opt.exLen, [1, 1560]);
-	node('ham', 'excite', [2, 1760], { exLength: 2, hardness: 20, exTone: 900 });
-	wire('mExLen', 'out', 'ham', 'exLength');
-	byVel('mContact', INV, opt.contactHard, opt.contactSoft, [1, 900]);
-	byPitch('mHeavy', INV, 0.15, 0.6, [1, 1140]);
-	/* ...but relative to its long period a bass string is struck briefly, which
-	   is where the low end's bright partials come from: shortened below C4. */
-	byPitch('mBassBlow', INV, 1, 0.55, [0, 1140], -9);
-	node('heavy', 'mul', [2, 820]);
-	wire('mHeavy', 'out', 'heavy', 'a');
-	wire('mBassBlow', 'out', 'heavy', 'b');
-	node('contact', 'mul', [2, 960]);
-	wire('mContact', 'out', 'contact', 'a');
-	wire('heavy', 'out', 'contact', 'b');
-	node('envH', 'env', [3, 1080], { envA: 0.001, envD: 0.001, envS: 0, envR: 0.001, envCurve: 0 });
-	/* Felt is pressed fast and lets go slowly: a symmetric triangle has exact
-	   spectral zeros (C4 lost its 5th and 10th partials), an asymmetric one
-	   does not. */
-	node('cRelease', 'const', [2, 1120], { kind: F32, value: 2.2 });
-	node('contactD', 'mul', [3, 920]);
-	wire('contact', 'out', 'contactD', 'a');
-	wire('cRelease', 'out', 'contactD', 'b');
-	wire('contact', 'out', 'envH', 'envA');
-	wire('contactD', 'out', 'envH', 'envD');
-	node('one', 'const', [1, 1400], { kind: F32, value: 1 });
-	node('dc', 'tosig', [2, 1400]);
-	wire('one', 'out', 'dc', 'level');
-	node('felt', 'gain', [4, 1180], { level: 0 });
-	wire('dc', 'out', 'felt', 'in');
-	wire('envH', 'out', 'felt', 'level');
+	// ── the hammer: a step through a bandpass is the felt's pulse
+	/* A step through a bandpass at Q 0.5 (critically damped) is t e^(-t/tau):
+	   a force that rises smoothly, peaks at tau and lets go over a few more,
+	   with no ringing -- the felt's pulse, flat to 1 / (2 pi tau) and falling
+	   12 dB an octave above it. Through a highpass instead the step kept its
+	   instant rise, a 1/f tail, and every key came out an octave too bright. */
+	const blowHz = (key: number) => lerp(opt.blow.map((ms) => 1000 / (2 * Math.PI * ms)), ANCHOR, key);
+	byCurve('mBlow', blowHz, [1, 300]);
+	byVel('mSoft', LOG, 1 / opt.blowSoft, 1, [1, 440]);
+	mul('blowHz', 'mBlow', 'mSoft', [2, 300]);
+	/* Above its corner the pulse's partials go as 1/tau, so a short blow is a
+	   loud one as well as a bright one: F5, between C4's long blow and C6's
+	   short one, came out 12 dB over its neighbours. Scaled by tau, the blow
+	   says only how bright a key is, and `key` alone how loud. */
+	byCurve('mBlowLvl', (key) => 1000 / (2 * Math.PI * blowHz(key)), [1, 160]);
+	byVel('mAmp', EXP, opt.ampLo, 1, [1, 0]);
+	// In decibels between the anchors: a level halfway is heard halfway in dB, not in amplitude.
+	byCurve('mKey', (key) => 10 ** (lerp(opt.key.map((g) => 20 * Math.log10(g)), KEY_ANCHOR, key) / 20), [2, 160]);
+	mul('ampKey', 'mAmp', 'mKey', [2, 0]);
+	mul('ampBlow', 'ampKey', 'mBlowLvl', [3, 0]);
+	k('cLevel', opt.level, [3, 160]);
+	mul('strike', 'ampBlow', 'cLevel', [4, 160]);
+	node('dc', 'tosig', [4, 0]);
+	cable('strike', 'out', 'dc', 'level');
+	node('blow', 'filter', [5, 0], { type: 2, cutoff: 400, q: 0.5 });
+	cable('dc', 'out', 'blow', 'in');
+	cable('blowHz', 'out', 'blow', 'cutoff');
 	// Felt limits the blow's bandwidth in hertz, the same on every key; a harder blow opens it.
-	byVel('mFelt', EXP, opt.feltSoft, opt.feltHard, [4, 1400]);
+	byVel('mFelt', EXP, opt.feltSoft, opt.feltHard, [1, 580]);
+	byKey('mFeltKey', opt.feltKey, [1, 720]);
+	mul('feltHz', 'mFelt', 'mFeltKey', [2, 580]);
 	/* Two poles twice: a soft blow's spectrum falls steeply, which is most of
 	   why pp is dark -- the second partial 25 dB down at C4, where one filter
 	   left it 6 dB down and pp sounded like mf played quietly. */
-	node('feltLp', 'filter', [5, 1180], { type: 0, cutoff: 1400, q: 0.5 });
-	node('feltLp2', 'filter', [5, 1300], { type: 0, cutoff: 1400, q: 0.5 });
-	wire('felt', 'out', 'feltLp', 'in');
-	wire('feltLp', 'out', 'feltLp2', 'in');
-	byKey('mFeltKey', opt.feltKey, [4, 1560]);
-	node('feltCut', 'mul', [5, 1440]);
-	wire('mFelt', 'out', 'feltCut', 'a');
-	wire('mFeltKey', 'out', 'feltCut', 'b');
-	wire('feltCut', 'out', 'feltLp', 'cutoff');
-	wire('feltCut', 'out', 'feltLp2', 'cutoff');
-	// The knock of the hammer itself, heard over the short treble strings more than the bass.
-	byKey('mDry', opt.hamDry, [2, 1900]);
-	node('gDry', 'gain', [3, 1760], { level: 0 });
-	wire('ham', 'out', 'gDry', 'in');
-	wire('mDry', 'out', 'gDry', 'level');
-	/* Noise under a 35 ms fall, not a click: the knock is the key and the
-	   frame ringing for a few tens of milliseconds -- a 2 ms burst was over
-	   before it counted. */
-	node('thk', 'noise', [2, 2050]);
-	node('thkE', 'env', [2, 2200], { envA: 0.0005, envD: 0.035, envS: 0, envR: 0.01, envCurve: 1 });
-	node('thkV', 'gain', [3, 1950], { level: 0 });
-	node('thkF', 'filter', [3, 2050], { type: 0, cutoff: 500, q: 0.6 });
-	node('gThk0', 'gain', [4, 2050], { level: 2 });
-	node('gThk1', 'gain', [4, 2180], { level: 2 });
-	node('gThk2', 'gain', [4, 2310], { level: 2 });
-	node('gThk3', 'gain', [4, 2440], { level: 2 });
-	byKey('mThk', opt.thump, [4, 2200]);
-	node('gThk', 'gain', [5, 2050], { level: 0 });
-	wire('thk', 'out', 'thkV', 'in');
-	wire('thkE', 'out', 'thkV', 'level');
-	wire('thkV', 'out', 'thkF', 'in');
-	wire('thkF', 'out', 'gThk0', 'in');
-	wire('gThk0', 'out', 'gThk1', 'in');
-	wire('gThk1', 'out', 'gThk2', 'in');
-	wire('gThk2', 'out', 'gThk3', 'in');
-	wire('gThk3', 'out', 'gThk', 'in');
-	wire('mThk', 'out', 'gThk', 'level');
+	node('felt', 'filter', [6, 0], { type: 0, cutoff: 1400, q: 0.5 });
+	node('felt2', 'filter', [7, 0], { type: 0, cutoff: 1400, q: 0.5 });
+	cable('blow', 'out', 'felt', 'in');
+	cable('felt', 'out', 'felt2', 'in');
+	cable('feltHz', 'out', 'felt', 'cutoff');
+	cable('feltHz', 'out', 'felt2', 'cutoff');
+	// The knock: the same pulse ringing the key and the frame, under the note.
+	node('knock', 'filter', [6, 240], { type: 2, cutoff: opt.knockHz, q: opt.knockQ });
+	cable('blow', 'out', 'knock', 'in');
+	byKey('mKnock', opt.knock, [5, 380]);
+	node('gKnock', 'gain', [7, 240], { level: 0 });
+	cable('knock', 'out', 'gKnock', 'in');
+	cable('mKnock', 'out', 'gKnock', 'level');
 
-	// ── the strings: one definition, three strings
+	// ── the strings: a long one and a prompt one, detuned so they beat
+	node('freq', 'tofreq', [8, -420]);
+	cable('entry', 'pitch', 'freq', 'a');
+	byKey('mDetune', opt.detune, [8, -280]);
+	mul('f2', 'freq', 'mDetune', [9, -280]);
+	byKey('mDec', opt.dec, [8, -140]);
+	byKey('mPrompt', opt.prompt, [8, 0]);
+	mul('dec2', 'mDec', 'mPrompt', [9, -140]);
+	// Where the hammer meets the string: nearer the end in the bass, so its notch sits high.
+	byKey('mPos', opt.pos, [8, 560]);
+	// High partials die sooner up the keyboard: a string's loss grows with its frequency.
+	byKey('mDamp', opt.damp, [8, 700]);
+	byKey('mStiff', opt.stiff, [8, 840]);
 	for (const [id, f, d, y] of [
-		['s1', 'freq', 'mDec', 0],
-		['s3', 'f3', 'dec3', 240],
-		['s2', 'f2', 'dec2', 480]
+		['long', 'freq', 'mDec', 200],
+		['prompt', 'f2', 'dec2', 420]
 	] as const) {
-		node(id, 'macro', [6, y], {}, 'string');
-		wire('feltLp2', 'out', id, 'in');
-		wire('mDamp', 'out', id, 'damp');
-		wire(f, 'out', id, 'freq');
-		wire(d, 'out', id, 'dec');
-		wire('mPos', 'out', id, 'pos');
-		wire('mStiff', 'out', id, 'stif');
+		node(id, 'wire', [10, y], { wireDecay: 4, wireDamp: opt.damp[2], wireStiff: 30, wirePos: opt.pos[2] });
+		cable('felt2', 'out', id, 'in');
+		cable(f, 'out', id, 'pitch');
+		cable(d, 'out', id, 'wireDecay');
+		cable('mPos', 'out', id, 'wirePos');
+		cable('mDamp', 'out', id, 'wireDamp');
+		cable('mStiff', 'out', id, 'wireStiff');
 	}
-	/* The unison's fundamental fades first, so the two long strings pass a low
-	   shelf keyed to the note; the prompt string decays quickly and is lifted. */
-	node('cShelf', 'const', [7, -120], { kind: F32, value: 1.5 });
-	node('fShelf', 'mul', [8, -120]);
-	wire('freq', 'out', 'fShelf', 'a');
-	wire('cShelf', 'out', 'fShelf', 'b');
-	byKey('mCutLong', opt.cutLong, [7, 700]);
-	byKey('mCutPrompt', opt.cutPrompt, [7, 940]);
-	node('sumLong', 'sum', [8, 60]);
-	wire('s1', 'out', 'sumLong', 'in');
-	wire('s3', 'out', 'sumLong', 'in');
-	node('shLong', 'filter', [9, 40], { type: 4, cutoff: 400, q: 0.7, filterGain: -10 });
-	wire('sumLong', 'out', 'shLong', 'in');
-	wire('fShelf', 'out', 'shLong', 'cutoff');
-	wire('mCutLong', 'out', 'shLong', 'filterGain');
-	node('shPrompt', 'filter', [9, 380], { type: 4, cutoff: 400, q: 0.7, filterGain: 0 });
-	wire('s2', 'out', 'shPrompt', 'in');
-	wire('fShelf', 'out', 'shPrompt', 'cutoff');
-	wire('mCutPrompt', 'out', 'shPrompt', 'filterGain');
-	/* Lifted by 3.5, past the one GAIN's reach of 2, so it takes two. */
-	node('gPrompt0', 'gain', [10, 280], { level: 2 });
-	byKey('mPromptLvl', opt.promptLevel.map((v) => v / 2) as ByKey, [9, 560]);
-	node('gPrompt', 'gain', [10, 380], { level: 0 });
-	wire('mPromptLvl', 'out', 'gPrompt', 'level');
-	wire('shPrompt', 'out', 'gPrompt0', 'in');
-	wire('gPrompt0', 'out', 'gPrompt', 'in');
-	node('sum', 'sum', [11, 420]);
-	/* The drain: a low shelf over the first three partials of all three
-	   strings, deepening as an envelope falls -- 0 dB at the strike, `drain`
-	   once it has. */
-	node('envDr', 'env', [9, -300], {
-		envA: 0.001,
-		envD: opt.drainTime,
-		envS: 0,
-		envR: opt.drainTime,
-		envCurve: 0
-	});
-	node('mDrEnv', 'map', [10, -300], { shape: DRAW, inLo: 0, inHi: 1, outLo: 1, outHi: 0 });
-	wire('envDr', 'out', 'mDrEnv', 'a');
-	byKey('mDrain', opt.drain, [9, -440]);
-	node('drainDb', 'mul', [11, -360]);
-	wire('mDrEnv', 'out', 'drainDb', 'a');
-	wire('mDrain', 'out', 'drainDb', 'b');
-	node('cDrain', 'const', [9, -180], { kind: F32, value: 4.5 });
-	node('fDrain', 'mul', [10, -180]);
-	wire('freq', 'out', 'fDrain', 'a');
-	wire('cDrain', 'out', 'fDrain', 'b');
-	node('sumStr', 'sum', [11, 200]);
-	wire('shLong', 'out', 'sumStr', 'in');
-	wire('gPrompt', 'out', 'sumStr', 'in');
-	node('shDrain', 'filter', [12, 200], { type: 4, cutoff: 400, q: 0.7, filterGain: 0 });
-	wire('sumStr', 'out', 'shDrain', 'in');
-	wire('fDrain', 'out', 'shDrain', 'cutoff');
-	wire('drainDb', 'out', 'shDrain', 'filterGain');
-	for (const s of ['shDrain', 'gDry', 'gThk']) wire(s, 'out', 'sum', 'in');
-
-	// ── the case, and the voice's own level
-	node('case', 'macro', [12, 420], {}, 'case');
-	wire('sum', 'out', 'case', 'in');
-	/* The board, measured: the Iowa Steinway's response, every mf key
-	   pooled (IR: PNO). What the case's three filters could only suggest. */
-	node('pno', 'ir', [12, 560], { irBody: BODY_IRS.findIndex((b) => b.label === 'PNO'), irMix: opt.pnoMix });
-	wire('case', 'out', 'pno', 'in');
-	node('gDryV', 'gain', [13, 420], { level: opt.dryLevel });
-	wire('pno', 'out', 'gDryV', 'in');
-	byVel('mAmp', EXP, opt.ampLo, 1, [13, 160]);
-	node('vVel', 'gain', [14, 420], { level: 1 });
-	wire('gDryV', 'out', 'vVel', 'in');
-	wire('mAmp', 'out', 'vVel', 'level');
-	// The treble's short strings and a felt that cannot reach their fundamentals: made up here.
-	byKey('mKey', opt.key, [14, 160]);
-	node('vKey', 'gain', [15, 420], { level: 1 });
-	wire('vVel', 'out', 'vKey', 'in');
-	wire('mKey', 'out', 'vKey', 'level');
+	/* The long string's fundamental fades into the board first, so it passes a
+	   low shelf keyed to the note; the prompt string keeps its own and dies
+	   young, so the bass's lowest partials go early, as the recordings' do. */
+	k('cShelf', 1.5, [9, 0]);
+	mul('fShelf', 'freq', 'cShelf', [9, 140]);
+	byKey('mCutLong', opt.cutLong, [10, 0]);
+	node('shLong', 'filter', [11, 200], { type: 4, cutoff: 400, q: 0.7, filterGain: -10 });
+	cable('long', 'out', 'shLong', 'in');
+	cable('fShelf', 'out', 'shLong', 'cutoff');
+	cable('mCutLong', 'out', 'shLong', 'filterGain');
+	byKey('mPromptLvl', opt.promptLevel, [10, 600]);
+	node('gPrompt', 'gain', [11, 420], { level: 0 });
+	cable('prompt', 'out', 'gPrompt', 'in');
+	cable('mPromptLvl', 'out', 'gPrompt', 'level');
 
 	// ── the damper: it lets go at the key's release
-	node('envD', 'env', [15, 100], {
-		envA: 0.001,
-		envD: 0.001,
-		envS: 100,
-		envR: opt.damperRel,
-		envCurve: 0
+	node('envD', 'env', [13, 0], { envA: 0.001, envD: 0.001, envS: 100, envR: opt.damperRel, envCurve: 0 });
+	byPitch('mRise', LOG, opt.riseBass, opt.riseTreble, [12, 0]);
+	cable('mRise', 'out', 'envD', 'envA');
+	node('vDmp', 'gain', [14, 300], { level: 0 });
+	for (const s of ['shLong', 'gPrompt', 'gKnock']) cable(s, 'out', 'vDmp', 'in');
+	cable('envD', 'out', 'vDmp', 'level');
+	byPitch('mPan', INV, 0.35, -0.35, [14, 0]);
+	node('pan', 'pan', [15, 300], { panPos: 0 });
+	cable('vDmp', 'out', 'pan', 'in');
+	cable('mPan', 'out', 'pan', 'panPos');
+	node('output', 'out', [16, 300]);
+	cable('pan', 'out', 'output', 'in');
+	cable('entry', 'then', 'output', 'exec');
+
+	// ── the board, one for the track: every string drives it after its damper
+	node('toBoard', 'tsend', [16, 560], { bus: 0 });
+	cable('pan', 'out', 'toBoard', 'in');
+	cable('entry', 'then', 'toBoard', 'exec');
+	node('fromStr', 'trtn', [17, 560], { bus: 0 });
+	/* The case: a radiation highpass, a dip in the middle, a softened top --
+	   on the way into the body, so the dry string keeps its own edge. */
+	node('radiate', 'filter', [18, 560], { type: 1, cutoff: opt.radiate, q: 0.7 });
+	node('caseMid', 'filter', [19, 560], {
+		type: 6,
+		cutoff: opt.caseMidHz,
+		q: 0.9,
+		filterGain: opt.caseMidDb
 	});
-	byPitch('mRise', LOG, opt.riseBass, opt.riseTreble, [14, -140]);
-	wire('mRise', 'out', 'envD', 'envA');
-	node('vDmp', 'gain', [16, 420], { level: 0 });
-	wire('vKey', 'out', 'vDmp', 'in');
-	wire('envD', 'out', 'vDmp', 'level');
-	byPitch('mPan', INV, 0.35, -0.35, [16, 160]);
-	node('pan', 'pan', [17, 420], { panPos: 0 });
-	wire('vDmp', 'out', 'pan', 'in');
-	wire('mPan', 'out', 'pan', 'panPos');
-	node('output', 'out', [18, 420]);
-	wire('pan', 'out', 'output', 'in');
-	wire('entry', 'then', 'output', 'exec');
-
-	// ── key-up: the damper felt landing
-	node('ham2', 'excite', [16, 760], { exLength: 30, hardness: 5, exTone: 700 });
-	node('gRel', 'gain', [17, 760], { level: opt.relLevel });
-	wire('ham2', 'out', 'gRel', 'in');
-	node('outRel', 'out', [18, 760]);
-	wire('gRel', 'out', 'outRel', 'in');
-	wire('entry', 'rel', 'outRel', 'exec');
-
-	// ── the soundboard, one for the track: every string drives it after its damper
-	node('toBoard', 'tsend', [17, 1080], { bus: 0 });
-	wire('vDmp', 'out', 'toBoard', 'in');
-	wire('entry', 'then', 'toBoard', 'exec');
-	node('fromStr', 'trtn', [18, 1080], { bus: 0 });
-	node('board', 'space', [19, 1080], opt.board);
-	wire('fromStr', 'out', 'board', 'in');
+	node('caseHi', 'filter', [20, 560], { type: 5, cutoff: 6000, q: 0.7, filterGain: opt.caseHiDb });
+	/* The body, measured: the Iowa Steinway's response, every mf key pooled
+	   (IR: PNO), all wet -- the note's own OUT is the dry. */
+	node('pno', 'ir', [21, 560], { irBody: BODY_IRS.findIndex((b) => b.label === 'PNO'), irMix: 100 });
+	k('cBody', opt.body, [21, 400]);
+	node('gBody', 'gain', [22, 560], { level: 0 });
+	node('outBody', 'out', [23, 560]);
+	cable('fromStr', 'out', 'radiate', 'in');
+	cable('radiate', 'out', 'caseMid', 'in');
+	cable('caseMid', 'out', 'caseHi', 'in');
+	cable('caseHi', 'out', 'pno', 'in');
+	cable('pno', 'out', 'gBody', 'in');
+	cable('cBody', 'out', 'gBody', 'level');
+	cable('gBody', 'out', 'outBody', 'in');
+	cable('entry', 'then', 'outBody', 'exec');
+	node('board', 'space', [18, 820], opt.board);
+	cable('fromStr', 'out', 'board', 'in');
 	// The pedal lifts every damper: the whole instrument rings longer and louder.
-	node('hands', 'ctrl', [18, 1260]);
-	node('mPedDec', 'map', [19, 1300], {
+	node('hands', 'ctrl', [17, 1060]);
+	node('mPedDec', 'map', [18, 1080], {
 		shape: INV,
 		inLo: 0,
 		inHi: 1,
 		outLo: opt.decayPedal,
 		outHi: opt.board.spaceDecay
 	});
-	wire('hands', 'ped', 'mPedDec', 'a');
-	wire('mPedDec', 'out', 'board', 'spaceDecay');
-	node('mPedLvl', 'map', [20, 1300], {
+	cable('hands', 'ped', 'mPedDec', 'a');
+	cable('mPedDec', 'out', 'board', 'spaceDecay');
+	node('mPedLvl', 'map', [19, 1080], {
 		shape: INV,
 		inLo: 0,
 		inHi: 1,
 		outLo: opt.boardPedal,
 		outHi: opt.boardLevel
 	});
-	wire('hands', 'ped', 'mPedLvl', 'a');
-	node('gBoard', 'gain', [20, 1080], { level: 0 });
-	wire('board', 'out', 'gBoard', 'in');
-	wire('mPedLvl', 'out', 'gBoard', 'level');
-	node('outBoard', 'out', [21, 1080]);
-	wire('gBoard', 'out', 'outBoard', 'in');
-	wire('entry', 'then', 'outBoard', 'exec');
+	cable('hands', 'ped', 'mPedLvl', 'a');
+	node('gBoard', 'gain', [19, 820], { level: 0 });
+	cable('board', 'out', 'gBoard', 'in');
+	cable('mPedLvl', 'out', 'gBoard', 'level');
+	node('outBoard', 'out', [20, 820]);
+	cable('gBoard', 'out', 'outBoard', 'in');
+	cable('entry', 'then', 'outBoard', 'exec');
 
-	const box = (id: string, label: string, members: string[], color: string): GraphGroup => {
+	/* The stages as boxes, each with a NOTE across its top saying what the
+	   stage is: the canvas is where someone who did not write this finds out
+	   how the piano works. */
+	const groups: GraphGroup[] = [];
+	const stage = (id: string, label: string, members: string[], color: string, note: string) => {
 		const own = nodes.filter((n) => members.includes(n.id));
 		const x = Math.min(...own.map((n) => n.x)) - 20;
-		const y = Math.min(...own.map((n) => n.y)) - 40;
-		return {
+		const y = Math.min(...own.map((n) => n.y)) - 200;
+		const noteId = `note-${id}`;
+		nodes.push({ id: noteId, type: 'note', x: x + 20, y: y + 30 });
+		labels[noteId] = note;
+		groups.push({
 			id,
 			label,
 			x,
@@ -544,83 +400,41 @@ export function grandPiano(over: Partial<PianoVoicing> = {}): {
 			w: Math.max(...own.map((n) => n.x)) + 280 - x,
 			h: Math.max(...own.map((n) => n.y)) + 240 - y,
 			color,
-			members
-		};
+			members: [...members, noteId]
+		});
 	};
-	const groups = [
-		box(
-			'g-hammer',
-			'HAMMER',
-			[
-				'mExLen',
-				'ham',
-				'mContact',
-				'mHeavy',
-				'mBassBlow',
-				'heavy',
-				'contact',
-				'envH',
-				'cRelease',
-				'contactD',
-				'one',
-				'dc',
-				'felt',
-				'mFelt',
-				'feltLp',
-				'feltLp2',
-				'mDry',
-				'gDry',
-				'thk',
-				'thkE',
-				'thkV',
-				'thkF',
-				'gThk0',
-				'gThk1',
-				'gThk2',
-				'gThk3',
-				'mThk',
-				'gThk'
-			],
-			'#d19a66'
-		),
-		box(
-			'g-strings',
-			'STRINGS',
-			[
-				's1',
-				's2',
-				's3',
-				'cShelf',
-				'fShelf',
-				'mCutLong',
-				'mCutPrompt',
-				'sumLong',
-				'shLong',
-				'envDr',
-				'mDrEnv',
-				'mDrain',
-				'drainDb',
-				'cDrain',
-				'fDrain',
-				'sumStr',
-				'shDrain',
-				'shPrompt',
-				'gPrompt0',
-				'mPromptLvl',
-				'gPrompt'
-			],
-			'#61afef'
-		),
-		box(
-			'g-board',
-			'SOUNDBOARD (TRACK)',
-			['toBoard', 'fromStr', 'board', 'hands', 'mPedDec', 'mPedLvl', 'gBoard', 'outBoard'],
-			'#98c379'
-		)
-	];
+	stage(
+		'g-hammer',
+		'HAMMER',
+		['mBlowLvl', 'mAmp', 'mKey', 'ampKey', 'ampBlow', 'cLevel', 'strike', 'dc', 'mBlow', 'mSoft', 'blowHz', 'blow', 'mFelt', 'mFeltKey', 'feltHz', 'felt', 'felt2', 'knock', 'mKnock', 'gKnock'],
+		'#d19a66',
+		'The felt: a step through a bandpass is a pulse over the contact time, softened by two lowpasses that open with velocity. The same pulse rings the frame (BP): the knock.'
+	);
+	stage(
+		'g-strings',
+		'STRINGS',
+		['freq', 'mDetune', 'f2', 'mDec', 'mPrompt', 'dec2', 'mPos', 'mDamp', 'mStiff', 'long', 'prompt', 'cShelf', 'fShelf', 'mCutLong', 'shLong', 'mPromptLvl', 'gPrompt'],
+		'#61afef',
+		'Two strings a key, a fraction of a cent apart so they beat: a long one with its fundamental shelved down, and a prompt one that dies young -- the two-stage decay of a unison.'
+	);
+	stage(
+		'g-damper',
+		'DAMPER',
+		['envD', 'mRise', 'vDmp', 'mPan', 'pan', 'output', 'toBoard'],
+		'#c678dd',
+		'The damper lets go at key-up (the pedal holds the note). Low keys sit left, high keys right, as the player hears them.'
+	);
+	stage(
+		'g-board',
+		'BOARD (TRACK)',
+		['fromStr', 'radiate', 'caseMid', 'caseHi', 'pno', 'cBody', 'gBody', 'outBody', 'board', 'hands', 'mPedDec', 'mPedLvl', 'gBoard', 'outBoard'],
+		'#98c379',
+		'One board for the whole track (TSND > TRTN), built once: the case, the measured Steinway body (IR: PNO), and a SPACE the pedal opens.'
+	);
 
 	return {
-		rackGraph: { nodes, cables, groups, macros: { string: STRING, case: CASE } },
-		graphParams: params
+		rackGraph: { nodes, cables, groups },
+		graphParams: params,
+		graphLabels: labels
 	};
 }

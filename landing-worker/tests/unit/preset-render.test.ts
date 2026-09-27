@@ -51,7 +51,16 @@ describe('the shipped presets', () => {
 				if ((timbre.rackGraph as { nodes?: unknown[] })?.nodes?.length) track.advanced = true;
 				S.triggerTrackVoice(0, 40, 0, 0, 0.4, 100, 100);
 
-				const sources = ctx.nodes.filter((n) => n.kind === 'osc' || n.kind === 'bufsrc');
+				/* A step counts: PIANO's hammer is a constant turned into sound
+				   (TO-SIG) through a highpass, so its only source is a
+				   ConstantSource set to the strike's level. ENTRY's own idle
+				   constant sits at 0 and is not one. */
+				const sources = ctx.nodes.filter(
+					(n) =>
+						n.kind === 'osc' ||
+						n.kind === 'bufsrc' ||
+						(n.kind === 'const' && (n as unknown as { offset: FakeParam }).offset.value !== 0)
+				);
 				if (!sources.length) bad.push(`${entry.name}: builds no source`);
 
 				for (const node of ctx.nodes) {
