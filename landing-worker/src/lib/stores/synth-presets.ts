@@ -595,15 +595,6 @@ function graphOfTuples(
 	};
 }
 
-/* The players of a bowed section: id, vibrato rate (Hz), tuning (+8, -4 and
-   +8 cents about the first) and seat. */
-const SECTION: [number, number, number, number][] = [
-	[1, 5.2, 1, -0.6],
-	[2, 5.7, 1.0047, 0.6],
-	[3, 6.1, 0.9977, -0.2],
-	[4, 5.5, 1.00463, 0.2]
-];
-
 /* The drawbars, as tuned by ear against Hammond recordings: 16' 8' 5 1/3'
    and 2 2/3' (roughly 86 7 0 2 4 on the bars; the 4' came out at nothing).
    id, footage as a multiple of the key (16' is half), level. */
@@ -2244,21 +2235,29 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		})
 	},
 	{
-		/* A string section, bowed. What the old one lacked is what separates
-		   strings from a pad built out of sawtooths:
+		/* A string section, bowed -- as one bowed source a note and the section
+		   around it, not as four copies of a player.
 
-		     the players  four, each on its own vibrato (5.2 to 6.1 Hz, arriving
-		                  after the note) and a few cents from the others, so
-		                  the section shimmers rather than sweeps -- one chorus
-		                  LFO moving everyone together is the pad's sound
-		     the bow      a quick start, a tenth of a second, not a swell; a
-		                  little rosin under it; brighter as it digs in
-		     the bodies   the formants every violin-family instrument has
-		                  whatever the note: the air and wood modes low, a
-		                  nasal dip at 1.3 k, the bridge hill at 2.6 k and a
-		                  steep fall above -- a pad is the saw's spectrum,
-		                  shaped only by a lowpass following the key
-		     the hall     seats spread across the stage, and a hall behind */
+		     the bow      one sawtooth, which is what a bowed string's
+		                  stick-slip is, and rosin under it: a scratch as the
+		                  bow bites that settles to a hiss, which is what a pad
+		                  has none of. The tone takes a quarter of a second,
+		                  as the section recordings do (tools/ear: 0.61 at
+		                  0.23 s, 0.30 at 0.08 s -- a faster bow was heard as
+		                  less of a violin, not more)
+		     the player   a vibrato arriving after the note, in proportion to
+		                  the pitch (cents, not hertz)
+		     the bodies   measured (IR): violins at C4 and above, cellos at G3
+		                  and below, a fifth's crossfade between. A body is
+		                  linear, so one for the track hears every note the way
+		                  one per note did -- only the crossfade is the note's,
+		                  and that is each note's two sends
+		     the section  one chorus for the track: two seats either side,
+		                  each a delay drifting at its own slow rate, which
+		                  detunes and staggers them against the middle. Four
+		                  players with four vibratos and four pans a note cost
+		                  76 nodes and two IRs, for the same spread
+		     the hall     behind them, one for the track */
 		name: 'FULL STRING',
 		category: 'STRING',
 		kind: 'AC',
@@ -2275,74 +2274,137 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['fq', 'tofreq'],
-					['vf', 'env', { envA: 0.1, envD: 0.01, envS: 100, envR: 0.5 }],
-					['vk', 'const', { kind: 6, value: 0.01 }],
-					['one', 'const', { kind: 6, value: 1 }],
-					...SECTION.flatMap(
-						([i, rate, ratio, pan]) =>
-							[
-								[`v${i}`, 'lfo', { lfoWave: 0, lfoRate: rate, lfoAmt: 100 }],
-								[`vm${i}`, 'mul'],
-								[`vd${i}`, 'mul'],
-								[`vr${i}`, 'add'],
-								[`r${i}`, 'const', { kind: 6, value: ratio }],
-								[`fr${i}`, 'mul'],
-								[`fv${i}`, 'mul'],
-								[`o${i}`, 'osc', { wave: 2 }],
-								[`p${i}`, 'pan', { panPos: pan }]
-							] as [string, string, Record<string, number>?][]
-					),
-					['sec', 'sum'],
-					/* The bodies, measured (IR): violins above G3, cellos below, a
-					   fifth's crossfade between. */
-					['vln', 'ir', { irBody: body('VLN'), irMix: 55 }],
-					['cel', 'ir', { irBody: body('CELL') }],
+					['vib', 'osc', { wave: 0 }],
+					['vr', 'const', { kind: 7, value: 5.6 }],
+					['vf', 'env', { envA: 0.18, envD: 0.01, envS: 100, envR: 0.5 }],
+					['vfg', 'gain', { level: 0 }],
+					['vk', 'const', { kind: 6, value: 0.005 }],
+					['vhz', 'mul'],
+					['vdep', 'gain', { level: 0 }],
+					['vcv', 'tocv'],
+					['bow', 'osc', { wave: 2 }],
+					['ros', 'noise'],
+					['rk', 'const', { kind: 6, value: 7.5 }],
+					['rf', 'mul'],
+					['rbp', 'filter', { type: 2, cutoff: 1000, q: 0.8 }],
+					['re', 'env', { envA: 0.004, envD: 0.2, envS: 45, envR: 0.1 }],
+					['rg', 'gain', { level: 0 }],
+					['rs', 'gain', { level: 0.2 }],
+					['ae', 'env', { envA: 0.23, envD: 0.1, envS: 72, envR: 0.08 }],
+					['amp', 'vca', { gain: 0 }],
+					['str', 'sum'],
+					['vel', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.35, outHi: 1 }],
 					['mv', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 0, outHi: 1 }],
 					['mc', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 1, outHi: 0 }],
+					['mvv', 'mul'],
+					['mcv', 'mul'],
 					['gv', 'gain', { level: 0 }],
 					['gc', 'gain', { level: 0 }],
+					['toV', 'tsend', { bus: 1 }],
+					['toC', 'tsend', { bus: 2 }],
+					['vlnR', 'trtn', { bus: 1 }],
+					['celR', 'trtn', { bus: 2 }],
+					['vln', 'ir', { irBody: body('VLN'), irMix: 53 }],
+					['cel', 'ir', { irBody: body('CELL') }],
 					['bod', 'sum'],
-					['ae', 'env', { envA: 0.2, envD: 0.2, envS: 68, envR: 0.12 }],
-					['amp', 'vca', { gain: 100 }],
-					['vel', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.35, outHi: 1 }],
-					['vg', 'gain', { level: 1 }]
+					['mid', 'gain', { level: 0.9 }],
+					['dlk', 'const', { kind: 6, value: 0.013 }],
+					['drk', 'const', { kind: 6, value: 0.021 }],
+					['dlb', 'add'],
+					['drb', 'add'],
+					['dl', 'delay', { delayTime: 0 }],
+					['dr', 'delay', { delayTime: 0 }],
+					['ml', 'lfo', { lfoWave: 0, lfoRate: 0.41, lfoAmt: 0.15 }],
+					['mr', 'lfo', { lfoWave: 0, lfoRate: 0.57, lfoAmt: 0.2 }],
+					['pl', 'pan', { panPos: -0.7 }],
+					['pr', 'pan', { panPos: 0.7 }],
+					['sec', 'sum'],
+					['room', 'space', { spaceSize: 85, spaceDecay: 64, spaceMix: 100 }],
+					['roomLvl', 'gain', { level: 0.0235 }],
+					['roomOut', 'out']
 				],
 				[
 					'entry.pitch>fq:a',
-					...SECTION.flatMap(([i]) => [
-						`v${i}.cv>vm${i}:a`,
-						`vf>vm${i}:b`,
-						`vm${i}>vd${i}:a`,
-						`vk>vd${i}:b`,
-						`vd${i}>vr${i}:a`,
-						`one>vr${i}:b`,
-						`fq>fr${i}:a`,
-						`r${i}>fr${i}:b`,
-						`fr${i}>fv${i}:a`,
-						`vr${i}>fv${i}:b`,
-						`fv${i}>o${i}:pitch`,
-						`o${i}>p${i}`,
-						`p${i}>sec`
-					]),
-					'sec>vln',
-					'sec>cel',
+					// The player: a sine at 5.6 Hz, faded in, scaled to 0.5% of the note.
+					'vr>vib:pitch',
+					'vib>vfg',
+					'vf>vfg:level',
+					'fq>vhz:a',
+					'vk>vhz:b',
+					'vhz>vdep:level',
+					'vfg>vdep',
+					'fq>bow:pitch',
+					'vdep>vcv',
+					'vcv>bow:pitch',
+					'ros>rbp',
+					'fq>rf:a',
+					'rk>rf:b',
+					'rf>rbp:cutoff',
+					'rbp>rg',
+					're>rg:level',
+					'bow>amp',
+					'ae>amp:level',
+					'amp>str',
+					'rg>rs',
+					'rs>str',
+					'entry.vel>vel:a',
 					'entry.note>mv:a',
 					'entry.note>mc:a',
-					'vln>gv',
-					'mv>gv:level',
-					'cel>gc',
-					'mc>gc:level',
-					'gv>bod',
-					'gc>bod',
-					'bod>amp',
-					'ae>amp:level',
-					'entry.vel>vel:a',
-					'amp>vg',
-					'vel>vg:level',
-					'vg>output'
+					'mv>mvv:a',
+					'vel>mvv:b',
+					'mc>mcv:a',
+					'vel>mcv:b',
+					'str>gv',
+					'mvv>gv:level',
+					'str>gc',
+					'mcv>gc:level',
+					'gv>toV',
+					'gc>toC',
+					'entry.then>toV:exec',
+					'entry.then>toC:exec',
+					'vlnR>vln',
+					'celR>cel',
+					'vln>bod',
+					'cel>bod',
+					'bod>mid',
+					'bod>dl',
+					'bod>dr',
+					'dlk>dlb:b',
+					'drk>drb:b',
+					'dlb>dl:delayTime',
+					'drb>dr:delayTime',
+					'ml.cv>dlb:a',
+					'mr.cv>drb:a',
+					'dl>pl',
+					'dr>pr',
+					'mid>sec',
+					'pl>sec',
+					'pr>sec',
+					'sec>output',
+					'sec>room',
+					'room>roomLvl',
+					'roomLvl>roomOut',
+					'entry.then>roomOut:exec'
 				],
-				8,
-				{ spaceSize: 85, spaceDecay: 64, spaceMix: 19 }
+				9.4,
+				undefined,
+				{
+					groups: [
+						['PLAYER', ['fq', 'vr', 'vib', 'vf', 'vfg', 'vk', 'vhz', 'vdep', 'vcv']],
+						['BOW', ['bow', 'ros', 'rk', 'rf', 'rbp', 're', 'rg', 'rs', 'ae', 'amp', 'str']],
+						['TO THE BODIES', ['vel', 'mv', 'mc', 'mvv', 'mcv', 'gv', 'gc', 'toV', 'toC']],
+						['BODIES (TRACK)', ['vlnR', 'celR', 'vln', 'cel', 'bod']],
+						['SECTION (TRACK)', ['mid', 'dlk', 'drk', 'dlb', 'drb', 'dl', 'dr', 'ml', 'mr', 'pl', 'pr', 'sec']],
+						['ROOM (TRACK)', ['trim', 'output', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						['One bowed string a note: a sawtooth, with a vibrato that arrives after the note.', 'bow'],
+						['Rosin: a scratch as the bow bites, then a hiss under the tone.', 'rbp'],
+						['Violins above G3, cellos below: each note sends to both bodies by its register.', 'gv'],
+						['Measured bodies (IR), one per track: a body is linear, so sharing it changes nothing.', 'vln'],
+						['The section: two seats either side, slow drifting delays, one for the track.', 'dl']
+					]
+				}
 			)
 		})
 	},
@@ -2523,7 +2585,23 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'amp>output'
 				],
 				30,
-				{ spaceSize: 45, spaceDecay: 40, spaceMix: 14 }
+				{ spaceSize: 45, spaceDecay: 40, spaceMix: 14 },
+				{
+					groups: [
+						['REED', ['fq', 'dr', 'dk', 'dm', 'one', 'da', 'fv', 'reed']],
+						['BORE', ['bore']],
+						['BREATH NOISE', ['air', 'k3', 'f3', 'abp', 'ag']],
+						['BLOW', ['mix', 'ae', 'amp']],
+						['ROOM (TRACK)', ['roomSend', 'roomRtn', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						['The reed: a square (odd harmonics only), each note up to a cent from true.', 'reed'],
+						["The bore and bell, measured from the VSCO clarinet's odd harmonics (IR: CLAR).", 'bore'],
+						["Breath under the tone: noise band-passed around the note's third harmonic.", 'abp'],
+						['The player: speaks in 60 ms and stops with the key. No vibrato.', 'ae'],
+						['One room for the whole track, not one per note.', 'room']
+					]
+				}
 			)
 		})
 	},
@@ -2554,175 +2632,124 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampSustain: 0.85,
 			ampRelease: 0.15,
 			/* Built from the recordings (Iowa MIS flute, mf, vibrato), not from a
-			   tube: eight sine partials whose balance moves with the register --
-			   at C4 the second is louder than the fundamental, by C5 the
-			   fundamental leads and the fifth and sixth are nearly gone -- which
-			   is what a flute sounds like and a dark tube did not. A flute's
-			   vibrato is mostly breath pressure, so it moves the level (+-30%)
-			   far more than the pitch (+-13 cents), at 4.8 Hz, arriving after the
-			   note. The tone speaks in 60 ms, the air a little ahead of it: the
-			   recordings take a fifth of a second, and played from a key that
-			   read as lag -- worse, ENV releases only once its attack and decay
-			   are through, so a tapped note swelled on for half a second after
-			   the key was up. The air is
-			   noise centred an octave over the key, following it, plenty of it in
-			   the low register and less above -- as the recordings have it, 20 to
-			   27 dB under the note. */
+			   tube: sine partials whose balance moves with the register, then
+			   voiced by ear against them (tools/ear) -- at C4 the second nearly
+			   as loud as the fundamental, by C5 the fundamental alone with the
+			   second and third 17 and 24 dB down. Three partials: the fourth and
+			   up are 18 dB and more under the fundamental, and the eight this had
+			   cost 61 nodes a note for what the recordings could not hear.
+
+			   A flute's vibrato is mostly breath pressure, so it moves the level
+			   (+-30%) far more than the pitch (+-8 cents), at 4.85 Hz, arriving
+			   well after the note. Both come from one signal, 3.26 + the faded
+			   vibrato: it is the level of the breath stage, and scaled it is the
+			   time of a short delay the tone passes through -- a delay whose time
+			   moves is a pitch that moves, for every partial at once, where a
+			   cable into each oscillator cost a gain per partial. The breath
+			   stage's 3.26 is taken back out by the trim. The fundamental goes
+			   in at unity, since the register barely moves it; the others are
+			   set against it.
+
+			   The tone speaks in 25 ms: the recordings take a fifth of a second,
+			   and played from a key that read as lag -- worse, ENV releases only
+			   once its attack and decay are through, so a tapped note swelled on
+			   after the key was up. The air is noise in a narrow band near the
+			   key's octave and a fifth, following it, a little more of it low --
+			   and it rides the same breath and the same envelope as the tone,
+			   since it is the same air. */
 			...patch(
 				[
 					['fq', 'tofreq'],
-					['vib', 'lfo', { lfoWave: 0, lfoRate: 4.8, lfoAmt: 100 }],
-					['vf', 'env', { envA: 0.45, envD: 0.01, envS: 100, envR: 0.1 }],
-					['vm', 'mul'],
-					['pdk', 'const', { kind: 6, value: 0.0075 }],
-					['pd', 'mul'],
-					['one', 'const', { kind: 6, value: 1 }],
-					['pr', 'add'],
-					['fv', 'mul'],
 					['h1', 'osc', { wave: 0 }],
-					['l1', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.562, outHi: 1.0 }],
-					['g1', 'gain', { level: 0 }],
 					['k2', 'const', { kind: 6, value: 2 }],
 					['f2', 'mul'],
 					['h2', 'osc', { wave: 0 }],
-					['l2', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 1.0, outHi: 0.355 }],
-					['g2', 'gain', { level: 0 }],
 					['k3', 'const', { kind: 6, value: 3 }],
 					['f3', 'mul'],
 					['h3', 'osc', { wave: 0 }],
-					['l3', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.178, outHi: 0.224 }],
+					['l2', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.82, outHi: 0.148 }],
+					['l3', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.146, outHi: 0.064 }],
+					['g2', 'gain', { level: 0 }],
 					['g3', 'gain', { level: 0 }],
-					['k4', 'const', { kind: 6, value: 4 }],
-					['f4', 'mul'],
-					['h4', 'osc', { wave: 0 }],
-					['l4', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.089, outHi: 0.126 }],
-					['g4', 'gain', { level: 0 }],
-					['k5', 'const', { kind: 6, value: 5 }],
-					['f5', 'mul'],
-					['h5', 'osc', { wave: 0 }],
-					['l5', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.251, outHi: 0.028 }],
-					['g5', 'gain', { level: 0 }],
-					['k6', 'const', { kind: 6, value: 6 }],
-					['f6', 'mul'],
-					['h6', 'osc', { wave: 0 }],
-					['l6', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.2, outHi: 0.004 }],
-					['g6', 'gain', { level: 0 }],
-					['k7', 'const', { kind: 6, value: 7 }],
-					['f7', 'mul'],
-					['h7', 'osc', { wave: 0 }],
-					['l7', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.0178, outHi: 0.0032 }],
-					['g7', 'gain', { level: 0 }],
-					['k8', 'const', { kind: 6, value: 8 }],
-					['f8', 'mul'],
-					['h8', 'osc', { wave: 0 }],
-					['l8', 'map', { shape: 9, inLo: 48, inHi: 36, outLo: 0.0501, outHi: 0.0009 }],
-					['g8', 'gain', { level: 0 }],
-					['tone', 'sum'],
-					['tl', 'vca', { gain: 30 }],
-					['ae', 'env', { envA: 0.06, envD: 0.08, envS: 90, envR: 0.1 }],
-					['amp', 'vca', { gain: 100 }],
-					['adk', 'const', { kind: 6, value: 0.3 }],
-					['ad', 'mul'],
-					['ar', 'add'],
-					['trem', 'gain', { level: 1 }],
+					['vr', 'const', { kind: 7, value: 4.85 }],
+					['vib', 'osc', { wave: 0 }],
+					['vf', 'env', { envA: 0.76, envD: 0.01, envS: 100, envR: 0.1 }],
+					['vfg', 'gain', { level: 0 }],
+					['one', 'const', { kind: 6, value: 3.26 }],
+					['vc', 'tocv'],
+					['tm', 'add'],
+					['dk', 'const', { kind: 6, value: 0.00015 }],
+					['dt', 'mul'],
+					['dly', 'delay', { delayTime: 0 }],
 					['air', 'noise'],
-					['be', 'env', { envA: 0.02, envD: 0.15, envS: 55, envR: 0.06 }],
-					['bl', 'map', { shape: 9, inLo: 48, inHi: 24, outLo: 0.22, outHi: 0.02 }],
-					['bv', 'mul'],
-					['bg', 'gain', { level: 0 }],
-					['fk', 'const', { kind: 6, value: 2 }],
+					['fk', 'const', { kind: 6, value: 2.74 }],
 					['fc', 'mul'],
-					['bp', 'filter', { type: 2, cutoff: 1000, q: 1 }],
-					['mix', 'sum']
+					['bp', 'filter', { type: 2, cutoff: 1000, q: 3.2 }],
+					['bl', 'map', { shape: 9, inLo: 48, inHi: 24, outLo: 0.35, outHi: 0.27 }],
+					['bg', 'gain', { level: 0 }],
+					['trem', 'gain', { level: 0 }],
+					['ae', 'env', { envA: 0.025, envD: 0.08, envS: 90, envR: 0.085 }],
+					['amp', 'vca', { gain: 0 }]
 				],
 				[
 					'entry.pitch>fq:a',
-					'vib.cv>vm:a',
-					'vf>vm:b',
-					'vm>pd:a',
-					'pdk>pd:b',
-					'pd>pr:a',
-					'one>pr:b',
-					'fq>fv:a',
-					'pr>fv:b',
-					'fv>h1:pitch',
-					'entry.note>l1:a',
-					'h1>g1',
-					'l1>g1:level',
-					'g1>tone',
-					'fv>f2:a',
+					'fq>h1:pitch',
+					'fq>f2:a',
 					'k2>f2:b',
 					'f2>h2:pitch',
-					'entry.note>l2:a',
-					'h2>g2',
-					'l2>g2:level',
-					'g2>tone',
-					'fv>f3:a',
+					'fq>f3:a',
 					'k3>f3:b',
 					'f3>h3:pitch',
+					'entry.note>l2:a',
 					'entry.note>l3:a',
+					'h2>g2',
+					'l2>g2:level',
 					'h3>g3',
 					'l3>g3:level',
-					'g3>tone',
-					'fv>f4:a',
-					'k4>f4:b',
-					'f4>h4:pitch',
-					'entry.note>l4:a',
-					'h4>g4',
-					'l4>g4:level',
-					'g4>tone',
-					'fv>f5:a',
-					'k5>f5:b',
-					'f5>h5:pitch',
-					'entry.note>l5:a',
-					'h5>g5',
-					'l5>g5:level',
-					'g5>tone',
-					'fv>f6:a',
-					'k6>f6:b',
-					'f6>h6:pitch',
-					'entry.note>l6:a',
-					'h6>g6',
-					'l6>g6:level',
-					'g6>tone',
-					'fv>f7:a',
-					'k7>f7:b',
-					'f7>h7:pitch',
-					'entry.note>l7:a',
-					'h7>g7',
-					'l7>g7:level',
-					'g7>tone',
-					'fv>f8:a',
-					'k8>f8:b',
-					'f8>h8:pitch',
-					'entry.note>l8:a',
-					'h8>g8',
-					'l8>g8:level',
-					'g8>tone',
-					'tone>tl',
-					'tl>amp',
-					'ae>amp:level',
-					'vm>ad:a',
-					'adk>ad:b',
-					'ad>ar:a',
-					'one>ar:b',
-					'amp>trem',
-					'ar>trem:level',
+					'h1>dly',
+					'g2>dly',
+					'g3>dly',
+					'vr>vib:pitch',
+					'vib>vfg',
+					'vf>vfg:level',
+					'vfg>vc',
+					'vc>tm:a',
+					'one>tm:b',
+					'tm>trem:level',
+					'tm>dt:a',
+					'dk>dt:b',
+					'dt>dly:delayTime',
 					'air>bp',
 					'fq>fc:a',
 					'fk>fc:b',
 					'fc>bp:cutoff',
-					'be>bv:a',
-					'entry.note>bl:a',
-					'bl>bv:b',
 					'bp>bg',
-					'bv>bg:level',
-					'trem>mix',
-					'bg>mix',
-					'mix>output'
+					'entry.note>bl:a',
+					'bl>bg:level',
+					'dly>trem',
+					'bg>trem',
+					'trem>amp',
+					'ae>amp:level',
+					'amp>output'
 				],
-				60,
-				{ spaceSize: 45, spaceDecay: 40, spaceMix: 12 }
+				5.6,
+				{ spaceSize: 45, spaceDecay: 40, spaceMix: 15 },
+				{
+					groups: [
+						['PARTIALS', ['fq', 'k2', 'f2', 'k3', 'f3', 'h1', 'h2', 'h3', 'l2', 'l3', 'g2', 'g3']],
+						['VIBRATO', ['vr', 'vib', 'vf', 'vfg', 'vc', 'one', 'tm', 'dk', 'dt', 'dly']],
+						['AIR', ['air', 'fk', 'fc', 'bp', 'bl', 'bg']],
+						['BREATH', ['trem', 'ae', 'amp']],
+						['ROOM (TRACK)', ['roomSend', 'roomRtn', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						['Three sine partials, balanced by register as the Iowa flute recordings are.', 'h2'],
+						['Vibrato, arriving late: 3.26 + a 4.85 Hz sine drives the breath level (+-30%).', 'vfg'],
+						['The same signal scaled is a moving delay: a moving pitch for every partial (+-8 cents).', 'dly'],
+						['Air: noise in a band following the key. Same breath, same envelope as the tone.', 'bp'],
+						['The breath: speaks in 25 ms and stops with the key.', 'ae']
+					]
+				}
 			)
 		})
 	},

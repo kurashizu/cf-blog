@@ -2235,8 +2235,9 @@ describe('the shipped ADV presets', () => {
 			const g = graphOf(p)!;
 			/* NOTE cards are nodes on the canvas but not modules: they carry no
 			   cable, so counting them let a well-annotated patch whose resonators
-			   strike themselves (VIBRAPHONE's MODES banks take no input) read as
-			   one with its cables dropped. */
+			   strike themselves (VIBRAPHONE's MODES banks take no input), or a
+			   small one with five cards (CLARINET), read as one with its cables
+			   dropped. */
 			const modules = g.nodes.filter((n) => n.type !== 'note');
 			if (modules.length < 6 || modules.length > 130)
 				bad.push(`${p.name}: ${modules.length} nodes is not a plausible patch`);
