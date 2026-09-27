@@ -45,7 +45,14 @@ import {
 	setTrackEditedHook
 } from './synth-tracks';
 import { showSaveStatus, askConfirm } from './synth-confirm';
-import { ENTRY_ID, OUTPUT_ID, startingGraph, type GraphNode, type GraphCable } from './graph-model';
+import {
+	ENTRY_ID,
+	OUTPUT_ID,
+	startingGraph,
+	type GraphNode,
+	type GraphCable,
+	type GraphGroup
+} from './graph-model';
 import type { MacroDef } from './macros';
 import { grandPiano } from './grand-piano';
 import { jazzKit, kit808 } from './drum-kits';
@@ -607,15 +614,6 @@ const DRAWBARS: [string, number, number][] = [
 	['3', 3, 0.33]
 ];
 
-/* A section plucking together, which it never quite does: id, tuning
-   (cents apart), how late the pluck lands (s), seat. */
-const PIZZ_PLAYERS: [number, number, number, number][] = [
-	[1, 1, 0, -0.5],
-	[2, 1.0029, 0.012, 0.5],
-	[3, 0.9977, 0.023, -0.15],
-	[4, 1.0012, 0.031, 0.2]
-];
-
 /** A measured body (IR) by its label, so adding one never moves another. */
 function body(label: string): number {
 	const i = BODY_IRS.findIndex((b) => b.label === label);
@@ -636,7 +634,21 @@ function patch(
 	   14 dB. That is loud enough that auditioning patches means riding the
 	   volume, which is not a judgement about the sound but a defect. Trimmed
 	   here rather than by re-voicing, since the voicing is the instrument. */
-	outLevel = 100
+	outLevel = 100,
+	/* The room the notes are heard in, one for the track: a TSND after the
+	   trim into a TRTN -> SPACE chain built once, not a SPACE in every note --
+	   twelve notes were twelve reverbs, and that is what underran the audio
+	   thread (docs/node-graph.md, "The built-in patches"). `mix` is the wet
+	   level beside the dry note, as SPACE's own MIX was. */
+	room?: { spaceSize: number; spaceDecay: number; spaceMix: number },
+	/* How the canvas reads: boxes around the stages (label, members, tint) and
+	   NOTE cards beside the nodes they explain (text, the node it sits over).
+	   A built-in patch is read by someone who did not write it; every one is
+	   grouped and annotated (docs/node-graph.md, "The built-in patches"). */
+	layout?: {
+		groups?: [label: string, members: string[], color?: string][];
+		notes?: [text: string, near: string][];
+	}
 ): Partial<TrackData> {
 	/* Laid out along the signal path rather than wrapped into rows.
 	
@@ -698,6 +710,32 @@ function patch(
 		// OUT runs when the note does; without this the patch builds and stays mute.
 		{ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' }
 	];
+	if (room) {
+		const x = 48 + (laid.lastCol + 2) * 300;
+		graphNodes.push(
+			{ id: 'roomSend', type: 'tsend', x, y: 320 },
+			{ id: 'roomRtn', type: 'trtn', x, y: 460 },
+			{ id: 'room', type: 'space', x: x + 300, y: 460 },
+			{ id: 'roomLvl', type: 'gain', x: x + 600, y: 460 },
+			{ id: 'roomOut', type: 'out', x: x + 900, y: 460 }
+		);
+		Object.assign(graphParams, {
+			'roomSend.bus': 0,
+			'roomRtn.bus': 0,
+			'room.spaceSize': room.spaceSize,
+			'room.spaceDecay': room.spaceDecay,
+			'room.spaceMix': 100,
+			'roomLvl.level': room.spaceMix / 100
+		});
+		graphCables.push(
+			{ from: TRIM_ID, fromPort: 'out', to: 'roomSend', toPort: 'in' },
+			{ from: ENTRY_ID, fromPort: 'then', to: 'roomSend', toPort: 'exec' },
+			{ from: 'roomRtn', fromPort: 'out', to: 'room', toPort: 'in' },
+			{ from: 'room', fromPort: 'out', to: 'roomLvl', toPort: 'in' },
+			{ from: 'roomLvl', fromPort: 'out', to: 'roomOut', toPort: 'in' },
+			{ from: ENTRY_ID, fromPort: 'then', to: 'roomOut', toPort: 'exec' }
+		);
+	}
 	/* Emitted only if every type in it exists.
 
 	   These patches predate the rebuild, and each is wired out of some modules
@@ -737,12 +775,101 @@ function patch(
 		return {};
 	}
 	const macros = Object.keys(wrapped.macros).length ? { macros: wrapped.macros } : {};
+	if (layout?.groups?.length) bandByGroup(graphNodes, layout.groups);
+	const at = new Map(graphNodes.map((n) => [n.id, n]));
+	const groups: GraphGroup[] = (layout?.groups ?? []).map(([label, members, color], i) => {
+		const own = members.map((m) => at.get(m)).filter((n): n is GraphNode => !!n);
+		const x = Math.min(...own.map((n) => n.x)) - 24;
+		const y = Math.min(...own.map((n) => n.y)) - 56;
+		return {
+			id: `g${i}`,
+			label,
+			x,
+			y,
+			w: Math.max(...own.map((n) => n.x)) + 300 - x,
+			h: Math.max(...own.map((n) => n.y)) + 200 - y,
+			color: color ?? GROUP_TINTS[i % GROUP_TINTS.length],
+			members: own.map((n) => n.id)
+		};
+	});
+	const graphLabels: Record<string, string> = {};
+	for (const [i, [text, near]] of (layout?.notes ?? []).entries()) {
+		const by = at.get(near);
+		const box = groups.find((g) => g.members?.includes(near));
+		const id = `note${i}`;
+		// Across the top of the stage it explains, over the node it names.
+		graphNodes.push({ id, type: 'note', x: box ? box.x + 24 : (by?.x ?? 48), y: box ? box.y + 30 : (by?.y ?? 168) - 150 });
+		graphLabels[id] = text;
+	}
 	return {
-		rackGraph: { nodes: graphNodes, cables: graphCables, ...macros },
+		rackGraph: {
+			nodes: graphNodes,
+			cables: graphCables,
+			...macros,
+			...(groups.length ? { groups } : {})
+		},
 		graphParams,
-		...(Object.keys(laid.waves).length ? { graphWaves: laid.waves } : {})
+		...(Object.keys(laid.waves).length ? { graphWaves: laid.waves } : {}),
+		...(Object.keys(graphLabels).length ? { graphLabels } : {})
 	};
 }
+
+/**
+ * Lay a grouped patch out a stage to a block: each group gets its own run of
+ * columns, left to right in the order the groups are listed (the order the
+ * sound passes through them), its members keeping their order along the
+ * signal inside it, with room above for the group's notes. Laid out by
+ * depth alone, a patch interleaves its stages -- the pluck's MAPs in the
+ * players' column -- and the boxes drawn round them overlapped until neither
+ * said anything; banded one above another, a four-stage patch was 3000 units
+ * tall, past what the canvas can show at its widest zoom. ENTRY sits left of
+ * the first stage, the trim and OUT after the stages that sound and before a
+ * track room.
+ */
+function bandByGroup(nodes: GraphNode[], groups: [string, string[], string?][]): void {
+	const COL = 300;
+	const ROW = 200;
+	const GAP = 90;
+	const TOP = 168 + 110;
+	const byId = new Map(nodes.map((n) => [n.id, n]));
+	let cursor = 48 + COL;
+	let tallest = 0;
+	const place = (ids: string[]) => {
+		for (const id of ids) {
+			const n = byId.get(id);
+			if (!n) continue;
+			n.x = cursor;
+			n.y = TOP + ROW;
+		}
+		cursor += COL;
+	};
+	for (const [, members] of groups) {
+		if (members.includes('roomSend')) place(['trim', OUTPUT_ID]);
+		const own = members.map((m) => byId.get(m)).filter((n): n is GraphNode => !!n);
+		const cols = [...new Set(own.map((n) => n.x))].sort((p, q) => p - q);
+		const perCol = new Map<number, number>();
+		const origin = cursor;
+		for (const n of own.sort((p, q) => p.y - q.y)) {
+			const c = cols.indexOf(n.x);
+			const k = perCol.get(c) ?? 0;
+			perCol.set(c, k + 1);
+			n.x = origin + c * COL;
+			n.y = TOP + k * ROW;
+		}
+		tallest = Math.max(tallest, ...perCol.values());
+		cursor = origin + cols.length * COL + GAP;
+	}
+	// A patch that groups the trim itself (its room is on the canvas) has placed it.
+	if (!groups.some(([, m]) => m.includes('roomSend') || m.includes('trim'))) place(['trim', OUTPUT_ID]);
+	const entry = byId.get(ENTRY_ID);
+	if (entry) {
+		entry.x = 48;
+		entry.y = TOP + ((tallest - 1) * ROW) / 2;
+	}
+}
+
+/** Box tints for a patch's stages, in order: source, shaping, body, space. */
+const GROUP_TINTS = ['#e06c75', '#e5c07b', '#61afef', '#98c379', '#c678dd', '#56b6c2'];
 
 /**
  * The types a graph names that the catalogue does not carry.
@@ -994,7 +1121,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			resonance: 3.5,
 			ampAttack: 0.003,
 			ampDecay: 0.35,
-			ampSustain: 0.7,
+			ampSustain: 0,
 			ampRelease: 0.2,
 			filterAttack: 0.003,
 			filterDecay: 0.08,
@@ -1047,8 +1174,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['str', 'wire', { wireDecay: 3, wireDamp: 19, wireStiff: 12, wirePos: 16 }],
 					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.95 }],
 					['dv', 'vca', { gain: 100 }],
-					['bod', 'ir', { irBody: body('ZIT'), irMix: 73 }],
-					['rm', 'space', { spaceSize: 35, spaceDecay: 40, spaceMix: 30 }]
+					['bod', 'ir', { irBody: body('ZIT'), irMix: 73 }]
 				],
 				[
 					'entry.pitch>fq:a',
@@ -1068,10 +1194,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'str>dv',
 					'dmp>dv:level',
 					'dv>bod',
-					'bod>rm',
-					'rm>output'
+					'bod>output'
 				],
-				40
+				40,
+				{ spaceSize: 35, spaceDecay: 40, spaceMix: 30 }
 			)
 		})
 	},
@@ -1108,9 +1234,27 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bar', 'modes', { mode1: 1, mode2: 3.85, mode3: 8.05, modeQ: 22.4 }],
 					['tub', 'tube', { tubeDecay: 3, tubeDamp: 94, tubeOdd: 1 }],
 					['mx', 'mix', { mixA: 100, mixB: 38 }],
-					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
+					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }],
+					/* How long a bar rings, by its pitch: halved about every octave
+					   up, as the VCSL marimba's are -- 20 dB down in 2.4 s at C3,
+					   0.6 at C5, 0.13 at C7. One Q and one tube decay for every bar
+					   rang the treble as long as the bass: a pluck held up. */
+					['mq', 'map', { shape: 1, inLo: 60, inHi: 12, outLo: 86, outHi: 5 }],
+					['md', 'map', { shape: 1, inLo: 60, inHi: 12, outLo: 3, outHi: 0.4 }]
 				],
-				['mal>ex', 'ex>bar', 'bar>mx', 'ex>tub', 'tub>mx:b', 'mx>bod', 'bod>output'],
+				[
+					'mal>ex',
+					'ex>bar',
+					'bar>mx',
+					'ex>tub',
+					'tub>mx:b',
+					'mx>bod',
+					'bod>output',
+					'entry.note>mq:a',
+					'mq>bar:modeQ',
+					'entry.note>md:a',
+					'md>tub:tubeDecay'
+				],
 				26
 			)
 		})
@@ -1132,7 +1276,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			resonance: 0.2,
 			ampAttack: 0.002,
 			ampDecay: 0.8,
-			ampSustain: 0.2,
+			ampSustain: 0,
 			ampRelease: 1.2,
 			airGain: 0.3
 		})
@@ -1226,14 +1370,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 							] as [string, string, Record<string, number>?][]
 					),
 					['bars', 'sum'],
-					// Percussion: the third harmonic, struck and let go in a quarter second.
 					['rp', 'const', { kind: 6, value: 3 }],
 					['xp', 'mul'],
 					['wp', 'osc', { wave: 0 }],
 					['pe', 'env', { envA: 0.001, envD: 0.11, envS: 0, envR: 0.05, envCurve: 1 }],
 					['pv', 'vca', { gain: 100 }],
 					['pg', 'gain', { level: 0.65 }],
-					// The key contacts closing: a few milliseconds of bright noise.
 					['ck', 'noise'],
 					['ce', 'env', { envA: 0.0005, envD: 0.006, envS: 0, envR: 0.004, envCurve: 1 }],
 					['cv', 'vca', { gain: 100 }],
@@ -1242,7 +1384,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['tone', 'sum'],
 					['ke', 'env', { envA: 0.004, envD: 0.01, envS: 100, envR: 0.03 }],
 					['key', 'vca', { gain: 100 }],
-					// The Leslie: horn and drum, each a moving delay (pitch) and a moving level.
+					['toLes', 'tsend', { bus: 0 }],
+					['les', 'trtn', { bus: 0 }],
 					['hp', 'filter', { type: 1, cutoff: 800, q: 0.7 }],
 					['lp', 'filter', { type: 0, cutoff: 800, q: 0.7 }],
 					['hr', 'lfo', { lfoWave: 0, lfoRate: 6.7, lfoAmt: 0.024 }],
@@ -1258,9 +1401,11 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['dg', 'gain', { level: 1 }],
 					['hpn', 'pan', { panPos: 0.4 }],
 					['dpn', 'pan', { panPos: -0.25 }],
-					['les', 'sum'],
+					['cab', 'sum'],
 					['lvl', 'gain', { level: 0.5 }],
-					['cab', 'space', { spaceSize: 22, spaceDecay: 40, spaceMix: 24 }]
+					['room', 'space', { spaceSize: 22, spaceDecay: 40, spaceMix: 100 }],
+					['roomLvl', 'gain', { level: 0.13 }],
+					['roomOut', 'out']
 				],
 				[
 					'entry.pitch>pf:a',
@@ -1285,10 +1430,11 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'pg>tone',
 					'tone>key',
 					'ke>key:level',
-					'key>hp',
-					'key>lp',
-					'cg>hp',
-					'cg>lp',
+					'key>toLes',
+					'cg>toLes',
+					'entry.then>toLes:exec',
+					'les>hp',
+					'les>lp',
 					'hp>hd',
 					'lp>dd',
 					'hr.cv>hd:delayTime',
@@ -1303,13 +1449,33 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'dal>dg:level',
 					'hg>hpn',
 					'dg>dpn',
-					'hpn>les',
-					'dpn>les',
-					'les>lvl',
-					'lvl>cab',
-					'cab>output'
+					'hpn>cab',
+					'dpn>cab',
+					'cab>lvl',
+					'lvl>output',
+					'lvl>room',
+					'room>roomLvl',
+					'roomLvl>roomOut',
+					'entry.then>roomOut:exec'
 				],
-				54
+				41,
+				undefined,
+				{
+					groups: [
+						['DRAWBARS', ['pf', ...DRAWBARS.flatMap(([id]) => [`r${id}`, `x${id}`, `w${id}`, `g${id}`]), 'bars']],
+						['PERC + CLICK', ['rp', 'xp', 'wp', 'pe', 'pv', 'pg', 'ck', 'ce', 'cv', 'cf', 'cg']],
+						['KEY', ['tone', 'ke', 'key', 'toLes']],
+						['LESLIE (TRACK)', ['les', 'hp', 'lp', 'hr', 'dr', 'hd', 'dd', 'ha', 'da', 'one', 'hal', 'dal', 'hg', 'dg', 'hpn', 'dpn', 'cab', 'lvl']],
+						['ROOM (TRACK)', ['trim', 'output', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						["Four drawbars: 16' 8' 5 1/3' 2 2/3', sines on the key's multiples.", 'w8'],
+						["Percussion: the 3rd harmonic, struck and gone in 0.1 s. The key contacts' click.", 'wp'],
+						['Every key goes to one Leslie (TSND > TRTN), built once for the track.', 'toLes'],
+						['Horn above 800 Hz, drum below, each spinning: a moving delay (pitch) and level.', 'hd'],
+						['One room for the track.', 'room']
+					]
+				}
 			)
 		})
 	},
@@ -1368,8 +1534,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['trm', 'gain', { level: 1 }],
 					// The damper bar, on the key: the bars ring while it is held.
 					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 1.36 }],
-					['dv', 'vca', { gain: 100 }],
-					['rm', 'space', { spaceSize: 45, spaceDecay: 45, spaceMix: 38 }]
+					['dv', 'vca', { gain: 100 }]
 				],
 				[
 					'mal>ex',
@@ -1392,10 +1557,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'fa>trm:level',
 					'trm>dv',
 					'dmp>dv:level',
-					'dv>rm',
-					'rm>output'
+					'dv>output'
 				],
-				42
+				42,
+				{ spaceSize: 45, spaceDecay: 45, spaceMix: 38 }
 			)
 		})
 	},
@@ -1439,8 +1604,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['crs', 'sum'],
 					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 1.2 }],
 					['dv', 'vca', { gain: 100 }],
-					['bod', 'ir', { irBody: body('PSL'), irMix: 77 }],
-					['rm', 'space', { spaceSize: 40, spaceDecay: 45, spaceMix: 30 }]
+					['bod', 'ir', { irBody: body('PSL'), irMix: 77 }]
 				],
 				[
 					'entry.pitch>fq:a',
@@ -1467,10 +1631,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'crs>dv',
 					'dmp>dv:level',
 					'dv>bod',
-					'bod>rm',
-					'rm>output'
+					'bod>output'
 				],
-				40
+				40,
+				{ spaceSize: 40, spaceDecay: 45, spaceMix: 30 }
 			)
 		})
 	},
@@ -1567,8 +1731,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['board', 'ir', { irBody: body('PNO'), irMix: 24 }],
 					['jack', 'excite', { hardness: 60, exLength: 6, exTone: 1800 }],
 					['jg', 'gain', { level: 0.063 }],
-					['outRel', 'out'],
-					['rm', 'space', { spaceSize: 35, spaceDecay: 35, spaceMix: 40 }]
+					['outRel', 'out']
 				],
 				[
 					'entry.pitch>fq:a',
@@ -1601,13 +1764,13 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'strs>dv',
 					'dmp>dv:level',
 					'dv>board',
-					'board>rm',
-					'rm>output',
 					'entry.rel>outRel:exec',
 					'jack>jg',
-					'jg>outRel'
+					'jg>outRel',
+					'board>output'
 				],
-				25
+				25,
+				{ spaceSize: 35, spaceDecay: 35, spaceMix: 40 }
 			)
 		})
 	},
@@ -1825,8 +1988,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 						{ modeHz: 100, mode1: 1, mode2: 2.05, mode3: 4.1, modeQ: 12, modeMix: 100 }
 					],
 					['kg', 'gain', { level: 0.02 }],
-					['mix', 'sum'],
-					['rm', 'space', { spaceSize: 30, spaceDecay: 30, spaceMix: 15 }]
+					['mix', 'sum']
 				],
 				[
 					'entry.pitch>fq:a',
@@ -1869,10 +2031,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'knock>kg',
 					'roll>mix',
 					'kg>mix',
-					'mix>rm',
-					'rm>output'
+					'mix>output'
 				],
-				36
+				36,
+				{ spaceSize: 30, spaceDecay: 30, spaceMix: 15 }
 			)
 		})
 	},
@@ -1925,8 +2087,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.25 }],
 					['dv', 'vca', { gain: 100 }],
 					['bod', 'ir', { irBody: body('BPZ'), irMix: 68 }],
-					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }],
-					['rm', 'space', { spaceSize: 30, spaceDecay: 30, spaceMix: 10 }]
+					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }]
 				],
 				[
 					'entry.pitch>fq:a',
@@ -1950,10 +2111,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'dmp>dv:level',
 					'dv>bod',
 					'bod>cmp',
-					'cmp>rm',
-					'rm>output'
+					'cmp>output'
 				],
-				48
+				48,
+				{ spaceSize: 30, spaceDecay: 30, spaceMix: 10 }
 			)
 		})
 	},
@@ -2019,8 +2180,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['ae', 'env', { envA: 0.2, envD: 0.2, envS: 68, envR: 0.12 }],
 					['amp', 'vca', { gain: 100 }],
 					['vel', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.35, outHi: 1 }],
-					['vg', 'gain', { level: 1 }],
-					['hall', 'space', { spaceSize: 85, spaceDecay: 64, spaceMix: 19 }]
+					['vg', 'gain', { level: 1 }]
 				],
 				[
 					'entry.pitch>fq:a',
@@ -2054,27 +2214,24 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'entry.vel>vel:a',
 					'amp>vg',
 					'vel>vg:level',
-					'vg>hall',
-					'hall>output'
+					'vg>output'
 				],
-				8
+				8,
+				{ spaceSize: 85, spaceDecay: 64, spaceMix: 19 }
 			)
 		})
 	},
 	{
-		/* Pizzicato: a section plucking together, which it never quite does
-		   -- four players a few cents apart, each pluck landing up to 30 ms
-		   after the first. A fingertip pulls the string at its middle, the
-		   finger's snap is a few tens of milliseconds of noise, and the rest
-		   is the wood: bodies measured from the VSCO section's own pizzicato
-		   (IR: VPZ above G3, CPZ below), since a plucked note excites the box
-		   differently from a bowed one. Dead in two seconds in the bass, one
-		   at the top; the hand comes down on it at the key's release.
+		/* Pizzicato: two players a few cents apart, the second plucking 15 ms
+		   after the first, a fingertip's soft pull over the middle of the
+		   string, and the wood -- a body measured from the VSCO section's own
+		   pizzicato (IR: VPZ). The strings die on their own, two seconds in the
+		   bass and one at the top; a pizzicato is not damped.
 
-		   Tuned by ear (tools/ear) against the VSCO violins' pizz: the
-		   two-string, heavily damped version before it was heard as a piano
-		   (Pizzicato 0.04); this one reads 0.20 where the recordings read
-		   0.46, and nothing else comes close. */
+		   Within the voice budget (docs/node-graph.md): the four players, two
+		   bodies, a snap and a damper it had cost 65 nodes and 7 worklets a
+		   note, and eight of those notes with their rooms underran the audio
+		   thread until the page went silent. */
 		name: 'PIZZ',
 		category: 'STRING',
 		kind: 'AC',
@@ -2092,40 +2249,24 @@ export const SOUND_PRESETS: SoundPreset[] = [
 				[
 					['fq', 'tofreq'],
 					['fin', 'excite', { hardness: 52, exLength: 4, exTone: 1660 }],
-					// The finger leaving the string: a snap of noise, into the body with the note.
-					['snp', 'noise'],
-					['sne', 'env', { envA: 0.0005, envD: 0.043, envS: 0, envR: 0.01, envCurve: 1 }],
-					['snv', 'vca', { gain: 100 }],
-					['sng', 'gain', { level: 0.038 }],
 					['pv', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 0.6, outHi: 2 }],
 					['pg', 'gain', { level: 1 }],
 					// The fingertip, in harmonics: a harder pull lets more of the top through.
 					['plk', 'map', { shape: 1, inLo: 0, inHi: 1, outLo: 4, outHi: 11.3 }],
 					['plc', 'mul'],
-					['pl1', 'filter', { type: 0, cutoff: 1500, q: 0.6 }],
-					['pl2', 'filter', { type: 0, cutoff: 1500, q: 0.6 }],
+					['pl', 'filter', { type: 0, cutoff: 1500, q: 0.6 }],
 					['dec', 'map', { shape: 9, inLo: 72, inHi: 24, outLo: 2.4, outHi: 1 }],
-					...PIZZ_PLAYERS.flatMap(
-						([i, ratio, late, pan]) =>
-							[
-								[`r${i}`, 'const', { kind: 6, value: ratio }],
-								[`f${i}`, 'mul'],
-								[`t${i}`, 'delay', { delayTime: late }],
-								[`w${i}`, 'wire', { wireDecay: 1, wireDamp: 23, wireStiff: 2, wirePos: 40 }],
-								[`p${i}`, 'pan', { panPos: pan }]
-							] as [string, string, Record<string, number>?][]
-					),
+					['d2k', 'const', { kind: 6, value: 0.8 }],
+					['dec2', 'mul'],
+					['r2', 'const', { kind: 6, value: 1.0029 }],
+					['f2', 'mul'],
+					['late', 'delay', { delayTime: 0.015 }],
+					['w1', 'wire', { wireDecay: 1, wireDamp: 23, wireStiff: 2, wirePos: 40 }],
+					['w2', 'wire', { wireDecay: 1, wireDamp: 23, wireStiff: 2, wirePos: 40 }],
+					['p1', 'pan', { panPos: -0.35 }],
+					['p2', 'pan', { panPos: 0.35 }],
 					['strs', 'sum'],
-					['dmp', 'env', { envA: 0.001, envD: 0.001, envS: 100, envR: 0.035 }],
-					['dv', 'vca', { gain: 100 }],
-					['vln', 'ir', { irBody: body('VPZ'), irMix: 59 }],
-					['cel', 'ir', { irBody: body('CPZ'), irMix: 59 }],
-					['mv', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 0, outHi: 1 }],
-					['mc', 'map', { shape: 9, inLo: 55, inHi: 48, outLo: 1, outHi: 0 }],
-					['gv', 'gain', { level: 0 }],
-					['gc', 'gain', { level: 0 }],
-					['bod', 'sum'],
-					['hall', 'space', { spaceSize: 80, spaceDecay: 55, spaceMix: 3 }]
+					['bod', 'ir', { irBody: body('VPZ'), irMix: 59 }]
 				],
 				[
 					'entry.pitch>fq:a',
@@ -2135,41 +2276,52 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'entry.vel>plk:a',
 					'fq>plc:a',
 					'plk>plc:b',
-					'plc>pl1:cutoff',
-					'plc>pl2:cutoff',
-					'pg>pl1',
-					'pl1>pl2',
+					'plc>pl:cutoff',
+					'pg>pl',
 					'entry.note>dec:a',
-					...PIZZ_PLAYERS.flatMap(([i]) => [
-						`fq>f${i}:a`,
-						`r${i}>f${i}:b`,
-						`f${i}>w${i}:pitch`,
-						`dec>w${i}:wireDecay`,
-						`pl2>t${i}`,
-						`t${i}>w${i}`,
-						`w${i}>p${i}`,
-						`p${i}>strs`
-					]),
-					'snp>snv',
-					'sne>snv:level',
-					'snv>sng',
-					'sng>strs',
-					'strs>dv',
-					'dmp>dv:level',
-					'dv>vln',
-					'dv>cel',
-					'entry.note>mv:a',
-					'entry.note>mc:a',
-					'vln>gv',
-					'mv>gv:level',
-					'cel>gc',
-					'mc>gc:level',
-					'gv>bod',
-					'gc>bod',
-					'bod>hall',
-					'hall>output'
+					'dec>dec2:a',
+					'd2k>dec2:b',
+					'fq>w1:pitch',
+					'fq>f2:a',
+					'r2>f2:b',
+					'f2>w2:pitch',
+					'dec>w1:wireDecay',
+					'dec2>w2:wireDecay',
+					'pl>w1',
+					'pl>late',
+					'late>w2',
+					'w1>p1',
+					'w2>p2',
+					'p1>strs',
+					'p2>strs',
+					'strs>bod',
+					'bod>output'
 				],
-				150
+				150,
+				{ spaceSize: 80, spaceDecay: 55, spaceMix: 3 },
+				{
+					groups: [
+						['PLUCK', ['fin', 'pv', 'pg', 'plk', 'plc', 'pl']],
+						[
+							'TWO PLAYERS',
+							['fq', 'r2', 'f2', 'late', 'dec', 'd2k', 'dec2', 'w1', 'w2', 'p1', 'p2', 'strs']
+						],
+						['BODY', ['bod']],
+						['ROOM (TRACK)', ['roomSend', 'roomRtn', 'room', 'roomLvl', 'roomOut']]
+					],
+					notes: [
+						[
+							'A fingertip: velocity sets how loud and how bright (the LP follows the note).',
+							'fin'
+						],
+						[
+							'Two players, 3 cents apart, the second 15 ms late. No damper: a pizzicato dies on its own.',
+							'w1'
+						],
+						['The violin section pizzicato body, measured (IR: VPZ).', 'bod'],
+						['One room for the whole track, not one per note.', 'room']
+					]
+				}
 			)
 		})
 	},
@@ -2222,8 +2374,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['ag', 'gain', { level: 0.046 }],
 					['ae', 'env', { envA: 0.06, envD: 0.33, envS: 85, envR: 0.1 }],
 					['amp', 'vca', { gain: 100 }],
-					['mix', 'sum'],
-					['rm', 'space', { spaceSize: 45, spaceDecay: 40, spaceMix: 16 }]
+					['mix', 'sum']
 				],
 				[
 					'entry.pitch>fq:a',
@@ -2244,10 +2395,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'ag>mix',
 					'mix>amp',
 					'ae>amp:level',
-					'amp>rm',
-					'rm>output'
+					'amp>output'
 				],
-				30
+				30,
+				{ spaceSize: 45, spaceDecay: 40, spaceMix: 14 }
 			)
 		})
 	},
@@ -2357,8 +2508,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['fk', 'const', { kind: 6, value: 2 }],
 					['fc', 'mul'],
 					['bp', 'filter', { type: 2, cutoff: 1000, q: 1 }],
-					['mix', 'sum'],
-					['rm', 'space', { spaceSize: 45, spaceDecay: 40, spaceMix: 12 }]
+					['mix', 'sum']
 				],
 				[
 					'entry.pitch>fq:a',
@@ -2444,10 +2594,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'bv>bg:level',
 					'trem>mix',
 					'bg>mix',
-					'mix>rm',
-					'rm>output'
+					'mix>output'
 				],
-				60
+				60,
+				{ spaceSize: 45, spaceDecay: 40, spaceMix: 12 }
 			)
 		})
 	},

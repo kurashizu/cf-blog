@@ -177,16 +177,17 @@ describe('the ten value nodes, pulled as a number when nothing is live', () => {
 
 	it('add is ADD\'s own identity (0) on each leg when neither is wired', () => {
 		const { ctx, made } = build('add');
-		const legs = ctx.nodes.filter((n) => n.kind === 'const');
-		expect(legs.map((l) => offsetOf(l)).sort()).toEqual([0, 0]);
+		// Both legs rest at 0, so there is no resting constant to build at all.
+		expect(ctx.nodes.filter((n) => n.kind === 'const')).toEqual([]);
 		expect(made!.mod.has('a')).toBe(true);
 		expect(made!.mod.has('b')).toBe(true);
 	});
 
 	it('sub inverts B\'s leg, matching PURE_NODES.sub for both wired and unwired legs', () => {
 		const { ctx, made } = build('sub', { a: 5, b: 2 });
+		// The resting legs are numbers: their difference rides in on one constant.
 		const legs = ctx.nodes.filter((n) => n.kind === 'const');
-		expect(legs.map((l) => offsetOf(l)).sort((x, y) => x - y)).toEqual([2, 5]);
+		expect(legs.map((l) => offsetOf(l))).toEqual([3]);
 		expect(made!.mod.has('a')).toBe(true);
 		expect(made!.mod.has('b')).toBe(true);
 		// B's leg gain is -1, the same trick DIFF's audio-domain subtraction uses.

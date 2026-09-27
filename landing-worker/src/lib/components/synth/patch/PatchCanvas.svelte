@@ -191,6 +191,37 @@
 
 	/** Camera: pan in px, scale about the pointer. Same shape LIFE.LAB uses. */
 	let cam = $state({ x: 40, y: 40, s: 1 });
+	/* Far enough out to see a whole built-in instrument at once: at 0.35 a
+	   four-stage patch ran off the canvas on every side. */
+	const MIN_ZOOM = 0.2;
+	/* A card's footprint when nothing measured it: a little over the widest
+	   and tallest cards, so what FIT frames is never cut at an edge. */
+	const CARD_W = 280;
+	const CARD_H = 240;
+
+	/** The whole graph in view: every card and box, centred, never above 1:1. */
+	function fitView() {
+		const w = canvasEl?.clientWidth ?? 800;
+		const h = canvasEl?.clientHeight ?? 500;
+		const boxes = [
+			...graph.nodes.map((n) => ({ x: n.x, y: n.y, w: CARD_W, h: CARD_H })),
+			...(graph.groups ?? [])
+		];
+		if (!boxes.length) {
+			cam = { x: 40, y: 40, s: 1 };
+			return;
+		}
+		const x0 = Math.min(...boxes.map((b) => b.x));
+		const y0 = Math.min(...boxes.map((b) => b.y));
+		const x1 = Math.max(...boxes.map((b) => b.x + b.w));
+		const y1 = Math.max(...boxes.map((b) => b.y + b.h));
+		const pad = 40;
+		const s = Math.max(
+			MIN_ZOOM,
+			Math.min(1, (w - 2 * pad) / (x1 - x0), (h - 2 * pad) / (y1 - y0))
+		);
+		cam = { x: (w - (x1 - x0) * s) / 2 - x0 * s, y: (h - (y1 - y0) * s) / 2 - y0 * s, s };
+	}
 	let canvasEl = $state<HTMLDivElement | undefined>();
 
 	const GRID = 16;
@@ -553,7 +584,7 @@
 		const my = e.clientY - r.top;
 		// Zoom about the pointer: the thing under the cursor stays under it.
 		const k = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-		const ns = Math.max(0.35, Math.min(3, cam.s * k));
+		const ns = Math.max(MIN_ZOOM, Math.min(3, cam.s * k));
 		const kk = ns / cam.s;
 		cam = { x: mx - (mx - cam.x) * kk, y: my - (my - cam.y) * kk, s: ns };
 	}
@@ -1230,7 +1261,7 @@
 
 		<button
 			onclick={() => {
-				cam = { x: 40, y: 40, s: 1 };
+				fitView();
 				playSound('click');
 			}}
 			class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"

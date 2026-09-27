@@ -9,7 +9,7 @@ const OUT = path.join(__dirname, '.cache/renders');
   const only = process.argv.slice(2);
   const br = await chromium.launch({ channel: 'chrome' });
   const page = await br.newPage();
-  await page.goto('http://localhost:5182/synth/audit', { waitUntil: 'networkidle' });
+  await page.goto((process.env.AUDIT_URL || 'http://localhost:5182') + '/synth/audit', { waitUntil: 'networkidle' });
   await page.waitForFunction(() => !!window.__audit, null, { timeout: 20000 });
   const names = await page.evaluate(() => [
     ...window.__audit.presets.SOUND_PRESETS.map((p) => p.name),

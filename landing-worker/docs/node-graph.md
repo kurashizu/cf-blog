@@ -508,28 +508,83 @@ expand one.
 
 ## The built-in patches
 
-The thirteen AC presets and the JAZZ KIT are written in `synth-presets.ts`
-with composites -- BODY, MIX, EQ, DRIVE, LFO, BOW, REED, COMB, SHELL -- and
-`patch()` turns each composite into a **macro**: its definition is that one
-composite run through the same expander as before, between terminals named for
-the ports its cables use, so the arithmetic is unchanged (all thirteen render
-within one 16-bit step of the flat version they replaced). The canvas shows the
-instrument -- KOTO is a pluck, a string, a COMB and a BODY -- and a double-click
-shows the primitives.
+The AC presets live in `synth-presets.ts` (PIANO in `grand-piano.ts`), the kits
+in `drum-kits.ts`. They are demonstrations of what a patch can be, and every
+one of them is played by people on ordinary machines -- so they are held to a
+budget, and voiced against recordings rather than by eye.
 
-- **PIANO** is the grand piano in `grand-piano.ts`: a felt pulse, three
-  detuned WIREs (one STR macro placed three times), a CASE macro, a damper, a
-  soundboard shared by the whole track through TSND/TRTN that CTRL's pedal
-  opens, and a REL damper thud. Its key tracking reads NOTE with reversed MAP
-  ranges, since PITCH may only reach a converter. Twenty-four voices.
-- **JAZZ KIT** emits its graphs again. They were built and discarded while
-  the catalogue was rebuilt, so every key played the track's oscillators under
-  a drum envelope. The old FILTER type order (LP, BP, HP) and the shaker's
-  self-feeding DELAY are translated: the shell is a SEND/RTN loop, which
-  compiles to a one-sample loop.
+### The budget: a voice costs about what a rack voice costs
 
-The subtractive presets and the 808 kit are racks 1-7's instrument and stay
-there; ADV is its own instrument (see "ADV is its own instrument").
+ADV is free enough to build anything, and that is the risk: nothing stops a
+patch from spending twenty times what the sound needs. The first full set of
+AC presets did. Measured (nodes built for a second, overlapping note, so
+everything shared is excluded), a racks 1-7 voice built 8-13 nodes and no
+worklets; the AC presets built 34-137 nodes and 2-10 worklets, and eleven of
+thirteen ran a whole SPACE reverb per note. On a machine also drawing the UI,
+a twelve-voice PIANO or an eight-voice PIZZ underran the audio thread, and the
+page went silent. What made those sounds real was never the node count: a
+measured body (IR), the right excitation, and envelopes and decays that follow
+the key did it, and cost almost nothing.
+
+Every built-in ADV patch, and every key of a kit, stays inside this:
+
+| Per voice (one note) | Budget | Rack voice |
+|---|---|---|
+| Audio nodes built | at most 32 | 8-13 |
+| AudioWorklet nodes (ENV counts) | at most 3 | 0 |
+| ...of them resonators (WIRE, MODES, STRING, TUBE) | at most 2 | 0 |
+| IR (convolver) | at most 1 | 0 |
+| SPACE, LOOP | none | none |
+| Kit key | at most 24 nodes, 2 worklets | |
+
+The node cap is the loose one on purpose. An ADV voice has about eleven nodes
+of its own before the patch adds any (the voice's path, the trim, OUT, the send
+to the room), and a module is often more than one node (EXCITE builds six), but
+a plain gain costs the audio thread next to nothing. The worklets, the
+resonators, the convolvers and above all the reverbs are what it pays for, and
+those caps are the tight ones.
+
+And the rules the numbers come from:
+
+- **A room belongs to the track, not the note.** SPACE per voice is twelve
+  reverbs for twelve notes. Send to the track's chain (TSND into a TRTN ->
+  SPACE, built once; see below) or leave the room to the master reverb.
+- **An ensemble is not N copies of a player.** A section is one or two
+  sources and a spread (a short modulated DELAY, a PAN) -- not four
+  oscillators, four vibratos and four pans.
+- **One resonator, and a measured body.** A string is one WIRE (two at most,
+  for a course or a unison that must beat); what the instrument's box does is
+  one IR. Three WIREs a note and a chain of shelves for the case is the
+  brute-force version of the same sound.
+- **Arithmetic that only runs once per note should not be a chain of
+  nodes.** MAPs from ENTRY's pins and the MUL/ADD/CONST that scale them are
+  per-note numbers; spell each one once, and prefer a MAP's curve to a chain.
+- **It reads as an instrument.** Every built-in graph is grouped by stage
+  (the source, what shapes it, the body, the room -- `patch()`'s `layout`
+  draws the boxes) and carries NOTE cards saying what each stage is and why
+  its numbers are what they are. The canvas is where someone who did not
+  write the patch finds out how it works.
+- **A structure earns its cost by ear.** Before adding a node to a built-in
+  patch, show what it buys: `tools/ear` scores the render against recordings
+  of the instrument (below). A change that the recordings cannot hear is not
+  added.
+
+### Voicing: by ear, against recordings
+
+`tools/ear/` (see its README) renders a preset through the real engine and
+asks an AudioSet model what instrument it hears, next to what the model hears
+in recordings of the real instrument playing the same notes -- VSCO-2 CE and
+VCSL (CC0), the Iowa MIS piano; Wikimedia Commons only to calibrate, never
+shipped. Per-note octave-band decay tables show *where* a sound differs from
+its recording when the score will not move, which is how most of the
+structural faults were found: a pluck driven by an impulse has no
+fundamental (a step does), and one MODES bank cannot give a vibraphone's
+fundamental its sustain without keeping the overtones too. CMA-ES tunes the
+knobs; the score cannot hear loudness, so levels are set afterwards.
+
+The measured bodies (IR module) are generated by `tools/ear/make_irs.py` into
+`src/lib/audio/body-irs.ts`, and presets name them (`body('PNO')`) rather than
+number them.
 
 ## What the notes share: TSND and TRTN
 

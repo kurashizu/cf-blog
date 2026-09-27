@@ -16,8 +16,23 @@ REAL = {
     'woodblock': ('Idiophones/Struck Idiophones/Woodblock/wood_click*', 'Wood block'),
 }
 skip = {'Music', 'Musical instrument', 'Percussion'}
+def first_hit(x, sr=48000):
+    """From the first stroke to just before the second: several of the
+    recordings strike more than once."""
+    x = x[max(0, np.argmax(np.abs(x) > 0.05 * np.abs(x).max()) - 24):]
+    h = 480; e = np.array([np.sqrt(np.mean(x[k:k + h] ** 2)) + 1e-12 for k in range(0, len(x) - h, h)])
+    d = 20 * np.log10(e / e.max()); armed = False
+    for i, v in enumerate(d):
+        if v < -35: armed = True
+        elif armed and v > -20:
+            y = x[:max(0, i * h - 240)].copy()
+            fade = min(len(y), 480); y[len(y) - fade:] *= np.linspace(1, 0, fade)
+            return y
+    return x
+
+
 def eight(path, step=0.5, n=8, sr=48000):
-    x = load(path); x = x[np.argmax(np.abs(x) > 0.05 * np.abs(x).max()):]
+    x = first_hit(load(path))
     out = np.zeros(int((0.05 + n * step + 0.6) * sr))
     for i in range(n):
         a = int((0.05 + i * step) * sr); seg = x[:len(out) - a]; out[a:a + len(seg)] += seg

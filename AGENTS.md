@@ -318,6 +318,7 @@ Direct deploy (skips CI):
 
 - All Next.js workers use `@opennextjs/cloudflare` (not `next start`).
 - `landing-worker/` is SvelteKit 2 / Svelte 5 with `@sveltejs/adapter-cloudflare`, fully prerendered (every route ships as static HTML; no bindings). Custom domains are configured in the Cloudflare Dashboard (not in `wrangler.toml`); the apex domain is tracked in `shared/site-config.ts` (`LANDING_URL`, `LANDING_WWW_URL`).
+- **Synth built-in ADV patches have a per-voice budget** (about a racks 1-7 voice: at most 32 audio nodes, 3 worklets, 2 resonators, 1 IR, no per-note SPACE; kit keys 24 nodes and 2 worklets) and are voiced with `landing-worker/tools/ear` against recordings, not by hand. See `landing-worker/docs/node-graph.md`, "The built-in patches". Do not brute-force a sound with more nodes.
 - **Apex domain** is centralized in `shared/site-config.ts` (`APEX_DOMAIN`, defaults to `krsz.in`). All worker URLs (blog, agent, bucket, landing apex + www, share row in `database/schema.sql`) fan out from this single constant. Override per environment via the `APEX_DOMAIN` env var.
 - Static assets go in `public/`. Blog article markdown lives in D1, not the repo (R2 markdown backups were removed in the D1 migration).
 - Theme colors via CSS variables in `components/theme/tokens.css`. Tailwind utilities map to these (`bg-bg-card`, `text-text-muted`, etc.).

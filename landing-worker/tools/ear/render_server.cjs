@@ -7,7 +7,7 @@ const readline = require('readline');
 (async () => {
   const br = await chromium.launch({ channel: 'chrome' });
   const page = await br.newPage();
-  await page.goto('http://localhost:5182/synth/audit', { waitUntil: 'networkidle' });
+  await page.goto((process.env.AUDIT_URL || 'http://localhost:5182') + '/synth/audit', { waitUntil: 'networkidle' });
   await page.waitForFunction(() => !!window.__audit, null, { timeout: 20000 });
   const rl = readline.createInterface({ input: process.stdin });
   console.log(JSON.stringify({ ready: true }));

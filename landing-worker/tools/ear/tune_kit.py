@@ -14,18 +14,31 @@ from tune import Renderer
 from bands import table
 from body import load
 from ear import listen
-from kit_real import eight
+from kit_real import eight, first_hit
 
 C = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cache')
 V = os.path.join(C, 'refs', 'vcsl')
+D = os.path.join(C, 'refs', 'drums')
 REFS = {  # GM -> (recording, label)
-    38: ('Membranophones/Struck Membranophones/Snare Drum, Modern 1/Snare2_HitSN_v3_rr1_Mid.wav', 'Snare drum'),
-    40: ('Membranophones/Struck Membranophones/Snare Drum, Modern 1/Snare2_HitSN_v3_rr1_Mid.wav', 'Snare drum'),
+    38: (os.path.join(D, 'Snare_drum_unmuffled.wav'), 'Snare drum'),
+    40: (os.path.join(D, 'Snare_drum_muffled.wav'), 'Snare drum'),
     39: ('Idiophones/Struck Idiophones/Claps/SoloClap_vl1.wav', 'Clapping'),
     56: ('Idiophones/Struck Idiophones/Cowbells/Cowbell1_Hit_v2_rr1_Mid.wav', 'Cowbell'),
     76: ('Idiophones/Struck Idiophones/Woodblock/wood_click2_mp.wav', 'Wood block'),
     77: ('Idiophones/Struck Idiophones/Woodblock/wood_click2_mp.wav', 'Wood block'),
     42: ('Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_HitC_v1_rr1_Mid.wav', 'Hi-hat'),
+    # Wikimedia Commons drum-kit recordings (calibration only, never shipped).
+    36: (os.path.join(D, 'Bass_drum.wav'), 'Bass drum'),
+    35: (os.path.join(D, 'Bass_drum.wav'), 'Bass drum'),
+    37: (os.path.join(D, 'Snare_drum_rim.wav'), 'Rimshot'),
+    51: (os.path.join(D, 'Ride_cymbal.wav'), 'Cymbal'),
+    59: (os.path.join(D, 'Ride_cymbal.wav'), 'Cymbal'),
+    53: (os.path.join(D, 'Ride_cymbal_bell.wav'), 'Cymbal'),
+    49: (os.path.join(D, 'Crash.wav'), 'Cymbal'),
+    57: (os.path.join(D, 'Crash.wav'), 'Cymbal'),
+    48: (os.path.join(D, 'Tom_drum_8_inch.wav'), 'Drum'),
+    50: (os.path.join(D, 'Tom_drum_8_inch.wav'), 'Drum'),
+    45: (os.path.join(D, 'Tom_drum_8_inch.wav'), 'Drum'),
     46: ('Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_HitOC_rr5_Mid.wav', 'Hi-hat'),
 }
 DISCRETE = re.compile(r'^(type|kind|shape|shapeKind|group|bus|irBody|envCurve|inLo|inHi|drawN|d\d+|wave|lfoWave|cutGroup|solo|busy|dur|durSec|choke)$')
@@ -35,9 +48,10 @@ AVOID = ['Heart sounds, heartbeat', 'Heart murmur', 'Tick', 'Static', 'Sine wave
 def main(kit, gm, evals):
     key = str(108 - gm)
     path, label = REFS[gm]
-    real = load(os.path.join(V, path)); real = real[np.argmax(np.abs(real) > 0.05 * np.abs(real).max()):]
+    src = path if os.path.isabs(path) else os.path.join(V, path)
+    real = first_hit(load(src))
     real_tab = table(real)
-    sf.write(os.path.join(C, '_kref.wav'), eight(os.path.join(V, path)), 48000)
+    sf.write(os.path.join(C, '_kref.wav'), eight(src), 48000)
     ref_s, ref_e = listen(os.path.join(C, '_kref.wav'), seconds=4.6)
     r = Renderer()
     info = r(kit=kit, key=key, getParams=True, notes=[], out='')

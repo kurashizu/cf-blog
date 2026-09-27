@@ -1049,5 +1049,37 @@ export function trackScope(
 			queue.push(c.to);
 		}
 	}
+	/* A modulator that drives only the chain is the chain's too.
+
+	   A Leslie is one cabinet with one pair of rotors under every key, and its
+	   rotors are LFOs -- oscillators on a delay's TIME and a gain's LEVEL behind
+	   the TRTN. Downstream-only left them out: nothing reaches an LFO from the
+	   TRTN, so the chain dropped the cable, and the only place left for a rotor
+	   was inside each note, a Leslie per key. So a node whose every outgoing
+	   cable lands in the chain joins it, and so on up (the CONST that sets the
+	   LFO's rate joins with it) -- unless it reads the note (a cable from ENTRY)
+	   or is struck by one (ENV, EXCITE, RAND and S&H fire once per note, and
+	   have no single firing on a track many notes share). */
+	const cables = graph.cables.filter(
+		(c) => !execPortIds.has(c.fromPort) && !execPortIds.has(c.toPort)
+	);
+	const typeOf = new Map(graph.nodes.map((n) => [n.id, n.type]));
+	const noteBound = (id: string) =>
+		NOTE_STRUCK.has(typeOf.get(id) ?? '') ||
+		cables.some((c) => c.to === id && NOTE_SOURCES.has(typeOf.get(c.from) ?? ''));
+	for (let grew = true; grew; ) {
+		grew = false;
+		for (const n of graph.nodes) {
+			if (scope.has(n.id) || NOTE_SOURCES.has(n.type) || noteBound(n.id)) continue;
+			const outs = cables.filter((c) => c.from === n.id);
+			if (!outs.length || !outs.every((c) => scope.has(c.to))) continue;
+			scope.add(n.id);
+			grew = true;
+		}
+	}
 	return scope;
 }
+
+/** What publishes a note (ENTRY), and what each note strikes afresh. */
+const NOTE_SOURCES = new Set(['in', 'entry']);
+const NOTE_STRUCK = new Set(['env', 'excite', 'rand', 'sh']);

@@ -2278,6 +2278,11 @@ class ModularSynth {
 		 * Binding it where the value is read means a knob cannot be modulatable in
 		 * the catalogue and inert in the engine: they are the same line.
 		 */
+		/* No cable lands on this knob, so its conversion node would be built for
+		   nobody. Every ENV built an idle 0.01 gain for a SUSTAIN nothing
+		   patched; at three envelopes a note that was three nodes a voice. Built
+		   when the caller cannot say which ports are wired, as before. */
+		const unwired = (key: string) => !!wiredPorts && !wiredPorts.has(key);
 		const knob = (target: AudioParam, key: string, def: number): number => {
 			const v = p(key, def);
 			target.value = v;
@@ -2302,6 +2307,7 @@ class ModularSynth {
 		): number => {
 			const raw = p(key, def) * scale;
 			target.value = clamp ? clamp(raw) : raw;
+			if (unwired(key)) return target.value;
 			const gain = ctx.createGain();
 			gain.gain.value = scale;
 			gain.connect(target);
@@ -2312,6 +2318,7 @@ class ModularSynth {
 		const knobPct = (target: AudioParam, key: string, def: number): number => {
 			const v = p(key, def) / 100;
 			target.value = v;
+			if (unwired(key)) return v;
 			/* The cable arrives in the knob's units, not the param's.
       
          Registering `target` directly made the two disagree by a factor of a
@@ -2341,6 +2348,7 @@ class ModularSynth {
 			const v = p(key, def) / 100;
 			wet.gain.value = v;
 			dry.gain.value = 1 - v;
+			if (unwired(key)) return;
 			const up = ctx.createGain();
 			up.gain.value = 0.01;
 			up.connect(wet.gain);
@@ -2484,8 +2492,6 @@ class ModularSynth {
            through `cvIn` and is skipped by the mod loop, so a patched constant
            sets the pitch exactly once. */
 				osc.frequency.value = cvIn(probeKey, 'pitch', 220);
-				const g = ctx.createGain();
-				osc.connect(g);
 				sources.push(osc);
 				/* FREQ is registered, which is what makes FM sayable.
         
@@ -2544,10 +2550,13 @@ class ModularSynth {
 					depth.gain.value = period;
 					depth.connect(line.delayTime);
 					mod.set('phase', depth);
-					g.connect(line);
+					osc.connect(line);
 					return { in: null, out: line, mod };
 				}
-				return { in: null, out: g, mod };
+				/* The oscillator is the outlet. It went through a unity gain on
+				   its way out, which did nothing but cost a node a voice for every
+				   OSC in a patch -- four drawbars were four idle gains. */
+				return { in: null, out: osc, mod };
 			}
 
 			case 'noise': {
@@ -2562,11 +2571,9 @@ class ModularSynth {
 				const nz = ctx.createBufferSource();
 				nz.buffer = this.noiseBuffer;
 				nz.loop = true;
-				const g = ctx.createGain();
-				g.gain.value = 1;
-				nz.connect(g);
 				sources.push(nz);
-				return { in: null, out: g, mod };
+				// The source is the outlet, as OSC's is: no unity gain behind it.
+				return { in: null, out: nz, mod };
 			}
 
 			case 'gain': {
@@ -3080,7 +3087,12 @@ class ModularSynth {
 				const out = ctx.createGain();
 				const wet = ctx.createGain();
 				const dry = ctx.createGain();
-				knobMix(wet, dry, 'irMix', 100);
+				// The crossfade a cable can move only when a cable is there to move it.
+				if (mixed) knobMix(wet, dry, 'irMix', 100);
+				else {
+					wet.gain.value = mix / 100;
+					dry.gain.value = 1 - mix / 100;
+				}
 				input.connect(dry);
 				dry.connect(out);
 				input.connect(conv);
@@ -3800,55 +3812,47 @@ class ModularSynth {
 			}
 
 			case 'add': {
-				/* A plus B, built as two gains sharing a destination -- which is
-           what Web Audio already does with anything connected to the same
-           node, so the sum itself costs nothing beyond naming the two legs.
-           Each leg's resting value is `p(key, 0)`, ADD's own identity for an
-           operand nothing is wired to; a live cable replaces that resting
-           zero with itself by summing on top of it, the AudioParam-signal
-           mechanism every knob in this file already relies on. */
+				/* A plus B, as one gain both legs arrive at -- Web Audio sums
+           whatever is connected to the same input, so the sum is the wiring
+           itself. The resting values (`p(key, 0)`, ADD's identity for an
+           operand nothing is wired to, and zero for one a signal has claimed)
+           are already numbers, so they are added here and ride in on one
+           constant; a live cable sums on top of it.
+
+           This was two gains per leg and a constant each, five nodes for one
+           addition. Patches do a lot of per-note arithmetic, and a voice paid
+           for all of it (docs/node-graph.md, "The built-in patches"). */
 				const out = ctx.createGain();
-				const a = ctx.createGain();
-				a.gain.value = 1;
-				a.connect(out);
-				const b = ctx.createGain();
-				b.gain.value = 1;
-				b.connect(out);
-				const restA = ctx.createConstantSource();
-				restA.offset.value = p('a', 0);
-				sources.push(restA);
-				restA.connect(a);
-				const restB = ctx.createConstantSource();
-				restB.offset.value = p('b', 0);
-				sources.push(restB);
-				restB.connect(b);
-				mod.set('a', a);
-				mod.set('b', b);
+				const rest = p('a', 0) + p('b', 0);
+				if (rest !== 0) {
+					const c = ctx.createConstantSource();
+					c.offset.value = rest;
+					sources.push(c);
+					c.connect(out);
+				}
+				mod.set('a', out);
+				mod.set('b', out);
 				return { in: null, out, mod };
 			}
 
 			case 'sub': {
-				/* A minus B, the same shape ADD is with B's leg inverted -- the
-           identical trick DIFF already uses for the audio-domain version,
-           a gain of -1 rather than a second subtraction mechanism. Both
-           legs default to 0, SUB's own identity, through the same `p(key,
-           0)` that zeroes a leg the instant something live claims it. */
+				/* A minus B, the shape ADD is with B's leg inverted -- the
+           identical trick DIFF already uses for the audio-domain version, a
+           gain of -1 rather than a second subtraction mechanism. Both legs
+           default to 0, SUB's own identity; the resting difference rides in
+           on one constant, as ADD's sum does. */
 				const out = ctx.createGain();
-				const a = ctx.createGain();
-				a.gain.value = 1;
-				a.connect(out);
+				const rest = p('a', 0) - p('b', 0);
+				if (rest !== 0) {
+					const c = ctx.createConstantSource();
+					c.offset.value = rest;
+					sources.push(c);
+					c.connect(out);
+				}
+				mod.set('a', out);
 				const b = ctx.createGain();
 				b.gain.value = -1;
 				b.connect(out);
-				const restA = ctx.createConstantSource();
-				restA.offset.value = p('a', 0);
-				sources.push(restA);
-				restA.connect(a);
-				const restB = ctx.createConstantSource();
-				restB.offset.value = p('b', 0);
-				sources.push(restB);
-				restB.connect(b);
-				mod.set('a', a);
 				mod.set('b', b);
 				return { in: null, out, mod };
 			}
@@ -4128,18 +4132,19 @@ class ModularSynth {
            it -- so an unwired B leaves the gain at its resting 1 and a live
            B leaves it at 0 plus whatever arrives, never 1 plus it. That is
            what stops "multiply by HELD" from reading as "multiply by HELD
-           plus one". */
+           plus one". A live A arrives straight at the gain's input, beside
+           its resting constant, which is built only when it is not zero. */
 				const g = ctx.createGain();
 				g.gain.value = p('b', 1);
 				mod.set('b', g.gain);
-				const aIn = ctx.createGain();
-				aIn.gain.value = 1;
-				aIn.connect(g);
-				const restA = ctx.createConstantSource();
-				restA.offset.value = p('a', 1);
-				sources.push(restA);
-				restA.connect(aIn);
-				mod.set('a', aIn);
+				const restA = p('a', 1);
+				if (restA !== 0) {
+					const c = ctx.createConstantSource();
+					c.offset.value = restA;
+					sources.push(c);
+					c.connect(g);
+				}
+				mod.set('a', g);
 				return { in: null, out: g, mod };
 			}
 
@@ -5943,7 +5948,14 @@ class ModularSynth {
 		const osc1IsBuffer = track.osc1Waveform === 'noise' || track.osc1Waveform === 'metal';
 		if (osc1IsBuffer && !this.noiseBuffer) this.initNoiseBuffer();
 		const buf1 = track.osc1Waveform === 'metal' ? this.metalBuf() : this.noiseBuffer;
-		if (osc1IsBuffer && track.osc2Waveform === 'noise') {
+		/* ADV is the whole voice, so none of racks 1-7's sources are built under
+		   it. They were -- two oscillators, their stacks, a noise buffer and the
+		   gains between, a dozen nodes a note sounding into a mixer held at zero,
+		   on every ADV voice. What follows them (the filter, the amp, the pan)
+		   is the voice's own path and stays. */
+		if (advOwnsVoice) {
+			// Nothing to build: the canvas is the instrument.
+		} else if (osc1IsBuffer && track.osc2Waveform === 'noise') {
 			noiseSource = ctx.createBufferSource();
 			noiseSource.buffer = buf1;
 			noiseSource.loop = true;
@@ -6134,7 +6146,7 @@ class ModularSynth {
        a kick built as noise plus SUB, which is the obvious way to build one and
        what "a kick without it has no weight" is about, got no sub at all. */
 		const subGainAmt = track.subOscGain ?? 0;
-		if (subGainAmt > 0) {
+		if (subGainAmt > 0 && !advOwnsVoice) {
 			const subGlide = (track.glideTime ?? 0) / 1000;
 			const subLast = this.lastTrackFreqs.get(track.id);
 			const subLegato = t - (this.lastTrackNoteTimes.get(track.id) ?? 0) < 1.5;
@@ -6162,7 +6174,7 @@ class ModularSynth {
 		// envelope as OSC1-as-noise, same burst gating. Skipped when OSC1 is
 		// already the noise source -- that would just be the same buffer twice.
 		const noiseMixAmt = track.noiseGain ?? 0;
-		if (noiseMixAmt > 0 && track.osc1Waveform !== 'noise') {
+		if (noiseMixAmt > 0 && track.osc1Waveform !== 'noise' && !advOwnsVoice) {
 			if (!this.noiseBuffer) this.initNoiseBuffer();
 			const nz = ctx.createBufferSource();
 			nz.buffer = this.noiseBuffer;
