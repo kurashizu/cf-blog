@@ -98,10 +98,13 @@ export interface SoundPreset {
    was before, so the same preset sounded different on every track. Now a
    preset is the whole sound. */
 export const BASE: Partial<TrackData> = {
-	/* Every preset carries its own level. Measured across all 37, onset energy
-	   spanned 18.8 dB -- a CLAV arrived 10 dB under an ORGAN -- so switching
-	   patches meant riding the fader. 1 is unchanged, and the two patches that
-	   are meant to be faint (RISER's swell, STATIC's bed) keep it. */
+	/* Every preset carries its own level, and the set is level: each note's
+	   first 400 ms at -23.5 dB (tools/ear/loudness.cjs), with peaks kept under
+	   -3 dBFS. Measured before, the musical presets spanned 25 dB -- GUITAR at
+	   -40, VIBRAPHONE at -14 -- so switching patches meant riding the fader.
+	   It multiplies a patched voice at the graph's sink as well as a rack
+	   voice, so one knob levels both kinds. The FX keep theirs: a swell or a
+	   bed is not heard by its onset (RISER, STATIC are meant to be faint). */
 	presetGain: 1,
 	osc1Waveform: 'square',
 	osc1Gain: 0.9,
@@ -1105,17 +1108,17 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PLUCK',
 		kind: 'E',
 		preset: synth({
-			presetGain: 0.78,
+			presetGain: 1.23,
 			osc1Waveform: 'square',
 			osc2Waveform: 'sawtooth',
 			cutoff: 1800,
 			resonance: 3.5,
 			ampAttack: 0.003,
-			ampDecay: 0.35,
+			ampDecay: 0.9,
 			ampSustain: 0,
-			ampRelease: 0.2,
+			ampRelease: 0.3,
 			filterAttack: 0.003,
-			filterDecay: 0.08,
+			filterDecay: 0.22,
 			filterSustain: 0.0,
 			filterRelease: 0.06,
 			filterEnvAmount: 0.85
@@ -1239,7 +1242,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'MALLET',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.81,
+			presetGain: 0.35,
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
 			osc2Waveform: 'triangle',
@@ -1335,7 +1338,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'MALLET',
 		kind: 'E',
 		preset: synth({
-			presetGain: 1.22,
+			presetGain: 0.52,
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
 			osc2Waveform: 'sine',
@@ -1345,9 +1348,9 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			cutoff: 12000,
 			resonance: 0.2,
 			ampAttack: 0.002,
-			ampDecay: 0.8,
+			ampDecay: 2.6,
 			ampSustain: 0,
-			ampRelease: 1.2,
+			ampRelease: 2,
 			airGain: 0.3
 		})
 	},
@@ -1384,7 +1387,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'ORGAN',
 		kind: 'E',
 		preset: synth({
-			presetGain: 0.6,
+			presetGain: 0.73,
 			osc1Waveform: 'sine',
 			osc1Gain: 0.8,
 			osc2Waveform: 'sine',
@@ -1419,7 +1422,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'ORGAN',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.73,
+			presetGain: 0.9,
 			osc1Gain: 0,
 			osc2Gain: 0,
 			subOscGain: 0,
@@ -1587,7 +1590,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'MALLET',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.51,
+			presetGain: 0.18,
 			osc1Gain: 0,
 			osc2Gain: 0,
 			subOscGain: 0,
@@ -1803,7 +1806,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'KEYBOARD',
 		kind: 'E',
 		preset: synth({
-			presetGain: 2.14,
+			presetGain: 2.66,
 			osc1Waveform: 'square',
 			osc1Gain: 1,
 			pulseWidth: 25,
@@ -1827,7 +1830,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'KEYBOARD',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.75,
+			presetGain: 1.72,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 0.9,
 			osc2Waveform: 'square',
@@ -2020,7 +2023,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PAD',
 		kind: 'E',
 		preset: synth({
-			presetGain: 1.89,
+			presetGain: 0.9,
 			osc1Waveform: 'triangle',
 			osc1Gain: 0.9,
 			osc2Waveform: 'sine',
@@ -2092,7 +2095,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'KEYBOARD',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.4,
+			presetGain: 0.29,
 			polyphony: 12,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
@@ -2110,7 +2113,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PLUCK',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.88,
+			presetGain: 5.68,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -2253,7 +2256,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'BASS',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.53,
+			presetGain: 2.45,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -2551,7 +2554,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'STRING',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.8,
+			presetGain: 1.34,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -2739,7 +2742,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'WIND',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 0.36,
+			presetGain: 0.75,
 			/* The racks 1-7 half, which is what plays with ADV off. It was a
 			   NOISE oscillator -- so a flute with ADV off was a hiss with no
 			   pitch at all. A sine with a quiet octave, a little air, and the
