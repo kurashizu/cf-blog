@@ -41,7 +41,8 @@
  * board is one per instrument, so the case and the IR moved to the track
  * chain and are built once. A note is now two WIREs and the damper's ENV.
  */
-import type { GraphCable, GraphGroup, GraphNode, RackGraph } from './graph-model';
+import type { GraphCable, GraphNode, RackGraph } from './graph-model';
+import { layoutStages } from './graph-layout';
 import { BODY_IRS } from '../audio/body-irs';
 
 const F32 = 6;
@@ -384,53 +385,40 @@ export function grandPiano(over: Partial<PianoVoicing> = {}): {
 	/* The stages as boxes, each with a NOTE across its top saying what the
 	   stage is: the canvas is where someone who did not write this finds out
 	   how the piano works. */
-	const groups: GraphGroup[] = [];
-	const stage = (id: string, label: string, members: string[], color: string, note: string) => {
-		const own = nodes.filter((n) => members.includes(n.id));
-		const x = Math.min(...own.map((n) => n.x)) - 20;
-		const y = Math.min(...own.map((n) => n.y)) - 200;
-		const noteId = `note-${id}`;
-		nodes.push({ id: noteId, type: 'note', x: x + 20, y: y + 30 });
-		labels[noteId] = note;
-		groups.push({
-			id,
-			label,
-			x,
-			y,
-			w: Math.max(...own.map((n) => n.x)) + 280 - x,
-			h: Math.max(...own.map((n) => n.y)) + 240 - y,
-			color,
-			members: [...members, noteId]
-		});
+	const stages: [string, string[], string][] = [];
+	const notes: [string, string][] = [];
+	const stage = (label: string, members: string[], color: string, note: string) => {
+		stages.push([label, members, color]);
+		notes.push([note, members[0]]);
 	};
 	stage(
-		'g-hammer',
 		'HAMMER',
 		['mBlowLvl', 'mAmp', 'mKey', 'ampKey', 'ampBlow', 'cLevel', 'strike', 'dc', 'mBlow', 'mSoft', 'blowHz', 'blow', 'mFelt', 'mFeltKey', 'feltHz', 'felt', 'felt2', 'knock', 'mKnock', 'gKnock'],
 		'#d19a66',
 		'The felt: a step through a bandpass is a pulse over the contact time, softened by two lowpasses that open with velocity. The same pulse rings the frame (BP): the knock.'
 	);
 	stage(
-		'g-strings',
 		'STRINGS',
 		['freq', 'mDetune', 'f2', 'mDec', 'mPrompt', 'dec2', 'mPos', 'mDamp', 'mStiff', 'long', 'prompt', 'cShelf', 'fShelf', 'mCutLong', 'shLong', 'mPromptLvl', 'gPrompt'],
 		'#61afef',
 		'Two strings a key, a fraction of a cent apart so they beat: a long one with its fundamental shelved down, and a prompt one that dies young -- the two-stage decay of a unison.'
 	);
 	stage(
-		'g-damper',
 		'DAMPER',
 		['envD', 'mRise', 'vDmp', 'mPan', 'pan', 'output', 'toBoard'],
 		'#c678dd',
 		'The damper lets go at key-up (the pedal holds the note). Low keys sit left, high keys right, as the player hears them.'
 	);
 	stage(
-		'g-board',
 		'BOARD (TRACK)',
 		['fromStr', 'radiate', 'caseMid', 'caseHi', 'pno', 'cBody', 'gBody', 'outBody', 'board', 'hands', 'mPedDec', 'mPedLvl', 'gBoard', 'outBoard'],
 		'#98c379',
 		'One board for the whole track (TSND > TRTN), built once: the case, the measured Steinway body (IR: PNO), and a SPACE the pedal opens.'
 	);
+
+	const { groups, notes: noteNodes, labels: noteLabels } = layoutStages(nodes, stages, notes);
+	nodes.push(...noteNodes);
+	Object.assign(labels, noteLabels);
 
 	return {
 		rackGraph: { nodes, cables, groups },

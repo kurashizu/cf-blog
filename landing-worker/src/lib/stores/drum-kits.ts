@@ -25,7 +25,8 @@
  * (`click`) or, through a very wide, very low bandpass, an exponential decay
  * with no worklet at all (`decay`).
  */
-import type { GraphCable, GraphGroup, GraphNode } from './graph-model';
+import type { GraphCable, GraphNode } from './graph-model';
+import { layoutStages } from './graph-layout';
 import type { TrackData } from '../track-data';
 
 type Params = Record<string, number>;
@@ -43,8 +44,6 @@ const PEAK = 6;
 /* MAP's shapes. */
 const M_EXP = 1;
 
-/** Box tints for a key's stages, in order -- the ones the AC presets use. */
-const TINTS = ['#e06c75', '#e5c07b', '#61afef', '#98c379', '#c678dd', '#56b6c2'];
 
 /**
  * A graph under construction: nodes with their knobs, cables in the preset
@@ -172,9 +171,6 @@ class Voice {
 	 */
 	done(ring: number, trim: number, group = 0): Partial<TrackData> {
 		const COL = 300;
-		const ROW = 200;
-		const GAP = 90;
-		const TOP = 278;
 		const feeders = new Map<string, string[]>();
 		for (const c of this.cables) {
 			const [lhs, rest] = c.split('>');
@@ -194,70 +190,23 @@ class Voice {
 			return d;
 		};
 		for (const [id] of this.nodes) depth(id);
-		const pos = new Map<string, { x: number; y: number }>();
-		/* Then banded by stage, as `patch()` lays out the AC presets: each box
-		   takes the columns its own members need, in their order along the
-		   signal, and the boxes sit side by side. Laid out by depth alone the
-		   stages interleave -- the stick's CONST in the head's column -- and a
-		   box drawn round either would enclose the other. */
-		let cursor = 48 + COL;
-		let tallest = 1;
-		const grouped = new Set(this.groups.flatMap(([, m]) => m));
-		const bands: [string, string[]][] = [
-			...this.groups,
-			// Anything left out of a box still gets a place, after the boxes.
-			['', this.nodes.map(([id]) => id).filter((id) => !grouped.has(id))]
-		];
-		for (const [, members] of bands) {
-			const own = members.filter((m) => this.nodes.some(([id]) => id === m));
-			if (!own.length) continue;
-			const cols = [...new Set(own.map((m) => col.get(m) ?? 1))].sort((p, q) => p - q);
-			const perCol = new Map<number, number>();
-			for (const m of own) {
-				const c = cols.indexOf(col.get(m) ?? 1);
-				const k = perCol.get(c) ?? 0;
-				perCol.set(c, k + 1);
-				pos.set(m, { x: cursor + c * COL, y: TOP + k * ROW });
-			}
-			tallest = Math.max(tallest, ...perCol.values());
-			cursor += cols.length * COL + GAP;
-		}
+		/* Then banded by stage and wrapped into rows, as `patch()` lays out the
+		   AC presets (stores/graph-layout): each box takes the columns its own
+		   members need, in their order along the signal. Laid out by depth
+		   alone the stages interleave -- the stick's CONST in the head's column
+		   -- and a box drawn round either would enclose the other. */
 		const nodes: GraphNode[] = [
-			{ id: 'entry', type: 'in', x: 48, y: TOP + ((tallest - 1) * ROW) / 2 },
-			...this.nodes.map(([id, type]) => ({ id, type, ...pos.get(id)! })),
-			{ id: 'trim', type: 'gain', x: cursor, y: TOP },
-			{ id: 'output', type: 'out', x: cursor + COL, y: TOP }
+			{ id: 'entry', type: 'in', x: 0, y: 0 },
+			...this.nodes.map(([id, type], i) => ({ id, type, x: (col.get(id) ?? 1) * COL, y: i })),
+			{ id: 'trim', type: 'gain', x: 0, y: 0 },
+			{ id: 'output', type: 'out', x: COL, y: 0 }
 		];
-		const at = new Map(nodes.map((n) => [n.id, n]));
-		const groups: GraphGroup[] = this.groups.map(([label, members], i) => {
-			const own = members.map((m) => at.get(m)).filter((n): n is GraphNode => !!n);
-			const x = Math.min(...own.map((n) => n.x)) - 24;
-			const y = Math.min(...own.map((n) => n.y)) - 56;
-			return {
-				id: `g${i}`,
-				label,
-				x,
-				y,
-				w: Math.max(...own.map((n) => n.x)) + COL - x,
-				h: Math.max(...own.map((n) => n.y)) + ROW - y,
-				color: TINTS[i % TINTS.length],
-				members: own.map((n) => n.id)
-			};
-		});
-		const graphLabels: Record<string, string> = {};
-		for (const [i, [text, near]] of this.notes.entries()) {
-			const box = groups.find((g) => g.members?.includes(near));
-			const by = at.get(near);
-			const id = `note${i}`;
-			// Across the top of the stage it explains, as `patch()` places them.
-			nodes.push({
-				id,
-				type: 'note',
-				x: box ? box.x + 24 : (by?.x ?? 48),
-				y: box ? box.y + 30 : (by?.y ?? TOP) - 150
-			});
-			graphLabels[id] = text;
-		}
+		const { groups, notes, labels: graphLabels } = layoutStages(
+			nodes,
+			this.groups,
+			this.notes
+		);
+		nodes.push(...notes);
 		const cables: GraphCable[] = [
 			...this.cables.map((c) => {
 				const [lhs, rest] = c.split('>');

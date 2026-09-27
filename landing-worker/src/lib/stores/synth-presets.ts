@@ -56,6 +56,7 @@ import {
 import type { MacroDef } from './macros';
 import { grandPiano } from './grand-piano';
 import { jazzKit, kit808 } from './drum-kits';
+import { layoutStages } from './graph-layout';
 
 const STORAGE_KEY = 'krsz-synth-presets-v1';
 const KIT_STORAGE_KEY = 'krsz-synth-kits-v1';
@@ -769,32 +770,10 @@ function patch(
 		return {};
 	}
 	const macros = Object.keys(wrapped.macros).length ? { macros: wrapped.macros } : {};
-	if (layout?.groups?.length) bandByGroup(graphNodes, layout.groups);
-	const at = new Map(graphNodes.map((n) => [n.id, n]));
-	const groups: GraphGroup[] = (layout?.groups ?? []).map(([label, members, color], i) => {
-		const own = members.map((m) => at.get(m)).filter((n): n is GraphNode => !!n);
-		const x = Math.min(...own.map((n) => n.x)) - 24;
-		const y = Math.min(...own.map((n) => n.y)) - 56;
-		return {
-			id: `g${i}`,
-			label,
-			x,
-			y,
-			w: Math.max(...own.map((n) => n.x)) + 300 - x,
-			h: Math.max(...own.map((n) => n.y)) + 200 - y,
-			color: color ?? GROUP_TINTS[i % GROUP_TINTS.length],
-			members: own.map((n) => n.id)
-		};
-	});
-	const graphLabels: Record<string, string> = {};
-	for (const [i, [text, near]] of (layout?.notes ?? []).entries()) {
-		const by = at.get(near);
-		const box = groups.find((g) => g.members?.includes(near));
-		const id = `note${i}`;
-		// Across the top of the stage it explains, over the node it names.
-		graphNodes.push({ id, type: 'note', x: box ? box.x + 24 : (by?.x ?? 48), y: box ? box.y + 30 : (by?.y ?? 168) - 150 });
-		graphLabels[id] = text;
-	}
+	const { groups, notes, labels: graphLabels } = layout?.groups?.length
+		? layoutStages(graphNodes, layout.groups, layout.notes)
+		: { groups: [] as GraphGroup[], notes: [] as GraphNode[], labels: {} as Record<string, string> };
+	graphNodes.push(...notes);
 	return {
 		rackGraph: {
 			nodes: graphNodes,
@@ -807,63 +786,6 @@ function patch(
 		...(Object.keys(graphLabels).length ? { graphLabels } : {})
 	};
 }
-
-/**
- * Lay a grouped patch out a stage to a block: each group gets its own run of
- * columns, left to right in the order the groups are listed (the order the
- * sound passes through them), its members keeping their order along the
- * signal inside it, with room above for the group's notes. Laid out by
- * depth alone, a patch interleaves its stages -- the pluck's MAPs in the
- * players' column -- and the boxes drawn round them overlapped until neither
- * said anything; banded one above another, a four-stage patch was 3000 units
- * tall, past what the canvas can show at its widest zoom. ENTRY sits left of
- * the first stage, the trim and OUT after the stages that sound and before a
- * track room.
- */
-function bandByGroup(nodes: GraphNode[], groups: [string, string[], string?][]): void {
-	const COL = 300;
-	const ROW = 200;
-	const GAP = 90;
-	const TOP = 168 + 110;
-	const byId = new Map(nodes.map((n) => [n.id, n]));
-	let cursor = 48 + COL;
-	let tallest = 0;
-	const place = (ids: string[]) => {
-		for (const id of ids) {
-			const n = byId.get(id);
-			if (!n) continue;
-			n.x = cursor;
-			n.y = TOP + ROW;
-		}
-		cursor += COL;
-	};
-	for (const [, members] of groups) {
-		if (members.includes('roomSend')) place(['trim', OUTPUT_ID]);
-		const own = members.map((m) => byId.get(m)).filter((n): n is GraphNode => !!n);
-		const cols = [...new Set(own.map((n) => n.x))].sort((p, q) => p - q);
-		const perCol = new Map<number, number>();
-		const origin = cursor;
-		for (const n of own.sort((p, q) => p.y - q.y)) {
-			const c = cols.indexOf(n.x);
-			const k = perCol.get(c) ?? 0;
-			perCol.set(c, k + 1);
-			n.x = origin + c * COL;
-			n.y = TOP + k * ROW;
-		}
-		tallest = Math.max(tallest, ...perCol.values());
-		cursor = origin + cols.length * COL + GAP;
-	}
-	// A patch that groups the trim itself (its room is on the canvas) has placed it.
-	if (!groups.some(([, m]) => m.includes('roomSend') || m.includes('trim'))) place(['trim', OUTPUT_ID]);
-	const entry = byId.get(ENTRY_ID);
-	if (entry) {
-		entry.x = 48;
-		entry.y = TOP + ((tallest - 1) * ROW) / 2;
-	}
-}
-
-/** Box tints for a patch's stages, in order: source, shaping, body, space. */
-const GROUP_TINTS = ['#e06c75', '#e5c07b', '#61afef', '#98c379', '#c678dd', '#56b6c2'];
 
 /**
  * The types a graph names that the catalogue does not carry.
