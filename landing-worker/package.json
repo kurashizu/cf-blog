@@ -44,6 +44,7 @@
 		"@vitest/coverage-v8": "~4.1.11",
 		"@webgpu/types": "^0.1.72",
 		"autoprefixer": "^10.4.20",
+		"playwright": "^1.59.1",
 		"postcss": "^8.4.49",
 		"prettier": "^3.9.6",
 		"prettier-plugin-svelte": "^4.1.1",
