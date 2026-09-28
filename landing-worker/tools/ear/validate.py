@@ -27,6 +27,13 @@ Candidates:
   mel    paired log-mel distance: ours against the recording of the same
          note, frame by frame over its first 1.5 s, level-normalised (dB)
 
+Then the listener checked this (listen.py, calib.py, 60 blind trials): the
+set-level mmd called the kick, the clap and PIZZ far from their recordings,
+and in the blind pairs those fooled the listener. What ranked the trials they
+caught was the plain pairwise distance -- 1 - cosine of the AST embeddings of
+a recording and our render, both prepared as the trials were (AUC 0.81, band
+tables 0.62-0.67). That is the measure the tuners use (tune_drum.py).
+
     uv run validate.py [PRESET ...]      single notes against each bank
     uv run validate.py --organ           DRAWBAR ORGAN by phrase (no bank)
     uv run validate.py --kits            kit pieces against VCSL single hits
