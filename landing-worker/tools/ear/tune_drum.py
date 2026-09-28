@@ -51,7 +51,10 @@ def main(gm, evals):
     ka.clear_entry(gm)  # from the builder's numbers
     time.sleep(4)
     info = r(kit='JAZZ KIT', key=key, getParams=True, notes=[], out='')
-    base = {k: v for k, v in info['params'].items() if isinstance(v, (int, float)) and v > 0 and not DISCRETE.match(k.split('.', 1)[1]) and k != 'trim.level'}
+    # Not the level: the loss is loudness-matched and cannot hear it, and left
+    # free the velocity map came out flat or upside down (an open hat quieter
+    # the harder it was hit). The builder's velocity response and the trim stay.
+    base = {k: v for k, v in info['params'].items() if isinstance(v, (int, float)) and v > 0 and not DISCRETE.match(k.split('.', 1)[1]) and k != 'trim.level' and not k.startswith('vm.')}
     names = sorted(base)
 
     def rng(k):

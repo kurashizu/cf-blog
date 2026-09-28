@@ -34,6 +34,21 @@ def clear_entry(gm):
     open(SRC, 'w').write(set_entries(s, {}, [gm]))
 
 
+def settled(r, want):
+    """Wait for the dev server to serve the file just written: rendering
+    before HMR has swapped it measures the old key, and a trim set from that
+    left three keys clipping."""
+    for _ in range(60):
+        ok = True
+        for g, knobs in want.items():
+            got = r(kit='JAZZ KIT', key=str(108 - g), getParams=True, notes=[], out='')['params']
+            ok &= all(abs(got.get(k, float('nan')) - float(f'{v:.4g}')) <= 1e-6 * max(1, abs(v)) for k, v in knobs.items())
+        if ok:
+            return
+        time.sleep(1)
+    raise RuntimeError('the dev server never served the new table')
+
+
 def peaks(r, gms):
     out = {}
     for g in gms:
@@ -49,9 +64,9 @@ def main(gms):
     moved = {g: {k: v for k, v in json.load(open(os.path.join(C, f'kit_JAZZ_KIT_{g}.json')))['moved'].items() if k != 'trim.level'} for g in gms}
     r = Renderer()
     open(SRC, 'w').write(set_entries(orig, {}, gms)); time.sleep(4); p0 = peaks(r, gms)
-    open(SRC, 'w').write(set_entries(orig, moved, gms)); time.sleep(4); p1 = peaks(r, gms)
+    open(SRC, 'w').write(set_entries(orig, moved, gms)); settled(r, moved); p1 = peaks(r, gms)
     final = {g: {**moved[g], 'trim.level': min(2.0, p0[g][1] * min(p0[g][0], 0.9) / max(p1[g][0], 1e-4))} for g in gms}
-    open(SRC, 'w').write(set_entries(orig, final, gms)); time.sleep(4); p2 = peaks(r, gms)
+    open(SRC, 'w').write(set_entries(orig, final, gms)); settled(r, final); p2 = peaks(r, gms)
     for g in gms: print(g, 'builder peak', round(p0[g][0], 3), '-> tuned', round(p1[g][0], 3), '-> trimmed', round(p2[g][0], 3))
     r.p.stdin.close()
 

@@ -989,15 +989,27 @@ function snare(hz: number, crack: number, wireDecay: number) {
 
 /**
  * Knobs the ear moved, by GM number: each key's graph as its builder makes it,
- * then these on top. Tuned (tools/ear/tune_kit.py) against VCSL recordings of
- * the same instrument (CC0), band by band and by what an AudioSet model hears
- * in eight hits -- the builders' own numbers were set by reading, and a kit
- * voiced that way was heard as a heartbeat, a clock and radio static. The
- * score cannot hear how loud a key is against the others, so each TRIM here
- * puts the key back at the peak its builder gave it (0.9 at most).
+ * then these on top.
+ *
+ * 38, 42, 44, 46, 49, 56, 57 and 76 were tuned (tools/ear/tune_drum.py) on
+ * half the VCSL takes of the same instrument (CC0) by the distance a blind
+ * listening test showed the listener hears -- the AST embedding distance
+ * between a take and our hit, loudness-matched (tools/ear/calib.py) -- and the
+ * octave bands to 16 kHz, and kept because they came nearer the takes held
+ * out than what shipped. Those eight were the pieces the listener caught
+ * every time; the hats' and crash's distance halved. 44 and 57 share 42's and
+ * 49's plates, scaled.
+ *
+ * The rest were tuned earlier, by an AudioSet model's label -- a score the
+ * tuner learnt to please, which is why the pieces above were redone. The
+ * kick, clap and toms fooled the listener as they are and were left alone.
+ *
+ * The score cannot hear how loud a key is against the others, so the
+ * velocity maps are the builders' and each TRIM puts the key back at the
+ * peak its builder gave it, the hardest hit under 0.95.
  */
 const JAZZ_TUNED: Record<number, Record<string, number>> = {
-	37: {
+37: {
 		'trim.level': 1.867,
 		'm.mode1': 1.033,
 		'm.mode2': 2.252,
@@ -1011,32 +1023,6 @@ const JAZZ_TUNED: Record<number, Record<string, number>> = {
 		'stk.hardness': 63.2,
 		'vm.outHi': 0.4539,
 		'vm.outLo': 0.1782
-	},
-	38: {
-		'trim.level': 1.128,
-		'body.cutoff': 3558,
-		'body.filterGain': 9.131,
-		'body.q': 2.136,
-		'm1.mode1': 1.902,
-		'm1.mode2': 2.174,
-		'm1.mode3': 1.68,
-		'm1.modeHz': 111.5,
-		'm1.modeMix': 79.48,
-		'm1.modeQ': 34.87,
-		'stk.cutoff': 2211,
-		'stksk.value': 0.7482,
-		'vm.outHi': 0.5636,
-		'vm.outLo': 0.2791,
-		'wae.envA': 0.00154,
-		'wae.envD': 0.6484,
-		'wae.envR': 0.00784,
-		'whp.cutoff': 789,
-		'whp.q': 1.268,
-		'wlp.cutoff': 16150,
-		'wlp.q': 1.323,
-		'wpk.cutoff': 1901,
-		'wpk.filterGain': 2.839,
-		'wpk.q': 0.3547
 	},
 	39: {
 		'trim.level': 1.861,
@@ -1081,77 +1067,6 @@ const JAZZ_TUNED: Record<number, Record<string, number>> = {
 		'wpk.filterGain': 3.064,
 		'wpk.q': 0.1952
 	},
-	42: {
-		'trim.level': 0.4622,
-		'ampe.envA': 0.00069,
-		'ampe.envD': 0.03466,
-		'ampe.envR': 0.04471,
-		'bp.cutoff': 19200,
-		'bp.q': 0.3528,
-		'f0.value': 590.5,
-		'f1.value': 340.8,
-		'f3.value': 1832,
-		'f5.value': 2583,
-		'ng.level': 0.8089,
-		'stk.cutoff': 2078,
-		'stk.q': 1.338,
-		'stksk.value': 0.8202,
-		'vm.outHi': 1.237,
-		'vm.outLo': 0.3686
-	},
-	44: {
-		'trim.level': 1.085,
-		'ampe.envA': 0.00069,
-		'ampe.envD': 0.03466,
-		'ampe.envR': 0.04471,
-		'bp.cutoff': 19200,
-		'bp.q': 0.3528,
-		'f0.value': 590.5,
-		'f1.value': 340.8,
-		'f3.value': 1832,
-		'f5.value': 2583,
-		'ng.level': 0.8089,
-		'vm.outHi': 1.237,
-		'vm.outLo': 0.3686
-	},
-	46: {
-		'trim.level': 0.85,
-		'ampe.envA': 0.00131,
-		'ampe.envD': 1,
-		'ampe.envR': 0.00817,
-		'bp.cutoff': 8617,
-		'bp.q': 0.6897,
-		'f0.value': 795.7,
-		'f1.value': 396.6,
-		'f3.value': 481.8,
-		'f5.value': 537.3,
-		'ng.level': 1,
-		'stk.cutoff': 4866,
-		'stk.q': 0.3575,
-		'stksk.value': 0.5104,
-		'vm.outHi': 0.762
-	},
-	49: {
-		'trim.level': 1.032,
-		'f0.value': 1042,
-		'f1.value': 410.3,
-		'f2.value': 1456,
-		'f3.value': 415.2,
-		'f5.value': 2412,
-		'hite.envA': 0.00196,
-		'hite.envD': 0.2143,
-		'hite.envR': 0.01477,
-		'mg.level': 1.554,
-		'mhp.cutoff': 16180,
-		'mhp.q': 0.47,
-		'nbp.cutoff': 1257,
-		'nbp.q': 0.2281,
-		'vm.outHi': 0.5606,
-		'vm.outLo': 0.1007,
-		'washe.envA': 0.01273,
-		'washe.envD': 4.5,
-		'washe.envR': 0.00583
-	},
 	51: {
 		'trim.level': 0.2929,
 		'f0.value': 413.3,
@@ -1172,43 +1087,6 @@ const JAZZ_TUNED: Record<number, Record<string, number>> = {
 	55: {
 		'trim.level': 0.4201
 	},
-	56: {
-		'trim.level': 2,
-		'af.value': 188.1,
-		'bf.value': 455.5,
-		'bp.cutoff': 1923,
-		'bp.q': 2.402,
-		'hite.envA': 0.0002,
-		'hite.envD': 0.02215,
-		'hite.envR': 0.03447,
-		'rg.level': 0.2557,
-		'ringe.envA': 0.00144,
-		'ringe.envD': 0.8332,
-		'ringe.envR': 0.03753,
-		'vm.outHi': 0.9459,
-		'vm.outLo': 0.1838
-	},
-	57: {
-		'trim.level': 0.8519,
-		'f0.value': 1166,
-		'f1.value': 459.1,
-		'f2.value': 1629,
-		'f3.value': 464.7,
-		'f5.value': 2700,
-		'hite.envA': 0.00196,
-		'hite.envD': 0.2143,
-		'hite.envR': 0.01477,
-		'mg.level': 1.554,
-		'mhp.cutoff': 16180,
-		'mhp.q': 0.47,
-		'nbp.cutoff': 1257,
-		'nbp.q': 0.2281,
-		'vm.outHi': 0.5606,
-		'vm.outLo': 0.1007,
-		'washe.envA': 0.01273,
-		'washe.envD': 4.5,
-		'washe.envR': 0.00583
-	},
 	59: {
 		'trim.level': 0.2636,
 		'f1.value': 335.7,
@@ -1225,22 +1103,6 @@ const JAZZ_TUNED: Record<number, Record<string, number>> = {
 		'washe.envD': 9.563,
 		'washe.envR': 0.00698
 	},
-	76: {
-		'trim.level': 1.992,
-		'bste.envA': 0.00025,
-		'bste.envD': 0.08986,
-		'bste.envR': 0.03519,
-		'r1.cutoff': 1400,
-		'r1.q': 14.94,
-		'r2.cutoff': 4916,
-		'r2.q': 4.763,
-		'r2g.level': 0.2352,
-		'stk.cutoff': 2782,
-		'stk.q': 1.573,
-		'stksk.value': 0.1965,
-		'vm.outHi': 4.08,
-		'vm.outLo': 1.2
-	},
 	77: {
 		'trim.level': 1.861,
 		'bste.envA': 0.00025,
@@ -1256,8 +1118,18 @@ const JAZZ_TUNED: Record<number, Record<string, number>> = {
 		'stksk.value': 0.1965,
 		'vm.outHi': 5.6,
 		'vm.outLo': 1.64
-	}
+	},
+	42: { 'ampe.envA': 0.00318, 'ampe.envD': 0.3577, 'ampe.envR': 0.04636, 'bp.cutoff': 18380, 'bp.q': 0.2169, 'f0.value': 719.8, 'f1.value': 246.5, 'f5.value': 675.7, 'ng.level': 1.324, 'stk.cutoff': 2443, 'stk.q': 3.102, 'stksk.value': 0.4572, 'trim.level': 0.7843 },
+	44: { 'ampe.envA': 0.00318, 'ampe.envD': 0.318, 'ampe.envR': 0.04636, 'bp.cutoff': 18380, 'bp.q': 0.2169, 'f0.value': 719.8, 'f1.value': 246.5, 'f5.value': 675.7, 'ng.level': 1.324, 'trim.level': 0.6909 },
+	46: { 'ampe.envA': 0.0006, 'ampe.envD': 1.68, 'ampe.envR': 0.02777, 'bp.cutoff': 19240, 'bp.q': 0.3085, 'f0.value': 102.1, 'f1.value': 380.9, 'f3.value': 401.5, 'f5.value': 817.9, 'ng.level': 0.3685, 'stk.q': 1.145, 'stksk.value': 1.935, 'trim.level': 1.276 },
+	49: { 'f0.value': 359.7, 'f1.value': 341.7, 'f2.value': 202.9, 'f3.value': 335.8, 'f5.value': 555.9, 'hite.envA': 0.00062, 'hite.envD': 0.2722, 'hite.envR': 0.03293, 'mg.level': 0.5172, 'mhp.cutoff': 830.2, 'mhp.q': 2.484, 'nbp.cutoff': 1680, 'nbp.q': 1.475, 'trim.level': 0.3468, 'washe.envA': 0.00143, 'washe.envD': 5.37, 'washe.envR': 0.00955 },
+	57: { 'f0.value': 402.6, 'f1.value': 382.4, 'f2.value': 227, 'f3.value': 375.7, 'f5.value': 622.1, 'hite.envA': 0.00062, 'hite.envD': 0.2722, 'hite.envR': 0.03293, 'mg.level': 0.5172, 'mhp.cutoff': 830.2, 'mhp.q': 2.484, 'nbp.cutoff': 1680, 'nbp.q': 1.475, 'trim.level': 0.3894, 'washe.envA': 0.00143, 'washe.envD': 6.041, 'washe.envR': 0.00955 },
+	56: { 'af.value': 1703, 'bf.value': 420.1, 'bp.cutoff': 664.8, 'bp.q': 0.9194, 'hite.envA': 0.00034, 'hite.envD': 0.01356, 'hite.envR': 0.00612, 'rg.level': 0.139, 'ringe.envD': 0.9294, 'ringe.envR': 0.022, 'trim.level': 1.381 },
+	38: { 'body.cutoff': 342, 'body.filterGain': 1.472, 'body.q': 0.3847, 'm1.mode1': 4, 'm1.mode2': 5.638, 'm1.mode3': 6.294, 'm1.modeHz': 48.8, 'm1.modeMix': 53.43, 'm1.modeQ': 33.4, 'stk.cutoff': 3807, 'stk.q': 1.271, 'stksk.value': 0.799, 'trim.level': 1.287, 'wae.envA': 0.00303, 'wae.envD': 0.5728, 'wae.envR': 0.07701, 'whp.cutoff': 674.8, 'whp.q': 0.1753, 'wlp.cutoff': 2989, 'wlp.q': 0.3241, 'wpk.cutoff': 10860, 'wpk.filterGain': 5.363, 'wpk.q': 0.3603 },
+	76: { 'bste.envA': 9e-05, 'bste.envD': 0.1198, 'bste.envR': 0.00683, 'r1.cutoff': 1308, 'r1.q': 20.86, 'r2.cutoff': 1371, 'r2g.level': 0.5129, 'stk.cutoff': 7925, 'stk.q': 2.514, 'stksk.value': 0.2555, 'trim.level': 2, 'vm.outHi': 2.4, 'vm.outLo': 0.6 }
 };
+
+
 
 
 

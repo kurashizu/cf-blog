@@ -2479,7 +2479,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'STRING',
 		kind: 'AC',
 		preset: synth({
-			presetGain: 1.34,
+			presetGain: 2,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -2504,12 +2504,20 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['r2', 'const', { kind: 6, value: 1.0029 }],
 					['f2', 'mul'],
 					['late', 'delay', { delayTime: 0.015 }],
-					['w1', 'wire', { wireDecay: 1, wireDamp: 23, wireStiff: 2, wirePos: 40 }],
-					['w2', 'wire', { wireDecay: 1, wireDamp: 23, wireStiff: 2, wirePos: 40 }],
+					['w1', 'wire', { wireDecay: 1, wireDamp: 90, wireStiff: 2, wirePos: 40 }],
+					['w2', 'wire', { wireDecay: 1, wireDamp: 90, wireStiff: 2, wirePos: 40 }],
 					['p1', 'pan', { panPos: -0.35 }],
 					['p2', 'pan', { panPos: 0.35 }],
 					['strs', 'sum'],
-					['bod', 'ir', { irBody: body('VPZ'), irMix: 59 }]
+					/* A pizzicato's upper partials go in a moment and its fundamental is
+					   left: the VCSL section at C4, half a second in, has the
+					   fundamental on top and the rest 10-60 dB under. With the body
+					   at 59% and little loss, ours had the 2nd and 4th on top and the
+					   fundamental 21 dB down, heard an octave up (and read so by the
+					   pitch test, now and then). More loss and less of the body: the
+					   fundamental within 6 dB of the loudest, and nearer the
+					   recordings by the listener-calibrated distance (0.084 to 0.074). */
+					['bod', 'ir', { irBody: body('VPZ'), irMix: 30 }]
 				],
 				[
 					'entry.pitch>fq:a',
