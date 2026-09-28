@@ -36,6 +36,14 @@ const readline = require('readline');
       if (!p) return { ok: false, error: 'no preset ' + q.name };
       // A piano voicing to try: the preset's graph rebuilt from grandPiano(overrides).
       const pr = q.piano ? { ...p.preset, ...a.grandPiano(q.piano) } : p.preset;
+      if (q.getParams) {
+        // The preset's knobs and each one's range, as for a kit key above.
+        const urls = performance.getEntriesByType('resource').map((e) => e.name);
+        const mods = await import(urls.find((x) => x.includes('/src/lib/stores/synth-modules.ts')));
+        const ranges = {};
+        for (const m of mods.MODULE_SPECS) ranges[m.id] = Object.fromEntries((m.params ?? []).map((p) => [p.key, [p.min, p.max]]));
+        return { ok: true, params: pr.graphParams ?? {}, types: Object.fromEntries((pr.rackGraph?.nodes ?? []).map((n) => [n.id, n.type])), ranges };
+      }
       a.setTrack({ ...pr, graphParams: { ...(pr.graphParams ?? {}), ...(q.params ?? {}) }, graphWaves: { ...(pr.graphWaves ?? {}), ...(q.waves ?? {}) }, advanced: !!(pr.rackGraph?.nodes?.length || pr.rackChain?.length) });
       const bass = p.category === 'BASS';
       const steps = [0, 2, 4, 5, 7, 9, 11, 12];
