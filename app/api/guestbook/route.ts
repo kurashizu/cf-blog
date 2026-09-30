@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { createGuestbookRepo } from "@/lib/guestbook";
+import { createGuestbookRepo, sanitizeGuestbookText } from "@/lib/guestbook";
 import { checkBurst, checkDailyKV, getIP } from "@/shared/ratelimiter";
 import type { BlogEnv } from "@/lib/types/env";
 import { withApiAudit, type ApiAuditContext } from "@/lib/api-audit";
@@ -14,14 +14,6 @@ const CORS_HEADERS = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
-
-function sanitize(str: string): string {
-    return str
-        .replace(/<[^>]*>/g, "")
-        .replace(/javascript:/gi, "")
-        .replace(/on\w+=/gi, "")
-        .trim();
-}
 
 export async function OPTIONS() {
     return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
@@ -133,8 +125,8 @@ async function handleGuestbookPost(
 
         const repo = createGuestbookRepo();
         const message = await repo.add({
-            name: sanitize(name),
-            content: sanitize(content),
+            name: sanitizeGuestbookText(name),
+            content: sanitizeGuestbookText(content),
             email: email?.trim(),
         });
 

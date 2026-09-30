@@ -12,8 +12,9 @@ const IMPORT_INTERVAL_MS = 10 * 60 * 1000;
 const IMPORT_STATE_KEY = "footprints:import";
 
 /**
- * Where a row came from: an explicit `[ leave a footprint ]` click on the
- * landing site, or an anonymised blog.krsz.in visit lifted from the inbound
+ * Where a row came from: an explicit stamp (a `[ leave a footprint ]` click
+ * on the landing site, or a player in the VRChat world), or an anonymised
+ * blog.krsz.in visit lifted from the inbound
  * access log (the `/api/visitor-info` call the blog's home page makes).
  */
 export type FootprintSource = "stamp" | "blog";
@@ -81,6 +82,23 @@ export function deriveFootprint(
         ...uaFamilies(userAgent),
         colo: edge.colo ?? "",
     };
+}
+
+/** Browser family recorded for stamps left from the VRChat world. */
+export const VRCHAT_BROWSER = "VRChat";
+
+/**
+ * Footprint for a stamp requested by the VRChat world. Same edge-derived
+ * row as `deriveFootprint`, but the browser family is fixed: the request
+ * comes from VRChat's web client, whose User-Agent no browser parser can
+ * name.
+ */
+export function deriveVrchatFootprint(
+    edge: FootprintEdge | undefined,
+    userAgent: string,
+): Omit<Footprint, "id" | "at" | "source"> | null {
+    const derived = deriveFootprint(edge, userAgent);
+    return derived && { ...derived, browser: VRCHAT_BROWSER };
 }
 
 /**

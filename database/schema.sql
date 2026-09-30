@@ -110,8 +110,10 @@ CREATE INDEX IF NOT EXISTS idx_guestbook_approved
 -- ============================================
 -- Footprint wall — coarse, edge-derived visitor "stamps"
 -- ============================================
--- One row per IP per day (enforced at the app layer via SESSION_KV, not
--- here). Deliberately narrow: no IP, city, region, ASN, browser/OS version,
+-- One row per IP per day from the website button (enforced at the app layer
+-- via SESSION_KV, not here); the VRChat endpoint (app/api/vrchat/route.ts)
+-- allows up to five a day per IP, shared with its guestbook posts.
+-- Deliberately narrow: no IP, city, region, ASN, browser/OS version,
 -- device model, or raw User-Agent is ever stored — only country, timezone
 -- and colo from Cloudflare's edge-resolved `request.cf`, plus browser/OS
 -- *family* names from ua-parser-js. See app/api/footprints/route.ts.
@@ -123,7 +125,8 @@ CREATE TABLE IF NOT EXISTS footprints (
     os         TEXT NOT NULL DEFAULT '',
     colo       TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
-    -- 'stamp' = explicit click on krsz.in; 'blog' = anonymised blog.krsz.in
+    -- 'stamp' = explicit click on krsz.in or from the VRChat world
+    -- (app/api/vrchat/route.ts); 'blog' = anonymised blog.krsz.in
     -- visit lifted from api_access_log (/api/visitor-info rows, one per
     -- ip+day). source_ref is 'blog:<first log row id of that ip+day>' —
     -- the dedupe key that makes the import idempotent. NULL for stamps.

@@ -34,6 +34,15 @@ function rowToMessage(row: {
     };
 }
 
+/** Strip markup-ish fragments from visitor text before it is stored. */
+export function sanitizeGuestbookText(str: string): string {
+    return str
+        .replace(/<[^>]*>/g, "")
+        .replace(/javascript:/gi, "")
+        .replace(/on\w+=/gi, "")
+        .trim();
+}
+
 export function createGuestbookRepo() {
     return {
         /**

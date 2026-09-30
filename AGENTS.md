@@ -298,6 +298,7 @@ Two-layer: Cloudflare Rate Limiter (burst) + KV (daily).
 |---|---|---|---|
 | cf-blog | `/api/llm` | 2/10s | 200/IP |
 | cf-blog | `/api/guestbook` | 2/10s | 5/IP |
+| cf-blog | `/api/vrchat` | 2/10s | 5/IP, guestbook posts and footprints together (own `vrchat` count, not shared with the two website endpoints) |
 | cf-agent | `/api/chat` | 2/10s | 100/IP |
 | cf-agent | `/api/tool` | 10/10s | 200/IP |
 

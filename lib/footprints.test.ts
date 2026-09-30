@@ -5,7 +5,13 @@
  * recorded, so they're worth pinning down independently of the route.
  */
 import { describe, it, expect } from "vitest";
-import { deriveFootprint, deriveFromAccessLog, sqliteToIso, summarizeCountries } from "./footprints";
+import {
+    deriveFootprint,
+    deriveFromAccessLog,
+    deriveVrchatFootprint,
+    sqliteToIso,
+    summarizeCountries,
+} from "./footprints";
 
 describe("deriveFootprint", () => {
     it("returns null when cf is missing (local dev, non-CF request)", () => {
@@ -55,6 +61,29 @@ describe("deriveFootprint", () => {
             colo: "",
             browser: "",
             os: "",
+        });
+    });
+});
+
+describe("deriveVrchatFootprint", () => {
+    const UNITY_UA = "UnityPlayer/2022.3.22f1-DWR (UnityWebRequest/1.0, libcurl/8.5.0-DEV)";
+
+    it("returns null without edge geo, like deriveFootprint", () => {
+        expect(deriveVrchatFootprint(undefined, UNITY_UA)).toBeNull();
+        expect(deriveVrchatFootprint({ country: "" }, UNITY_UA)).toBeNull();
+    });
+
+    it("keeps the edge fields and fixes the browser to VRChat", () => {
+        expect(
+            deriveVrchatFootprint(
+                { country: "JP", timezone: "Asia/Tokyo", colo: "NRT" },
+                UNITY_UA,
+            ),
+        ).toMatchObject({
+            country: "JP",
+            timezone: "Asia/Tokyo",
+            colo: "NRT",
+            browser: "VRChat",
         });
     });
 });
