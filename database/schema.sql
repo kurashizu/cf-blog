@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS posts (
     search_updated_at TEXT
 );
 
+CREATE INDEX IF NOT EXISTS idx_posts_dirty
+    ON posts(published_at) WHERE status = 'published' AND search_updated_at IS NULL;
+
 -- ============================================
 -- HN news archive
 -- ============================================
@@ -52,6 +55,17 @@ CREATE TABLE IF NOT EXISTS news_items (
 );
 
 CREATE INDEX IF NOT EXISTS idx_news_time ON news_items(time DESC);
+
+-- Partial indexes for the 3-min cron queues (heartbeat rewrite + search
+-- indexing). Without them every tick full-scans news_items, and D1 bills
+-- rows scanned — ~480 ticks/day x table size. The indexes only hold the
+-- (normally tiny) pending / dirty rows. The WHERE clauses must stay
+-- textually in sync with the queries in cache-worker/src/lib/heartbeat.ts
+-- and cache-worker/src/handlers/search-index.ts for SQLite to use them.
+CREATE INDEX IF NOT EXISTS idx_news_pending_rewrite
+    ON news_items(time) WHERE summary = '';
+CREATE INDEX IF NOT EXISTS idx_news_dirty
+    ON news_items(time) WHERE summary != '' AND search_updated_at IS NULL;
 
 -- ============================================
 -- GitHub repos cache (full list)
